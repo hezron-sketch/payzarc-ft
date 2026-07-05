@@ -61,29 +61,33 @@ function Navbar() {
   const navigate = useNavigate();
   return (
     <nav className={styles.navbar}>
-      <div className={styles.navBrand}>
-        <div className={styles.navLogo}>
-          <img
-            src="/images/payzarc.png"
-            className={styles.logo}
-            alt="Payzarc-logo"
-          />
+      <div className={styles.navInner}>
+        <div className={styles.navLeft}>
+          <div className={styles.navBrand}>
+            <div className={styles.navLogo}>
+              <img
+                src="/images/payzarc.png"
+                className={styles.logo}
+                alt="Payzarc-logo"
+              />
+            </div>
+            {/* <span className={styles.navName}>Payzarc</span> */}
+          </div>
+          <div className={styles.navLinks}>
+            <a href="#">Home</a>
+            <a href="#">Features</a>
+            <a href="#">Rates</a>
+            <a href="#">Help</a>
+            <a href="#">Contact</a>
+          </div>
         </div>
-        {/* <span className={styles.navName}>Payzarc</span> */}
+        <button
+          className={styles.navBtn}
+          onClick={() => navigate("/components/member/login")}
+        >
+          Login →
+        </button>
       </div>
-      <div className={styles.navLinks}>
-        <a href="#">Home</a>
-        <a href="#">Features</a>
-        <a href="#">Rates</a>
-        <a href="#">Help</a>
-        <a href="#">Contact</a>
-      </div>
-      <button
-        className={styles.navBtn}
-        onClick={() => navigate("/components/member/login")}
-      >
-        Login →
-      </button>
     </nav>
   );
 }

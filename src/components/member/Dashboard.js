@@ -191,98 +191,107 @@ export default function Dashboard() {
   return (
     <div className={styles.pageWrap}>
       <div className={styles.appDashboard}>
+        <div className={`${styles.bgRing} ${styles.ringLg}`} />
+        <div className={`${styles.bgRing} ${styles.ringSm}`} />
         <div className={styles.mainWrapper}>
           {/* Simplified Top Bar */}
           <header className={styles.topBar}>
-            <div className={styles.topBarLeft}>
-              <div
-                className={styles.logoSection}
-                onClick={() => handleNavClick("home")}
-                role="button"
-              >
-                <img
-                  src="/images/payzarc.png"
-                  alt="Payzarc"
-                  className={styles.appLogo}
-                />
-              </div>
-            </div>
-
-            <div className={styles.topBarRight}>
-              <div className={styles.searchContainer}>
-                <Search className={styles.searchIcon} size={18} />
-                <input
-                  type="search"
-                  placeholder="Search..."
-                  className={styles.searchInput}
-                  aria-label="Search"
-                />
-              </div>
-
-              <div className={styles.topBarActions}>
+            <div className={styles.topBarInner}>
+              <div className={styles.topBarLeft}>
                 <div
-                  className={styles.notificationWrapper}
-                  aria-label="Notifications"
+                  className={styles.logoSection}
+                  onClick={() => handleNavClick("home")}
                   role="button"
-                  tabIndex={0}
                 >
-                  <Bell size={22} />
-                  <span className={styles.notificationBadge}>3</span>
+                  <img
+                    src="/images/payzarc.png"
+                    alt="Payzarc"
+                    className={styles.appLogo}
+                  />
+                </div>
+              </div>
+
+              <div className={styles.topBarRight}>
+                <div className={styles.searchContainer}>
+                  <Search className={styles.searchIcon} size={18} />
+                  <input
+                    type="search"
+                    placeholder="Search..."
+                    className={styles.searchInput}
+                    aria-label="Search"
+                  />
                 </div>
 
-                <div
-                  className={styles.userInfo}
-                  onClick={() => setIsUserMenuOpen((o) => !o)}
-                  ref={dropdownRef}
-                >
-                  <div className={styles.userAvatarWrapper}>
-                    <img
-                      src={
-                        user.profileImageUrl
-                          ? `${API_URL}${user.profileImageUrl}`
-                          : "/images/default-user.png"
-                      }
-                      alt={`${displayName} avatar`}
-                      className={styles.userAvatar}
-                      onError={(e) => {
-                        e.target.src = "/images/default-user.png";
-                      }}
-                    />
-                    {isUserMenuOpen && (
-                      <div className={styles.userDropdown} role="menu">
-                        <div className={styles.dropdownHeader}>
-                          <span className={styles.dropdownName}>
-                            {displayName}
-                          </span>
-                          <span className={styles.dropdownRole}>Member</span>
-                        </div>
-                        <div
-                          className={styles.dropdownItem}
-                          onClick={() => handleNavClick("account")}
-                          role="menuitem"
-                        >
-                          <User size={16} className={styles.dropdownIcon} />{" "}
-                          Account
-                        </div>
-                        <div
-                          className={styles.dropdownItem}
-                          onClick={handleImageCapture}
-                          role="menuitem"
-                        >
-                          Update Photo
-                        </div>
-                        <div
-                          className={`${styles.dropdownItem} ${styles.logout}`}
-                          onClick={handleLogout}
-                          role="menuitem"
-                        >
-                          <LogOut size={16} className={styles.dropdownIcon} />{" "}
-                          Log out
-                        </div>
-                      </div>
-                    )}
+                <div className={styles.topBarActions}>
+                  <div
+                    className={styles.notificationWrapper}
+                    aria-label="Notifications"
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <Bell size={22} />
+                    <span className={styles.notificationBadge}>3</span>
                   </div>
-                  <ChevronDown className={styles.chevronIcon} size={16} />
+
+                  <div
+                    className={styles.userInfo}
+                    onClick={() => setIsUserMenuOpen((o) => !o)}
+                    ref={dropdownRef}
+                  >
+                    <div className={styles.userAvatarWrapper}>
+                      <img
+                        src={
+                          user.profileImageUrl
+                            ? `${API_URL}${user.profileImageUrl}`
+                            : "/images/default-user.png"
+                        }
+                        alt={`${displayName} avatar`}
+                        className={styles.userAvatar}
+                        onError={(e) => {
+                          e.target.src = "/images/default-user.png";
+                        }}
+                      />
+                      {isUserMenuOpen && (
+                        <div className={styles.userDropdown} role="menu">
+                          <div className={styles.dropdownHeader}>
+                            <span className={styles.dropdownName}>
+                              {displayName}
+                            </span>
+                            <span className={styles.dropdownRole}>
+                              Member
+                            </span>
+                          </div>
+                          <div
+                            className={styles.dropdownItem}
+                            onClick={() => handleNavClick("account")}
+                            role="menuitem"
+                          >
+                            <User size={16} className={styles.dropdownIcon} />{" "}
+                            Account
+                          </div>
+                          <div
+                            className={styles.dropdownItem}
+                            onClick={handleImageCapture}
+                            role="menuitem"
+                          >
+                            Update Photo
+                          </div>
+                          <div
+                            className={`${styles.dropdownItem} ${styles.logout}`}
+                            onClick={handleLogout}
+                            role="menuitem"
+                          >
+                            <LogOut
+                              size={16}
+                              className={styles.dropdownIcon}
+                            />{" "}
+                            Log out
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <ChevronDown className={styles.chevronIcon} size={16} />
+                  </div>
                 </div>
               </div>
             </div>

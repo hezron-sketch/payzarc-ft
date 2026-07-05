@@ -24,20 +24,42 @@
 
 /* ── App shell ── */
 .appDashboard {
+  position: relative;
   display: flex;
   width: 100%;
   min-height: 100vh;
-  background:
-    radial-gradient(
-      ellipse 900px 500px at 50% -10%,
-      rgba(236, 201, 75, 0.08),
-      transparent 60%
-    ),
-    var(--bg);
+  background: radial-gradient(rgba(255, 242, 0, 0.067), var(--bg));
+  background-attachment: fixed;
   color: var(--white);
   font-family:
     -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
   overflow-x: hidden;
+}
+
+/* Background rings — copied from App.module.css's .hero decoration */
+.bgRing {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(236, 201, 75, 0.07);
+  pointer-events: none;
+}
+
+.ringLg {
+  position: fixed;
+  width: 600px;
+  height: 600px;
+  top: -160px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.ringSm {
+  position: fixed;
+  width: 380px;
+  height: 380px;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .mainWrapper {
@@ -60,14 +82,22 @@
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 4%;
+  justify-content: center;
   position: sticky;
   top: 0;
   z-index: 100;
-  gap: 2rem;
   width: 100%;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.topBarInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  width: 100%;
+  max-width: 1280px;
+  padding: 0 1.5rem;
 }
 
 .topBarLeft {
@@ -396,8 +426,8 @@
    RESPONSIVE
    ════════════════════════════════════════ */
 @media (max-width: 768px) {
-  .topBar {
-    padding: 0 1.5rem;
+  .topBarInner {
+    padding: 0 1rem;
   }
   .searchContainer {
     display: none;
@@ -490,5 +520,6 @@
 }
 
 .pageWrap {
-  background-color: var(--bg);
+  background-color: #0602145f;
+  background-attachment: fixed;
 }

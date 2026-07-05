@@ -30,12 +30,14 @@
 
 .pageWrap {
   background-color: #0602145f;
+  background-attachment: fixed;
   /* backdrop-filter: blur(2px); */
 }
 
 /* ─── Page wrapper ─── */
 .page {
   background: radial-gradient(rgba(255, 242, 0, 0.067), var(--bg));
+  background-attachment: fixed;
   color: var(--white);
   font-family:
     -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
@@ -188,10 +190,6 @@
    NAVBAR
 ═══════════════════════════════════════ */
 .navbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 2.5rem;
   border-bottom: 0.5px solid var(--border-subtle);
   position: sticky;
   top: 0;
@@ -199,6 +197,21 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   z-index: 100;
+}
+
+.navInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 1rem 2rem;
+}
+
+.navLeft {
+  display: flex;
+  align-items: center;
+  gap: 2.25rem;
 }
 
 .navBrand {
@@ -231,7 +244,7 @@
 
 .navLinks {
   display: flex;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 
 .navLinks a {
@@ -302,19 +315,21 @@
 }
 
 .ringLg {
+  position: fixed;
   width: 600px;
   height: 600px;
-  top: -160px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
 }
 
 .ringSm {
+  position: fixed;
   width: 380px;
   height: 380px;
-  top: -60px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
 }
 
 .ringInner {
@@ -402,7 +417,7 @@
 .ctaPrimary {
   background: var(--gold);
   color: #111;
-  border: Get stanone;
+  border: none;
   border-radius: 2rem;
   padding: 0.75rem 1.75rem;
   font-size: 1.5rem;
@@ -999,7 +1014,7 @@
 }
 
 @media (max-width: 768px) {
-  .navbar {
+  .navInner {
     padding: 1rem 1.25rem;
   }
   .navLinks {
