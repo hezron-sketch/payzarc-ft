@@ -1,0 +1,146 @@
+{
+  "dashboard": [
+    {
+      "id": 1,
+      "username": "johndoe",
+      "firstname": "John",
+      "surname": "Doe",
+      "email": "john.doe@example.com",
+      "phone": "+254712345678",
+      "profileImageUrl": "/images/default-user.png",
+      "balance": 1250.75,
+      "currency": "USD"
+    }
+  ],
+  "profile": [
+    {
+      "id": 1,
+      "username": "johndoe",
+      "firstname": "John",
+      "middlename": "Quincy",
+      "surname": "Doe",
+      "othernames": "Junior",
+      "gender": "Male",
+      "dob": "1990-05-15",
+      "countryOfBirth": "Kenya",
+      "idType": "National ID",
+      "idNumber": "12345678",
+      "idVerified": true,
+      "issuedCountry": "Kenya",
+      "issueDate": "2015-01-01",
+      "expiryDate": "2025-01-01",
+      "residenceCountry": "Kenya",
+      "townCity": "Nairobi",
+      "postalCode": "00100",
+      "addressLine": "123 Langata Road, Apt 4B",
+      "phone": "+254712345678",
+      "phoneVerified": true,
+      "email": "john.doe@example.com",
+      "emailVerified": true
+    }
+  ],
+  "secondary_contacts": [
+    {
+      "id": 1,
+      "type": "EMAIL",
+      "value": "secondary@example.com",
+      "isVerified": true
+    },
+    {
+      "id": 2,
+      "type": "PHONE",
+      "value": "+254700000000",
+      "isVerified": false
+    }
+  ],
+  "secondary_ids": [
+    {
+      "id": 1,
+      "idType": "Passport",
+      "idNumber": "A1234567",
+      "issuedCountry": "Kenya",
+      "isVerified": true
+    }
+  ],
+  "balance": [
+    {
+      "id": 1,
+      "success": true,
+      "balance": 1250.75,
+      "currency": "USD"
+    }
+  ],
+  "my_contact": [
+    {
+      "id": 1,
+      "success": true,
+      "phone": "+254712345678"
+    }
+  ],
+  "favorites": [
+    {
+      "id": 1,
+      "display_name": "Jane Smith",
+      "email": "jane@example.com",
+      "phone": "+254788888888",
+      "label": "Sister"
+    },
+    {
+      "id": 2,
+      "display_name": "Bob Agent",
+      "email": "bob@agent.com",
+      "phone": "+254799999999",
+      "label": "Work"
+    }
+  ],
+  "transactions": [
+    {
+      "id": 1,
+      "created_at": "2026-06-15 10:30:00",
+      "transaction_code": "TX123456789",
+      "name": "Jane Smith",
+      "country": "Kenya",
+      "amount": 50.0,
+      "status": "Completed",
+      "fee": 1.5,
+      "recipient": "jane@example.com"
+    },
+    {
+      "id": 2,
+      "created_at": "2026-06-14 15:45:00",
+      "transaction_code": "TX987654321",
+      "name": "Bob Agent",
+      "country": "Kenya",
+      "amount": 100.0,
+      "status": "Completed",
+      "fee": 2.0,
+      "recipient": "+254799999999"
+    }
+  ],
+  "reference_countries": [
+    { "id": 1, "name": "Kenya" },
+    { "id": 2, "name": "Uganda" },
+    { "id": 3, "name": "Tanzania" },
+    { "id": 4, "name": "Rwanda" }
+  ],
+  "reference_banks": [
+    { "id": 1, "name": "Equity Bank" },
+    { "id": 2, "name": "KCB Bank" },
+    { "id": 3, "name": "Co-operative Bank" },
+    { "id": 4, "name": "Standard Chartered" }
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "name": "Emergency Fund",
+      "type": "Emergency",
+      "balance": 500.0
+    },
+    {
+      "id": 2,
+      "name": "Wedding Savings",
+      "type": "Wedding",
+      "balance": 2000.0
+    }
+  ]
+}

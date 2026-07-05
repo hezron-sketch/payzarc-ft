@@ -1,0 +1,77 @@
+@import url("https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap");
+
+:root {
+  /* Font Family */
+  --primary-page-font-family:
+    "Google Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+
+  /* Colors */
+  --primary-pagebgcolor: #0f1a2e;
+  --primary-immediate-component-bgcolor: #1e2a47;
+  --primary-immediate-immediate-component-bgcolor: #2e4066;
+  --primary-dashboard-bgcolor: #465575;
+  --primary-page-font-color-orange: #ecc94b;
+  --primary-page-font-color-white: white;
+  --primary-unique-font-color: #2196f3;
+  --primary-unique-bgcolor: #e3f2fd;
+
+  /* Border Radius */
+  --primary-parent-componet-border-radius: 16px;
+  --primary-child-componet-border-radius: 8px;
+  --primary-input-fields-border-radius: 8px;
+  --primary-buttons-border-radius: 8px;
+
+  /* Yellow Palette */
+  --primary-yellow: #976d19;
+  --primary-yellow-hover: #ecc94b;
+  --primary-solid-border-line: #ecc94b;
+
+  /* Input Fields */
+  --primary-input-fields-bgcolor: #5b6271;
+  --primary-input-fields-bgcolor-disabled: #5d6270;
+  --primary-input-fields-font-color: white;
+  --primary-input-fields-font-size: 16px;
+  --primary-input-fields-line-height: 1.5;
+
+  /* Buttons */
+  --primary-button-bgcolor: #101825;
+  --primary-button-fontcolor: white;
+  --primary-button-bgcolor-hover: #976d19;
+  --primary-button-fontcolor-hover: black;
+
+  /* Links */
+  --primary-links-fontcolor: white;
+  --primary-links-fontcolor-hover: #ecc94b;
+
+  /* Spacing */
+  --spacing-unit: 0.75rem;
+  --spacing-half: 0.5rem;
+  --spacing-quarter: 0.25rem;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--primary-pagebgcolor);
+  color: var(--primary-page-font-color-white);
+  font-family: var(--primary-page-font-family);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+code {
+  font-family: "Google Sans", monospace;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}

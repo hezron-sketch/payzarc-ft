@@ -1,0 +1,908 @@
+/* ─────────────────────────────────────────
+   Payzarc — Login.module.css
+   Consistent with App.module.css tokens
+───────────────────────────────────────── */
+
+/* ─── Page layout: two columns ─── */
+.app {
+  background: #0d1117;
+  min-height: 100vh;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+  color: #f9fafb;
+}
+
+.page {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+}
+
+/* ─── Embedded mode ───
+   When Login is rendered inside the shared Modal (the normal case now that
+   auth opens as an overlay on Home), drop the two-column marketing layout
+   and let it read as a single, compact form that belongs inside the modal
+   card — same colors, radii, and type scale as the rest of the app. */
+.app.embedded {
+  background: transparent;
+  min-height: auto;
+}
+
+.page.embedded {
+  display: block;
+  min-height: auto;
+}
+
+.page.embedded .leftPanel {
+  display: none;
+}
+
+.page.embedded .rightPanel {
+  padding: 0;
+  background: transparent;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.page.embedded .formCard {
+  max-width: 100%;
+  gap: 1.5rem;
+}
+
+.hiddenWhenEmbedded {
+  display: none;
+}
+
+/* ─── Compact mode ───
+   Used when Login renders inside the Phone Auth Stage (a phone-width
+   container, independent of viewport size — media queries alone can't
+   target it). Tightens sizing so everything fits comfortably inside a
+   ~380–400px wide "phone screen". */
+.page.compact .formHeader {
+  gap: 4px;
+}
+
+.page.compact .formTitle {
+  font-size: 21px;
+}
+
+.page.compact .formSub {
+  font-size: 12px;
+}
+
+.page.compact .form {
+  gap: 0.85rem;
+}
+
+.page.compact .inputField {
+  padding: 0.65rem 2.5rem 0.65rem 2.25rem;
+  font-size: 13px;
+}
+
+.page.compact .toggleTab {
+  padding: 0.42rem;
+  font-size: 12px;
+}
+
+.page.compact .submitBtn {
+  padding: 0.75rem;
+  font-size: 14px;
+}
+
+.page.compact .otpBox {
+  width: 40px;
+  height: 48px;
+  font-size: 17px;
+  border-radius: 8px;
+}
+
+.page.compact .otpContainer {
+  gap: 6px;
+}
+
+.page.compact .popupContent {
+  padding: 1.5rem;
+}
+
+/* ═══════════════════════════════════════
+   LEFT PANEL — illustration
+═══════════════════════════════════════ */
+.leftPanel {
+  background: #111827;
+  border-right: 0.5px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* subtle ring decorations */
+.leftPanel::before,
+.leftPanel::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  border: 0.5px solid rgba(236, 201, 75, 0.07);
+  pointer-events: none;
+}
+.leftPanel::before {
+  width: 480px;
+  height: 480px;
+  top: -100px;
+  left: -100px;
+}
+.leftPanel::after {
+  width: 320px;
+  height: 320px;
+  bottom: -80px;
+  right: -80px;
+}
+
+.leftInner {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 360px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.leftBrand {
+  display: flex;
+  align-items: center;
+  /* gap: 8px; */
+}
+
+.logo {
+  height: 5rem;
+  /* display: flex;
+  align-items: center; */
+}
+
+.leftLogoBox {
+  width: 32px;
+  height: 32px;
+  /* background: #ecc94b; */
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.leftBrandName {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f9fafb;
+  letter-spacing: -0.3px;
+}
+
+.leftHeadline {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.8px;
+  color: #f9fafb;
+}
+
+.leftAccent {
+  color: #ecc94b;
+  letter-spacing: 1.2rem;
+  font-weight: 900;
+}
+
+.leftSub {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.65;
+  margin-top: -0.5rem;
+}
+
+/* ─── Stats row ─── */
+.leftStats {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 0.5px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+}
+
+.stat {
+  flex: 1;
+  text-align: center;
+}
+
+.statValue {
+  font-size: 16px;
+  font-weight: 800;
+  color: #ecc94b;
+  letter-spacing: -0.5px;
+}
+
+.statLabel {
+  font-size: 10px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.statDiv {
+  width: 0.5px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ─── Phone illustration ─── */
+.phoneIllustration {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  height: 280px;
+}
+
+.illPhone {
+  width: 140px;
+  background: #1c2333;
+  border-radius: 24px;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  padding: 9px 7px 12px;
+  position: relative;
+  z-index: 2;
+  align-self: center;
+}
+
+.illNotch {
+  width: 38px;
+  height: 7px;
+  background: #0d1117;
+  border-radius: 4px;
+  margin: 0 auto 8px;
+}
+
+.illScreen {
+  background: #131c2e;
+  border-radius: 14px;
+  padding: 9px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.illHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.illBrand {
+  width: 16px;
+  height: 16px;
+  background: #ecc94b;
+  border-radius: 4px;
+}
+
+.illDots {
+  display: flex;
+  gap: 3px;
+}
+
+.illDots span {
+  display: block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.illBal {
+  background: #1e3a5f;
+  border-radius: 7px;
+  padding: 6px 7px;
+  border: 0.5px solid rgba(96, 165, 250, 0.2);
+}
+
+.illBalLabel {
+  font-size: 7px;
+  color: #60a5fa;
+}
+
+.illBalAmt {
+  font-size: 13px;
+  font-weight: 800;
+  color: #f9fafb;
+}
+
+.illTxList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.illTxRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 5px;
+  padding: 4px 5px;
+}
+
+.illFlag {
+  font-size: 9px;
+  flex-shrink: 0;
+}
+
+.illTxName {
+  font-size: 7px;
+  color: #d1d5db;
+  flex: 1;
+}
+
+.illTxAmt {
+  font-size: 7px;
+  font-weight: 700;
+}
+
+.illRatePill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 7px;
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.08);
+  border: 0.5px solid rgba(74, 222, 128, 0.2);
+  border-radius: 10px;
+  padding: 3px 6px;
+  width: fit-content;
+  margin: 0 auto;
+}
+
+.illRateDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #4ade80;
+  flex-shrink: 0;
+}
+
+/* Floating cards on illustration */
+.illFloatCard {
+  position: absolute;
+  left: 0;
+  top: 50px;
+  background: #1f2937;
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 3;
+}
+
+.illFloatCard2 {
+  position: absolute;
+  right: 0;
+  top: 130px;
+  background: #1f2937;
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 3;
+}
+
+.illCardIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: rgba(59, 130, 246, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.illCardLabel {
+  font-size: 9px;
+  color: #6b7280;
+}
+
+.illCardValue {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f9fafb;
+}
+
+/* ═══════════════════════════════════════
+   RIGHT PANEL — form
+═══════════════════════════════════════ */
+.rightPanel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 2rem;
+  background: #0d1117;
+}
+
+.formCard {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Back button */
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  cursor: pointer;
+  width: fit-content;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
+  font-family: inherit;
+}
+
+.backBtn:hover {
+  color: #f9fafb;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Form header */
+.formHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formTitle {
+  font-size: 26px;
+  font-weight: 800;
+  color: #f9fafb;
+  letter-spacing: -0.5px;
+}
+
+.formSub {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.55;
+}
+
+/* Toggle tabs */
+.toggleRow {
+  display: flex;
+  background: rgba(255, 255, 255, 0.04);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.toggleTab {
+  flex: 1;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  color: #6b7280;
+  transition:
+    background 0.2s,
+    color 0.2s;
+  font-family: inherit;
+}
+
+.toggleActive {
+  background: #1f2937;
+  color: #f9fafb;
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9ca3af;
+  letter-spacing: 0.2px;
+}
+
+.inputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.inputIcon {
+  position: absolute;
+  left: 13px;
+  color: #4b5563;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.inputField {
+  width: 100%;
+  padding: 0.75rem 2.75rem 0.75rem 2.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: #f9fafb;
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.inputField:focus {
+  border-color: #ecc94b;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.inputField::placeholder {
+  color: #4b5563;
+}
+
+.eyeBtn {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: #4b5563;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.eyeBtn:hover {
+  color: #9ca3af;
+}
+
+.forgotRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -4px;
+}
+
+.forgotLink {
+  font-size: 12px;
+  color: #ecc94b;
+  text-decoration: none;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.forgotLink:hover {
+  opacity: 0.8;
+}
+
+/* Inline error */
+.inlineError {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(248, 113, 113, 0.08);
+  border: 0.5px solid rgba(248, 113, 113, 0.25);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #f87171;
+}
+
+/* Submit button */
+.submitBtn {
+  width: 100%;
+  padding: 0.85rem;
+  background: #ecc94b;
+  color: #111;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    transform 0.15s;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background: #d6b02e;
+  transform: translateY(-1px);
+}
+
+.submitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Spinner */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-top-color: #111;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Register prompt */
+.registerPrompt {
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+}
+
+.registerLink {
+  color: #ecc94b;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.registerLink:hover {
+  opacity: 0.8;
+}
+
+/* ─── OTP step ─── */
+.otpIconWrap {
+  width: 52px;
+  height: 52px;
+  background: rgba(236, 201, 75, 0.1);
+  border: 0.5px solid rgba(236, 201, 75, 0.25);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.emailHighlight {
+  color: #ecc94b;
+  font-size: 12px;
+}
+
+.otpContainer {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.otpBox {
+  width: 48px;
+  height: 54px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #f9fafb;
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+  font-family: inherit;
+  caret-color: #ecc94b;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.otpBox:focus {
+  border-color: #ecc94b;
+  background: rgba(236, 201, 75, 0.06);
+}
+
+/* Timer */
+.timerRow {
+  text-align: center;
+}
+
+.timerText {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.timerText strong {
+  color: #9ca3af;
+}
+
+.expiredBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.expiredText {
+  font-size: 12px;
+  color: #f87171;
+}
+
+.resendBtn {
+  background: rgba(236, 201, 75, 0.1);
+  color: #ecc94b;
+  border: 0.5px solid rgba(236, 201, 75, 0.3);
+  border-radius: 8px;
+  padding: 7px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+
+.resendBtn:hover:not(:disabled) {
+  background: rgba(236, 201, 75, 0.18);
+}
+
+.backStepBtn {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+  font-family: inherit;
+  transition: color 0.2s;
+}
+
+.backStepBtn:hover {
+  color: #9ca3af;
+}
+
+/* ═══════════════════════════════════════
+   ERROR POPUP
+═══════════════════════════════════════ */
+.popupOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.popupContent {
+  background: #1f2937;
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 360px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.875rem;
+  text-align: center;
+}
+
+.popupIconWrap {
+  width: 52px;
+  height: 52px;
+  background: rgba(248, 113, 113, 0.1);
+  border: 0.5px solid rgba(248, 113, 113, 0.25);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.popupTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: #f9fafb;
+}
+
+.popupMessage {
+  font-size: 13px;
+  color: #9ca3af;
+  line-height: 1.55;
+}
+
+.popupButton {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(248, 113, 113, 0.12);
+  color: #f87171;
+  border: 0.5px solid rgba(248, 113, 113, 0.3);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+
+.popupButton:hover {
+  background: rgba(248, 113, 113, 0.2);
+}
+
+/* ═══════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════ */
+@media (max-width: 768px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+
+  .leftPanel {
+    display: none;
+  }
+
+  .rightPanel {
+    padding: 2rem 1.25rem;
+    align-items: flex-start;
+    padding-top: 3rem;
+  }
+
+  .formCard {
+    max-width: 100%;
+  }
+
+  .otpBox {
+    width: 42px;
+    height: 48px;
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .otpContainer {
+    gap: 6px;
+  }
+
+  .otpBox {
+    width: 38px;
+    height: 44px;
+    font-size: 16px;
+    border-radius: 8px;
+  }
+
+  .formTitle {
+    font-size: 22px;
+  }
+}

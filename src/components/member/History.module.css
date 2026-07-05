@@ -1,0 +1,284 @@
+.section {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  background: var(--card2, #131c2e);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.07));
+  border-radius: var(--radius-lg, 20px);
+  box-sizing: border-box;
+}
+
+/* ─── Filters ─── */
+.dateGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+  align-items: stretch;
+}
+
+.buttonGroup {
+  color: var(--white, #f9fafb);
+  display: flex;
+  flex-direction: column;
+  flex: 2 1 200px;
+}
+
+.dateInput {
+  color: var(--white, #f9fafb);
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 140px;
+}
+
+.inputField,
+.dateInput input {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-mid, rgba(255, 255, 255, 0.12));
+  background-color: var(--card, #1f2937);
+  color: var(--white, #f9fafb);
+  font-size: 0.95rem;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.inputField:focus,
+.dateInput input:focus {
+  outline: none;
+  border-color: var(--gold, #ecc94b);
+  background-color: var(--card2, #131c2e);
+}
+
+.inputField::placeholder {
+  color: var(--muted, #6b7280);
+}
+
+.searchButton {
+  padding: 0;
+  background-color: var(--gold, #ecc94b);
+  color: #000;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  width: 44px;
+  flex-shrink: 0;
+  transition:
+    background-color 0.2s,
+    transform 0.2s;
+}
+
+.searchButton:hover {
+  background-color: var(--gold-dark, #d6b02e);
+}
+
+.searchButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.searchButton svg {
+  width: 18px;
+  height: 18px;
+  color: #000;
+}
+
+/* ─── Status text ─── */
+.loadingText,
+.noDataText {
+  color: var(--muted, #6b7280);
+  font-size: 0.95rem;
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.errorText {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 12px;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 12px 16px;
+}
+
+/* ─── Table ─── */
+.tableContainer {
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.07));
+}
+
+.table {
+  width: 100%;
+  max-width: 100%;
+  border-collapse: collapse;
+  background-color: var(--card, #1f2937);
+}
+
+.table th,
+.table td {
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.07));
+  white-space: normal;
+  word-break: break-word;
+  color: var(--white, #f9fafb);
+  font-size: 0.9rem;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.table th {
+  background-color: rgba(236, 201, 75, 0.08);
+  color: var(--gold, #ecc94b);
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Default column widths for larger screens */
+.table th:nth-child(1),
+.table td:nth-child(1) {
+  width: 20%; /* Date */
+}
+
+.table th:nth-child(2),
+.table td:nth-child(2) {
+  width: 15%; /* Ref. No. */
+}
+
+.table th:nth-child(3),
+.table td:nth-child(3) {
+  width: 15%; /* Name */
+}
+
+.table th:nth-child(4),
+.table td:nth-child(4) {
+  width: 20%; /* Country */
+}
+
+.table th:nth-child(5),
+.table td:nth-child(5) {
+  width: 15%; /* Amt */
+}
+
+.table th:nth-child(6),
+.table td:nth-child(6) {
+  width: 15%; /* Status */
+}
+
+/* Hide Name, Country, and Amt columns on small screens */
+@media (max-width: 767px) {
+  .table th:nth-child(3),
+  .table td:nth-child(3), /* Name */
+  .table th:nth-child(4),
+  .table td:nth-child(4), /* Country */
+  .table th:nth-child(5),
+  .table td:nth-child(5) {
+    /* Amt */
+    display: none;
+  }
+
+  /* Adjust widths for remaining columns on small screens */
+  .table th:nth-child(1),
+  .table td:nth-child(1) {
+    width: 45%; /* Date: wider to use available space */
+  }
+
+  .table th:nth-child(2),
+  .table td:nth-child(2) {
+    width: 30%; /* Ref. No. */
+  }
+
+  .table th:nth-child(6),
+  .table td:nth-child(6) {
+    width: 25%; /* Status */
+  }
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 1.25rem;
+  }
+
+  .dateGroup {
+    flex-direction: column;
+  }
+
+  .buttonGroup,
+  .dateInput {
+    flex: 1 1 100%;
+  }
+
+  .searchButton {
+    width: 100%;
+  }
+}
+
+.statusButton {
+  background: rgba(236, 201, 75, 0.1);
+  border: 1px solid rgba(236, 201, 75, 0.25);
+  color: var(--gold, #ecc94b);
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 20px;
+  padding: 5px 12px;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+  white-space: nowrap;
+}
+
+.statusButton:hover {
+  background-color: var(--gold, #ecc94b);
+  color: #000;
+}
+
+.flagContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.flagEmoji {
+  font-size: 1.2em;
+}
+
+.countryName {
+  color: var(--soft, #9ca3af);
+  font-size: 0.9rem;
+}
+
+/* ─── Amounts ─── */
+.credit {
+  color: var(--green, #4ade80);
+  font-weight: 700;
+}
+
+.debit {
+  color: #ef4444;
+  font-weight: 700;
+}

@@ -1,0 +1,328 @@
+.container {
+  min-height: calc(100vh - 140px); /* Adjust based on dashboard header/footer */
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2rem 1rem;
+  box-sizing: border-box;
+}
+
+.card {
+  background-color: var(--primary-immediate-component-bgcolor, #1e2a47);
+  border-radius: var(--primary-parent-componet-border-radius, 16px);
+  width: 100%;
+  max-width: 480px;
+  padding: 2.5rem 2rem;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.headerSpacer {
+  width: 40px; /* Balances the back button for centering title */
+}
+
+.backButton {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  color: var(--primary-page-font-color-white, white);
+  font-size: 1.1rem;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.backButton:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateX(-2px);
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-page-font-color-orange, #ecc94b);
+  margin: 0;
+  text-align: center;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.iconWrapper {
+  width: 64px;
+  height: 64px;
+  background: rgba(236, 201, 75, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.mainIcon {
+  font-size: 1.8rem;
+  color: var(--primary-page-font-color-orange, #ecc94b);
+}
+
+.description {
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 2rem;
+  max-width: 300px;
+}
+
+.form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.inputGroup label {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.inputGroup input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border-radius: var(--primary-input-fields-border-radius, 8px);
+  background-color: var(--primary-input-fields-bgcolor, #5b6271);
+  color: var(--primary-input-fields-font-color, white);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 1rem;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.inputGroup input:focus {
+  border-color: var(--primary-page-font-color-orange, #ecc94b);
+  background-color: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 4px rgba(236, 201, 75, 0.1);
+}
+
+.submitButton {
+  width: 100%;
+  padding: 1rem;
+  background-color: var(--primary-page-font-color-orange, #ecc94b);
+  color: #1a202c;
+  font-weight: 700;
+  font-size: 1rem;
+  border: none;
+  border-radius: var(--primary-buttons-border-radius, 8px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.submitButton:hover:not(:disabled) {
+  background-color: var(--primary-yellow-hover, #ecc94b);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(236, 201, 75, 0.2);
+}
+
+.submitButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.errorMsg {
+  color: #ef4444;
+  font-size: 0.85rem;
+  text-align: center;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* OTP Styles */
+.otpWrapper {
+  width: 100%;
+  margin: 1.5rem 0;
+}
+
+.otpInput {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--primary-page-font-color-orange, #ecc94b);
+  border: 2px dashed rgba(236, 201, 75, 0.3);
+  font-size: 2rem;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.5rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.otpInput:focus {
+  border-color: var(--primary-page-font-color-orange, #ecc94b);
+  background-color: rgba(255, 255, 255, 0.1);
+  border-style: solid;
+}
+
+.timerWrapper {
+  margin-bottom: 1.5rem;
+}
+
+.timer {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+}
+
+.timer span {
+  color: var(--primary-page-font-color-orange, #ecc94b);
+  font-weight: 700;
+}
+
+.expiredWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.expiredText {
+  color: #ef4444;
+  font-weight: 600;
+  margin: 0;
+}
+
+.resendBtn {
+  background: none;
+  border: none;
+  color: var(--primary-page-font-color-orange, #ecc94b);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  transition: background 0.2s;
+}
+
+.resendBtn:hover {
+  background: rgba(236, 201, 75, 0.1);
+}
+
+.buttonGroup {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cancelBtn {
+  width: 100%;
+  padding: 0.8rem;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.cancelBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+/* Success State */
+.successContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 0;
+}
+
+.successIcon {
+  font-size: 4rem;
+  color: #10b981;
+  margin-bottom: 1.5rem;
+  animation: scaleUp 0.4s ease-out;
+}
+
+@keyframes scaleUp {
+  0% {
+    transform: scale(0);
+  }
+  70% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.loader {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: #1a202c;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 2rem 1.5rem;
+  }
+
+  .title {
+    font-size: 1.3rem;
+  }
+
+  .otpInput {
+    font-size: 1.5rem;
+    letter-spacing: 0.3rem;
+  }
+}

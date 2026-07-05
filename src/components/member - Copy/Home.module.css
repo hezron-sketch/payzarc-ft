@@ -1,0 +1,1725 @@
+.section {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 16px;
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  background-color: var(--primary-immediate-component-bgcolor, #333333);
+  max-height: 90vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #64748b #1e293b;
+  box-sizing: border-box;
+}
+
+.section::-webkit-scrollbar {
+  width: 6px;
+}
+
+.section::-webkit-scrollbar-track {
+  background: #1e293b;
+  border-radius: 12px;
+}
+
+.section::-webkit-scrollbar-thumb {
+  background: #64748b;
+  border-radius: 12px;
+}
+
+.section::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.section.active {
+  display: flex;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 399px) {
+  .section {
+    width: 100%;
+    max-width: none;
+    padding: 8px;
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #64748b #1e293b;
+  }
+
+  .section::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .homeDashboard {
+    padding: 0 8px;
+  }
+
+  .userDetails,
+  .divWallet,
+  .divQuick,
+  .divTransactions {
+    padding: 12px;
+  }
+
+  .walletContent,
+  .withdrawContent,
+  .addMoneyContent {
+    padding: 12px;
+  }
+}
+
+@media (min-width: 400px) and (max-width: 767px) {
+  .section {
+    width: 100%;
+    max-width: 500px;
+    padding: 12px;
+  }
+
+  .homeDashboard {
+    padding: 0 12px;
+  }
+
+  .userDetails,
+  .divWallet,
+  .divQuick,
+  .divTransactions {
+    padding: 16px;
+  }
+
+  .walletContent,
+  .withdrawContent,
+  .addMoneyContent {
+    padding: 16px;
+  }
+}
+
+@media (min-width: 768px) {
+  .section {
+    width: 100%;
+    max-width: 600px;
+    padding: 16px;
+  }
+}
+
+.homeDashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 16px;
+  background-color: var(--primary-immediate-component-bgcolor, #333333);
+}
+
+/* New row wrapper for pairing cards */
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: stretch;
+  /* default – keep for mobile */
+}
+
+/* User details card – always column layout with improved typography */
+.userDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(145deg, #334155, #475569);
+  border-radius: 12px;
+  color: #e2e8f0;
+  box-sizing: border-box;
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.userName {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f59e0b;
+}
+
+.userEmail {
+  font-size: 1rem;
+  color: #e2e8f0;
+}
+
+.userPhone {
+  font-size: 1.2rem;
+  color: #3b82f6;
+  cursor: pointer;
+}
+
+.userPhone:hover {
+  color: #60a5fa;
+}
+
+/* Shared styles for all dashboard cards */
+.userDetails,
+.divWallet,
+.divQuick,
+.divTransactions {
+  background: linear-gradient(145deg, #334155, #475569);
+  padding: 20px;
+  border-radius: 12px;
+  color: #e2e8f0;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.userDetails:hover,
+.divWallet:hover,
+.divQuick:hover,
+.divTransactions:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.divWallet {
+  cursor: pointer;
+}
+
+.divWallet h4,
+.divQuick h4,
+.divTransactions h4 {
+  text-align: center;
+  margin: 0 0 16px 0;
+  color: #f59e0b;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.walletBalance {
+  text-align: center;
+  font-weight: 600;
+  font-size: 1.75rem;
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+  color: #f0f9ff;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  transition: background 0.3s ease;
+  box-sizing: border-box;
+}
+
+.walletButtons {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+@media (max-width: 1023px) {
+  .walletButtons {
+    flex-wrap: wrap;
+  }
+}
+
+.actionBtn {
+  flex: 1;
+  padding: 14px 20px;
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  color: #1e293b;
+  border-radius: 10px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .actionBtn {
+    flex: 1 1 45%;
+    margin-bottom: 8px;
+  }
+}
+
+.actionBtn:hover {
+  background: linear-gradient(90deg, #fbbf24, #fed7aa);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.buttonIcon {
+  font-size: 1rem;
+  color: #1e293b;
+}
+
+.quickButtons {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 767px) {
+  .quickButtons {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+.quickButtons .actionBtn {
+  flex: 1 1 45%;
+  min-width: 150px;
+}
+
+/* Latest Transactions List Styles */
+.transactionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.transactionItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: rgba(51, 65, 85, 0.6);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.transactionItem:hover {
+  background: rgba(71, 85, 105, 0.8);
+}
+
+.itemLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.itemIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+
+.itemIcon.netflixIcon {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.itemIcon.saversIcon {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.itemIcon.businessIcon {
+  background: rgba(251, 146, 60, 0.2);
+  color: #fb923c;
+}
+
+.itemInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.itemTitle {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #e2e8f0;
+}
+
+.itemTime {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.itemAmount {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.itemAmount.positive {
+  color: #22c55e;
+}
+
+.itemAmount.negative {
+  color: #ef4444;
+}
+
+.seeAll {
+  text-align: center;
+  color: #f59e0b;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 12px;
+  font-size: 0.95rem;
+  transition: color 0.3s ease;
+}
+
+.seeAll:hover {
+  color: #fbbf24;
+}
+
+/* Large screen layout – fully use the 90% container width */
+@media (min-width: 1024px) {
+  .section {
+    max-width: none;
+    width: 100%;
+    padding: 32px;
+    margin: 0 auto;
+  }
+
+  .homeDashboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* perfect equal columns */
+    gap: 16px;
+    /* small, consistent gap horizontally and vertically */
+    padding: 0;
+  }
+
+  /* Place widgets in grid */
+  .divWallet {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .userDetails {
+    /* Quick Send */
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .divQuick {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .divGroups {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .divTransactions {
+    grid-column: 2;
+    grid-row: 2 / 4;
+    /* span rows 2-3 to align bottom with Groups */
+  }
+
+  /* Keep content-based height, no stretching needed */
+  .userDetails,
+  .divWallet,
+  .divQuick,
+  .divGroups,
+  .divTransactions {
+    justify-content: flex-start;
+    align-items: flex-start;
+  }
+}
+
+/* Remove old per-card centering on large screens */
+@media (max-width: 1023px) {
+
+  .userDetails,
+  .divWallet,
+  .divQuick,
+  .divTransactions {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* Rest of your existing styles (unchanged) */
+.transactionTable {
+  width: 100%;
+  border-collapse: collapse;
+  background: #334155;
+  font-size: 0.95rem;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.transactionTable th,
+.transactionTable td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.transactionTable th {
+  background: linear-gradient(90deg, #475569, #64748b);
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.transactionTable td {
+  color: #d1d5db;
+}
+
+.seeMore {
+  text-align: center;
+  color: #f59e0b;
+  cursor: pointer;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.seeMore:hover {
+  color: #fbbf24;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.backIcon {
+  color: #f59e0b;
+  font-size: 1.75rem;
+  cursor: pointer;
+  transition: color 0.3s ease, transform 0.2s ease;
+}
+
+.backIcon:hover {
+  color: #fbbf24;
+  transform: scale(1.15);
+}
+
+.header h3 {
+  font-size: 1.5rem;
+  text-align: center;
+  color: #e2e8f0;
+  margin: 0 auto;
+  font-weight: 700;
+}
+
+.walletContent,
+.withdrawContent,
+.addMoneyContent {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.agentWithdraw,
+.atmWithdraw,
+.addMoneyForm,
+.withdrawForm {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobileMoneyForm {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.recipient {
+  position: relative;
+  width: 100%;
+}
+
+.search,
+.email,
+.amount,
+.pin,
+.agentNo,
+.storeCode,
+.accountSelect,
+.withdrawSelect,
+.addMoneyBtn,
+.withdrawBtn,
+.sendBtn {
+  width: 100%;
+  max-width: 100%;
+  padding: 16px 14px;
+  border-radius: 10px;
+  background: #475569;
+  color: #e2e8f0;
+  border: none;
+  font-size: 1.1rem;
+  outline: none;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+  box-sizing: border-box;
+}
+
+.search {
+  padding-left: 48px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #5eead4;
+  font-size: 1.2rem;
+}
+
+.suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background: #475569;
+  color: #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 10;
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0 0;
+  scrollbar-width: thin;
+  scrollbar-color: #9ca3af #4b5563;
+}
+
+.suggestions::-webkit-scrollbar {
+  width: 2px;
+}
+
+.suggestions::-webkit-scrollbar-track {
+  background: #4b5563;
+  border-radius: 8px;
+}
+
+.suggestions::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 8px;
+}
+
+.suggestions::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
+
+.suggestions li {
+  padding: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.suggestions li:hover {
+  background: #64748b;
+}
+
+.email[readonly] {
+  background: #475569;
+  border: 1px solid #64748b;
+  border-radius: 20px;
+  padding: 12px 16px;
+  text-align: center;
+  font-weight: 500;
+  cursor: default;
+}
+
+.sendBtn,
+.withdrawBtn,
+.addMoneyBtn {
+  width: 100%;
+  max-width: 500px;
+  padding: 14px 20px;
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  color: #1e293b;
+  border-radius: 10px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+.sendBtn:disabled,
+.withdrawBtn:disabled,
+.addMoneyBtn:disabled {
+  background: #64748b;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.sendBtn:hover:not(:disabled),
+.withdrawBtn:hover:not(:disabled),
+.addMoneyBtn:hover:not(:disabled) {
+  background: linear-gradient(90deg, #fbbf24, #fed7aa);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+input:focus,
+select:focus {
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
+  border-color: #f59e0b;
+}
+
+input::placeholder {
+  color: #94a3b8;
+}
+
+input:disabled {
+  background: #334155;
+  cursor: not-allowed;
+  color: #94a3b8;
+}
+
+.errorWallet {
+  color: #ef4444;
+  font-size: 0.95rem;
+  text-align: center;
+  margin-top: 12px;
+}
+
+.optionsList {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  background: #475569;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+  box-sizing: border-box;
+}
+
+.option:hover {
+  background: #64748b;
+  transform: translateY(-2px);
+}
+
+.optionIcon {
+  font-size: 1.5rem;
+  color: #e2e8f0;
+}
+
+.optionText {
+  font-size: 1rem;
+  color: #e2e8f0;
+  font-weight: 500;
+}
+
+.transactionTile {
+  width: 100%;
+  background: #334155;
+  font-size: 0.95rem;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.tileHeader {
+  padding: 12px;
+  text-align: center;
+  background: linear-gradient(90deg, #475569, #64748b);
+  font-weight: 600;
+  color: #e2e8f0;
+  width: 100%;
+}
+
+.tileContent {
+  padding: 12px;
+  width: 100%;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+}
+
+.transactionTile:hover .tileContent {
+  display: flex;
+}
+
+.tileMeta {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.transactionDate {
+  color: rgb(2, 245, 2);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.transactionAmount {
+  color: rgb(250, 3, 250);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.tileDetails {
+  text-align: center;
+  color: white;
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+
+.tileFooter {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 12px;
+}
+
+.transactionBalance {
+  color: rgb(203, 145, 232);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.quickSendContainer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 0 4px;
+  /* small side padding to match card feel without overflow */
+}
+
+.quickSendTitle {
+  color: #f59e0b;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  text-align: center;
+  margin: 0;
+}
+
+/* Recipient input – now flex layout to perfectly fit and prevent overflow */
+.quickRecipientWrapper {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: #475569;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  /* safety */
+}
+.recipientField {
+  margin-bottom: 16px;
+  min-height: 56px;          /* same as your .search / .amount height */
+  display: flex;
+  align-items: center;
+}
+
+.prefix {
+  padding: 0 16px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #475569;
+  color: #e2e8f0;
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.quickRecipientInput {
+  flex: 1;
+  min-width: 0;
+  /* allows shrinking in flex */
+  padding: 16px;
+  background: transparent;
+  color: #e2e8f0;
+  border: none;
+  font-size: 1.1rem;
+}
+
+/* Country dropdown – full width, consistent */
+.quickCountrySelect {
+  width: auto;
+  min-width: 110px;
+  padding: 16px 12px;
+  border-radius: 10px;
+  background: #475569;
+  color: #05c1f5;
+  border: none;
+  font-size: 1.05rem;
+  box-sizing: border-box;
+  border-right: 1px solid #64748b;
+}
+
+.phoneInput {
+  /* new class for the number input */
+  flex: 1;
+  /* take all remaining space */
+  min-width: 0;
+  padding: 16px 20px;
+  background: transparent;
+  color: #e2e8f0;
+  border: none;
+  font-size: 1.1rem;
+  outline: none;
+}
+
+.phoneInput::placeholder {
+  color: #94a3b8;
+}
+
+.phoneInput:focus {
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
+}
+
+/* Amounts row – equal width, no overflow */
+.quickAmounts {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+}
+
+.amountGroup {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: #475569;
+  border-radius: 10px;
+  padding: 0 16px;
+  overflow: hidden;
+  /* prevent long numbers from overflowing */
+  box-sizing: border-box;
+}
+
+.quickAmountInput {
+  flex: 1;
+  min-width: 0;
+  padding: 16px 8px;
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.quickAmountInput:focus {
+  outline: none;
+}
+
+.quickAmountInput[readOnly] {
+  opacity: 0.8;
+}
+
+.currencyLabel {
+  color: #94a3b8;
+  font-size: 1.1rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* Focus styles to match other inputs in the app */
+.quickRecipientInput:focus,
+.quickCountrySelect:focus,
+.quickAmountInput:focus {
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
+}
+
+/* Bottom left container – stacks Quick Actions + Groups on desktop */
+.bottomLeft {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* Groups widget – same styling as other cards */
+.divGroups {
+  background: linear-gradient(145deg, #334155, #475569);
+  padding: 20px;
+  border-radius: 12px;
+  color: #e2e8f0;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+}
+
+.divGroups:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.divGroups h4 {
+  text-align: center;
+  margin: 0 0 16px 0;
+  color: #f59e0b;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+/* Reuse transaction list styles for groups */
+.groupsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.groupItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: rgba(51, 65, 85, 0.6);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.groupItem:hover {
+  background: rgba(71, 85, 105, 0.8);
+}
+
+.arrowIcon {
+  color: #f59e0b;
+  font-size: 1.2rem;
+  margin-left: 8px;
+}
+
+.createGroup {
+  text-align: center;
+  color: #f59e0b;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 16px;
+  font-size: 1.1rem;
+  transition: color 0.3s ease;
+}
+
+.createGroup:hover {
+  color: #fbbf24;
+}
+
+.walletBalanceContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+  color: #f0f9ff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 20px;
+  font-weight: 600;
+  font-size: 1.4rem;
+  min-height: 58px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.balanceDisplay {
+  flex: 1;
+  text-align: center;
+  letter-spacing: 1.2px;
+  font-variant-numeric: tabular-nums;
+  /* better digit alignment */
+  transition: all 0.4s ease;
+}
+
+.balanceReveal,
+.balanceHidden {
+  display: inline-block;
+}
+
+/* ── Shown state ── */
+.balanceReveal {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: revealBalance 0.7s forwards ease-out;
+}
+
+/* Character-by-character reveal feel */
+@keyframes revealBalance {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+    filter: blur(4px);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translateY(0) scale(1.02);
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Hidden state ── */
+.balanceHidden {
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+}
+
+.hidden .balanceHidden {
+  letter-spacing: 1px;
+  opacity: 0.4;
+  filter: blur(3px);
+}
+
+.eyeToggle {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 8px 12px;
+  margin-left: 16px;
+  opacity: 0.85;
+  transition: all 0.2s ease;
+}
+
+.eyeToggle:hover {
+  opacity: 1;
+  transform: scale(1.2) rotate(8deg);
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+}
+
+.eyeIcon {
+  transition: transform 0.3s ease;
+}
+
+/* Optional: slight pulse when visible */
+.visible .eyeIcon {
+  animation: subtlePulse 2s infinite ease-in-out;
+}
+
+@keyframes subtlePulse {
+
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.mobileNavBar {
+  display: flex;
+  justify-content: space-around;
+  background: #2d3748;
+  border-radius: 12px;
+  padding: 10px 8px;
+  margin: 12px 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.navIconBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  flex: 1;
+  max-width: 85px;
+}
+
+.navIconBtn svg {
+  font-size: 1.4rem;
+}
+
+.navIconBtn.active,
+.navIconBtn:hover {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.15);
+}
+
+.dynamicBottomContent {
+  flex: 1;
+  min-height: 320px;
+}
+
+/*/////////////////////////////////////////////*/
+/* ============================================= */
+/*               MOBILE ONLY (< 1024px)         */
+/* ============================================= */
+@media (max-width: 1023px) {
+
+  /* Hide original card classes on mobile */
+  .userDetails,
+  .divQuick,
+  .divGroups,
+  .divTransactions {
+    display: none !important;
+  }
+
+  /* Ensure dynamic content is visible and takes space */
+  .dynamicBottomContent {
+    display: block !important;
+    min-height: 400px;
+  }
+
+  .homeDashboard {
+    display: flex !important;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .walletButtons {
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .actionBtn {
+    flex: 1 1 45%;
+    min-width: 140px;
+  }
+
+  /* Make nav bar more visible */
+  .mobileNavBar {
+    display: flex !important;
+    margin: 16px 0;
+  }
+}
+
+/* ============================================= */
+/*               DESKTOP ONLY (≥ 1024px)        */
+/* ============================================= */
+@media (min-width: 1024px) {
+
+  /* Hide mobile-only elements */
+  .mobileNavBar {
+    display: none !important;
+  }
+
+  .dynamicBottomContent {
+    display: none !important;
+  }
+
+  /* Force full grid layout */
+  .homeDashboard {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 20px !important;
+    padding: 0 !important;
+  }
+
+  /* Explicitly restore and position EVERY original card */
+  .divWallet {
+    display: block !important;
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .userDetails {
+    display: block !important;
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .divQuick {
+    display: block !important;
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .divGroups {
+    display: block !important;
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .divTransactions {
+    display: block !important;
+    grid-column: 2;
+    grid-row: 2 / 4;
+  }
+}
+
+/* ────────────────────────────────────────────── */
+/* FIXES for mobile + desktop layout conflict     */
+/* Add this at the VERY END of Home.module.css    */
+/* ────────────────────────────────────────────── */
+
+/* 1. Mobile: make sure dynamic content is visible + has space */
+@media (max-width: 1023px) {
+  .dynamicBottomContent {
+    display: block !important;
+    min-height: 50vh;
+    /* ← forces height so you see something */
+    background: #2d3748;
+    /* ← temporary debug color – remove later */
+    border-radius: 12px;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+
+  /* Ensure nav is always visible on mobile */
+  .mobileNavBar {
+    display: flex !important;
+  }
+}
+
+/* 2. Desktop: force ALL original cards to show + position correctly */
+@media (min-width: 1024px) {
+
+  /* Hide mobile stuff */
+  .mobileNavBar,
+  .dynamicBottomContent {
+    display: none !important;
+  }
+
+  /* Make sure ALL cards are visible */
+  .userDetails,
+  .divQuick,
+  .divGroups,
+  .divTransactions {
+    display: block !important;
+  }
+
+  /* Reinforce grid (your existing rule + !important for override) */
+  .homeDashboard {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 16px !important;
+    padding: 0 !important;
+  }
+
+  .divWallet {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .userDetails {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .divQuick {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .divGroups {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .divTransactions {
+    grid-column: 2;
+    grid-row: 2 / 4;
+  }
+}
+
+/* ────────────────────────────────────────────── */
+/* FINAL OVERRIDES — replace the previous fix blocks with this */
+/* Place at the VERY END of Home.module.css       */
+/* ────────────────────────────────────────────── */
+
+/* Mobile: unhide cards ONLY when inside dynamic content + nice styling */
+@media (max-width: 1023px) {
+
+  /* Targeted unhide for dynamic content children */
+  .dynamicBottomContent .userDetails,
+  .dynamicBottomContent .divQuick,
+  .dynamicBottomContent .divGroups,
+  .dynamicBottomContent .divTransactions {
+    display: block !important;
+  }
+
+  .dynamicBottomContent {
+    display: block !important;
+    min-height: 60vh !important;
+    /* generous space */
+    background: #2d3748;
+    /* remove later if you don't like */
+    border-radius: 12px;
+    padding: 20px;
+    margin: 16px 0;
+    box-sizing: border-box;
+  }
+
+  .mobileNavBar {
+    display: flex !important;
+    margin: 20px 0 16px;
+  }
+}
+
+/* Desktop: stronger force-show + grid reinforcement */
+@media (min-width: 1024px) {
+
+  /* Hide mobile elements */
+  .mobileNavBar,
+  .dynamicBottomContent {
+    display: none !important;
+  }
+
+  /* Force ALL dashboard cards visible (override any !important hide) */
+  .userDetails,
+  .divQuick,
+  .divGroups,
+  .divTransactions,
+  .divWallet {
+    display: block !important;
+  }
+
+  /* Reinforce grid layout */
+  .homeDashboard {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 24px !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  /* Explicit grid positions with !important */
+  .divWallet {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+
+  .userDetails {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+  }
+
+  .divQuick {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+  }
+
+  .divGroups {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+  }
+
+  .divTransactions {
+    grid-column: 2 !important;
+    grid-row: 2 / 4 !important;
+  }
+}
+
+/* Hide desktop cards on mobile */
+@media (max-width: 1023px) {
+  .desktopCards {
+    display: none !important;
+  }
+}
+
+/* Hide mobile dynamic content on desktop */
+@media (min-width: 1024px) {
+  .dynamicBottomContent {
+    display: none !important;
+  }
+
+  .mobileNavBar {
+    display: none !important;
+  }
+}
+
+/* Make sure desktop cards are positioned correctly */
+@media (min-width: 1024px) {
+
+  /* Remove wrapper if you added .desktopCards – or don't use wrapper at all */
+  .desktopCards {
+    display: contents;
+    /* lets children participate directly in parent grid */
+  }
+
+  /* Force correct placement – these override anything else */
+  .divWallet {
+    grid-area: 1 / 1 / 2 / 2 !important;
+  }
+
+  .userDetails {
+    grid-area: 1 / 2 / 2 / 3 !important;
+  }
+
+  .divQuick {
+    grid-area: 2 / 1 / 3 / 2 !important;
+  }
+
+  .divGroups {
+    grid-area: 3 / 1 / 4 / 2 !important;
+  }
+
+  .divTransactions {
+    grid-area: 2 / 2 / 4 / 3 !important;
+  }
+
+  /* spans 3 rows */
+}
+
+.loadingItem,
+.errorItem {
+  padding: 14px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.recipient {
+  position: relative;
+  width: 100%;
+  height: 56px;
+  /* fixed height prevents shifting */
+}
+
+.search {
+  width: 100%;
+  height: 56px;
+  padding: 0 70px 0 60px !important;
+  /* left: icon space, right: avatar space */
+  border-radius: 12px;
+  background: #475569;
+  color: #e2e8f0;
+  border: none;
+  font-size: 1.05rem;
+  box-sizing: border-box;
+  line-height: 56px;
+}
+
+.searchIcon {
+  position: absolute !important;
+  left: 20px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  color: #f59e0b !important;
+  font-size: 1.4rem !important;
+  pointer-events: none !important;
+  z-index: 5 !important;
+  /* below avatar */
+}
+
+.recipient:focus-within .searchIcon,
+.recipient:has(input:not(:placeholder-shown)) .searchIcon {
+  color: #fbbf24 !important;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.7));
+}
+
+.userAvatarWrapper {
+  position: absolute !important;
+  right: 10px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 35px !important;
+  height: 35px !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  cursor: pointer !important;
+  background: #334155 !important;
+  /* dark background */
+  border: 2.5px solid #f59e0b !important;
+  /* gold border like before */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  transition: all 0.25s ease !important;
+  z-index: 20 !important;
+}
+
+.userAvatarWrapper:hover {
+  transform: translateY(-50%) scale(1.1) !important;
+  box-shadow: 0 0 0 5px rgba(28, 25, 20, 0.35) !important;
+  background: #475569 !important;
+}
+
+.addUserIcon {
+  font-size: 1.2rem !important;
+  /* slightly bigger than before */
+  color: #f59e0b !important;
+  /* gold color to match theme */
+  transition: all 0.2s ease;
+}
+
+.userAvatarWrapper:hover .addUserIcon {
+  transform: scale(1.1);
+  color: #fbbf24 !important;
+  /* brighter on hover */
+}
+
+.userAvatarInSearch {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+  display: block !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 15 !important;
+}
+
+.userInitials {
+  position: absolute !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: linear-gradient(135deg, #f59e0b, #fbbf24) !important;
+  color: #1e293b !important;
+  font-weight: 900 !important;
+  font-size: 1.6rem !important;
+  border-radius: 50% !important;
+  z-index: 5 !important;
+}
+
+.recipientTypeTabs {
+  display: flex;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #475569;
+}
+
+
+
+.fieldLabel {
+  color: #e2e8f0;
+  font-size: 1rem;
+  margin-bottom: 6px;
+  display: block;
+  font-weight: 500;
+}
+
+.fieldError {
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin-top: 4px;
+  display: block;
+}
+
+.inputError {
+  border: 1px solid #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+.recipientTypeTabs {
+  display: flex;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #475569;
+  gap: 8px;
+  /* small gap between tabs */
+}
+
+.tabButton {
+  flex: 1;
+  padding: 12px 8px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  transition: color 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.tabButton.active {
+  color: #f59e0b;
+  border-bottom: 3px solid #f59e0b;
+}
+
+.tabIconWrapper {
+  font-size: 1.4rem;
+}
+
+.tabButton span {
+  font-size: 0.95rem;
+}
+
+.tabIcon {
+  font-size: 1.5rem;
+  color: #e2e8f0;
+  transition: color 0.25s ease;
+}
+
+.tabButton:hover .tabIcon {
+  color: #fbbf24 !important;
+}
+
+.tabButton.activeTab .tabIcon {
+  color: #f59e0b !important;
+}
+
+.tabButton.activeTab {
+  color: #f59e0b;
+  border-bottom: 3px solid #f59e0b;
+}
+
+.tabButton:hover {
+  background: rgba(245, 158, 11, 0.08);
+  border-radius: 8px 8px 0 0;
+  color: #e2e8f0;
+}
+
+.tabButton:disabled {
+  color: #475569;
+  cursor: not-allowed;
+}

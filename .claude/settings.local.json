@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(run)",
+      "Bash(npm ls *)",
+      "Bash(find / -maxdepth 6 -iname \"*playwright*\")",
+      "Bash(npm --version)",
+      "Bash(timeout 5 curl -sI https://registry.npmjs.org)"
+    ]
+  }
+}

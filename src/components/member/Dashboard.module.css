@@ -1,0 +1,494 @@
+/* ── Design tokens from App.js ── */
+:root {
+  --gold: #ecc94b;
+  --gold-dark: #d6b02e;
+  --gold-pale: rgba(236, 201, 75, 0.12);
+  --gold-border: rgba(236, 201, 75, 0.3);
+  --bg: #0d1117;
+  --card: #1f2937;
+  --card2: #131c2e;
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-mid: rgba(255, 255, 255, 0.12);
+  --white: #f9fafb;
+  --muted: #6b7280;
+  --soft: #9ca3af;
+  --green: #4ade80;
+  --blue: #60a5fa;
+
+  --topbar-height: 80px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── App shell ── */
+.appDashboard {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      ellipse 900px 500px at 50% -10%,
+      rgba(236, 201, 75, 0.08),
+      transparent 60%
+    ),
+    var(--bg);
+  color: var(--white);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+  overflow-x: hidden;
+}
+
+.mainWrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100vh;
+  padding-bottom: 100px; /* Space for floating dock */
+}
+
+/* ════════════════════════════════════════
+   TOP BAR (Simplified)
+   ════════════════════════════════════════ */
+.topBar {
+  height: var(--topbar-height);
+  background: rgba(13, 17, 23, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4%;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  gap: 2rem;
+  width: 100%;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.topBarLeft {
+  display: flex;
+  align-items: center;
+}
+
+.logoSection {
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.appLogo {
+  height: 2.2rem;
+  width: auto;
+  display: block;
+}
+
+.topBarRight {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.searchContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 280px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 14px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: 2rem;
+  padding: 0.55rem 1rem 0.55rem 2.8rem;
+  color: var(--white);
+  font-size: 0.85rem;
+  outline: none;
+  transition: all var(--transition);
+}
+
+.searchInput:focus {
+  border-color: var(--gold-border);
+  width: 320px;
+}
+
+.topBarActions {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.notificationWrapper {
+  position: relative;
+  cursor: pointer;
+  color: var(--muted);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+}
+
+.notificationWrapper:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--white);
+}
+
+.notificationBadge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background-color: var(--gold);
+  color: #000;
+  font-size: 9px;
+  font-weight: 800;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.userAvatarWrapper {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  overflow: visible;
+  border: 2px solid var(--gold-border);
+  transition: border-color var(--transition);
+}
+
+.userInfo:hover .userAvatarWrapper {
+  border-color: var(--gold);
+}
+
+.userAvatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  object-fit: cover;
+  transition: transform var(--transition);
+}
+
+.chevronIcon {
+  color: var(--muted);
+}
+
+/* ════════════════════════════════════════
+   USER DROPDOWN
+   ════════════════════════════════════════ */
+.userDropdown {
+  position: absolute;
+  top: calc(100% + 15px);
+  right: 0;
+  background: var(--card);
+  border-radius: var(--radius-md);
+  min-width: 220px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
+  padding: 0.6rem;
+  border: 1px solid var(--border-mid);
+  z-index: 200;
+  animation: dropIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dropdownHeader {
+  padding: 0.8rem 1.2rem;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 0.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdownName {
+  font-weight: 700;
+  color: var(--white);
+  font-size: 0.95rem;
+}
+
+.dropdownRole {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.dropdownItem {
+  padding: 0.75rem 1rem;
+  color: var(--white);
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all var(--transition);
+}
+
+.dropdownItem:hover {
+  background-color: var(--gold-pale);
+  color: var(--gold);
+}
+
+.dropdownIcon {
+  margin-right: 12px;
+  opacity: 0.7;
+}
+
+.dropdownItem.logout {
+  color: #ef4444;
+  margin-top: 4px;
+}
+
+.dropdownItem.logout:hover {
+  background-color: rgba(239, 68, 68, 0.08);
+}
+
+@keyframes dropIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ════════════════════════════════════════
+   MAIN CONTENT
+   ════════════════════════════════════════ */
+.mainContent {
+  flex: 1;
+  padding: 2rem 0;
+}
+
+.contentContainer {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 4%;
+}
+
+/* ════════════════════════════════════════
+   CREATIVE FLOATING DOCK
+   ════════════════════════════════════════ */
+.floatingDock {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  z-index: 1000;
+  width: auto;
+  min-width: 360px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease,
+    visibility 0s linear 0.3s;
+}
+
+.floatingDock.dockVisible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+
+.dockInner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1.5rem;
+  background: rgba(19, 28, 46, 0.18);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.5rem;
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+/* Once the page scrolls, the dock picks up a real (still restrained, not
+   glowing) background so it stays legible over whatever content passes
+   beneath it. The blur is identical in both states — only the tint and
+   border strengthen. */
+.dockScrolled .dockInner {
+  background: rgba(19, 28, 46, 0.85);
+  border: 1px solid var(--border-mid);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.dockItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0.55rem 1.2rem 0.45rem;
+  border-radius: 1.5rem;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dockItem:hover {
+  color: var(--white);
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-3px);
+}
+
+.dockItem.active {
+  color: var(--gold);
+  background: var(--gold-pale);
+  border-radius: 1rem;
+}
+
+.dockLabel {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  height: 0.65rem;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.dockItem:hover .dockLabel,
+.dockItem.active .dockLabel {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ════════════════════════════════════════
+   RESPONSIVE
+   ════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .topBar {
+    padding: 0 1.5rem;
+  }
+  .searchContainer {
+    display: none;
+  }
+  .mainContent {
+    padding: 1rem 0;
+  }
+  .floatingDock {
+    bottom: 1.5rem;
+    width: 90%;
+    min-width: unset;
+    max-width: 400px;
+  }
+  .dockInner {
+    justify-content: space-around;
+    padding: 0.6rem;
+    gap: 0.4rem;
+  }
+  .dockItem {
+    padding: 0.6rem;
+  }
+  .dockLabel {
+    display: none;
+  }
+}
+
+/* ════════════════════════════════════════
+   PLACEHOLDER PAGE
+   ════════════════════════════════════════ */
+.placeholderPage {
+  text-align: center;
+  padding: 6rem 1rem;
+  background: var(--card2);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  max-width: 800px;
+  margin: 2rem auto;
+}
+
+.accentText {
+  color: var(--gold);
+  margin-bottom: 1rem;
+}
+.mutedText {
+  color: var(--muted);
+  margin-bottom: 2rem;
+}
+
+.backBtn {
+  padding: 0.8rem 2rem;
+  background: var(--gold);
+  border: none;
+  border-radius: 3rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.backBtn:hover {
+  background: var(--gold-dark);
+  transform: translateY(-2px);
+}
+
+/* ════════════════════════════════════════
+   LOADING
+   ════════════════════════════════════════ */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: var(--bg);
+  color: var(--muted);
+}
+
+.loader {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--card);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pageWrap {
+  background-color: var(--bg);
+}

@@ -1,0 +1,627 @@
+.homeContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+/* Balance Section */
+.balanceSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.balanceHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 0.75rem;
+}
+
+.balanceLabel {
+  color: var(--soft);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.eyeButton {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.eyeButton:hover {
+  color: var(--white);
+}
+
+.balanceValue {
+  font-size: clamp(2.5rem, 6vw, 3.75rem);
+  font-weight: 900;
+  color: var(--gold);
+  letter-spacing: -2px;
+  margin: 0 0 2rem 0;
+  display: flex;
+  align-items: baseline;
+  text-shadow: 0 0 40px rgba(236, 201, 75, 0.25);
+}
+.bodyContainer {
+  background: linear-gradient(180deg, var(--card2), var(--card));
+  width: min(600px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2.5rem 2rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-mid);
+  box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.5);
+}
+
+.currency {
+  margin-right: 0.6rem;
+  opacity: 0.75;
+  font-size: 0.55em;
+  align-self: flex-start;
+  margin-top: 0.35em;
+}
+
+/* Action Grid */
+.actionGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+  width: 100%;
+  max-width: 600px;
+}
+
+.actionBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: none;
+  color: var(--white);
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+}
+
+.actionBtn:hover {
+  transform: translateY(-5px);
+}
+
+.actionBtn span {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--soft);
+}
+
+.actionBtn:hover span {
+  color: var(--white);
+}
+
+.actionIcon {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.bgGold {
+  background: rgba(236, 201, 75, 0.15);
+  color: var(--gold);
+  border: 1px solid rgba(236, 201, 75, 0.3);
+}
+.bgBlue {
+  background: rgba(96, 165, 250, 0.15);
+  color: var(--blue);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+}
+.bgGreen {
+  background: rgba(74, 222, 128, 0.15);
+  color: var(--green);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+.bgPink {
+  background: rgba(244, 114, 182, 0.15);
+  color: #f472b6;
+  border: 1px solid rgba(244, 114, 182, 0.3);
+}
+
+.actionBtn:hover .actionIcon {
+  transform: scale(1.1);
+}
+
+.actionBtn:hover .bgGold {
+  background: var(--gold);
+  color: #000;
+}
+.actionBtn:hover .bgBlue {
+  background: var(--blue);
+  color: #000;
+}
+.actionBtn:hover .bgGreen {
+  background: var(--green);
+  color: #000;
+}
+.actionBtn:hover .bgPink {
+  background: #f472b6;
+  color: #000;
+}
+
+/* Active state — the button for whichever flow is currently open. Stays
+   visually "on" using the same solid look as :hover, plus a soft glow ring,
+   so it reads as a persistent toggle rather than a momentary hover. */
+.actionBtnActive span {
+  color: var(--white);
+}
+
+.actionBtnActive .actionIcon {
+  transform: scale(1.05);
+}
+
+.actionBtnActive .bgGold {
+  background: var(--gold);
+  color: #000;
+  box-shadow:
+    0 0 0 4px rgba(236, 201, 75, 0.25),
+    0 10px 20px rgba(0, 0, 0, 0.25);
+}
+
+.actionBtnActive .bgBlue {
+  background: var(--blue);
+  color: #000;
+  box-shadow:
+    0 0 0 4px rgba(96, 165, 250, 0.25),
+    0 10px 20px rgba(0, 0, 0, 0.25);
+}
+
+.actionBtnActive .bgGreen {
+  background: var(--green);
+  color: #000;
+  box-shadow:
+    0 0 0 4px rgba(74, 222, 128, 0.25),
+    0 10px 20px rgba(0, 0, 0, 0.25);
+}
+
+.actionBtnActive .bgPink {
+  background: #f472b6;
+  color: #000;
+  box-shadow:
+    0 0 0 4px rgba(244, 114, 182, 0.25),
+    0 10px 20px rgba(0, 0, 0, 0.25);
+}
+
+.displayWindow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Overview Section */
+.overviewSection {
+  background: var(--card2);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  padding: 2rem;
+  animation: flowFadeIn 0.25s ease;
+  width: min(600px, 100%);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px -24px rgba(0, 0, 0, 0.5);
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.sectionHeader h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.viewAllBtn {
+  background: none;
+  border: none;
+  color: var(--gold);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.2s;
+}
+
+.viewAllBtn:hover {
+  opacity: 0.8;
+}
+
+.transactionList {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.transactionItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 0.75rem;
+  margin: 0 -0.75rem;
+  border-radius: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.2s ease;
+}
+
+.transactionItem:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.transactionItem:last-child {
+  border-bottom: none;
+}
+
+.txLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.txIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bgSuccess {
+  background: rgba(74, 222, 128, 0.1);
+  color: var(--green);
+}
+.bgDanger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.txInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.txName {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.txDate {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.txRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.txAmount {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.textSuccess {
+  color: var(--green);
+}
+.textDanger {
+  color: #ef4444;
+}
+
+.txStatus {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .balanceValue {
+    font-size: 3.5rem;
+  }
+
+  /* Turn the 4 actions into a horizontally-scrollable tab strip that
+     sticks to the top of the viewport. On a small screen the flow panels
+     below can get tall (long forms, groups list), so keeping this
+     reachable without scrolling back up lets you jump straight between
+     Add Money / Withdraw / Send / Groups mid-scroll. */
+  .actionGrid {
+    display: flex;
+    grid-template-columns: unset;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 0.75rem;
+    max-width: 100%;
+    padding: 0.75rem 0.5rem;
+    margin: 0 -0.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: rgba(19, 28, 46, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+    scrollbar-width: none;
+  }
+
+  .actionGrid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .actionBtn {
+    flex: 0 0 auto;
+    min-width: 76px;
+  }
+
+  .actionBtn:hover {
+    transform: none;
+  }
+
+  .actionIcon {
+    width: 50px;
+    height: 50px;
+  }
+
+  .actionBtn span {
+    font-size: 0.8rem;
+  }
+}
+
+.heroTitle {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  color: var(--gold);
+  text-align: center;
+  opacity: 0.85;
+  margin: 0;
+}
+
+/* ═══════════════════════════════════════
+   INLINE FLOWS
+   Add Money / Withdraw / Send / Groups panels that replace the dashboard
+   view inside Home. Mirrors .overviewSection's card language (same
+   background, radius, border) so it reads as part of the same page.
+═══════════════════════════════════════ */
+.flowSection {
+  background: var(--card2);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  animation: flowFadeIn 0.25s ease;
+}
+
+@keyframes flowFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.flowHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.flowHeader h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  color: var(--gold);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+}
+
+.backBtn:hover {
+  opacity: 0.75;
+}
+
+.flowForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.formLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: -0.7rem;
+}
+
+.formInput {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border-mid);
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: var(--white);
+  font-size: 1rem;
+  font-family: inherit;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.formInput::placeholder {
+  color: var(--muted);
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: var(--gold);
+  background: var(--card2);
+}
+
+.primaryBtn {
+  background: var(--gold);
+  color: #000;
+  border: none;
+  border-radius: 14px;
+  padding: 14px 20px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.2s;
+  margin-top: 0.25rem;
+}
+
+.primaryBtn:hover {
+  transform: translateY(-2px);
+}
+
+.primaryBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.favouriteList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: -0.6rem;
+}
+
+.favouriteChip {
+  background: var(--card);
+  border: 1px solid var(--border-mid);
+  color: var(--white);
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
+}
+
+.favouriteChip:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.inlineFormRow {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.inlineFormRow .formInput {
+  flex: 1;
+}
+
+.inlineFormRow .primaryBtn {
+  flex-shrink: 0;
+  margin-top: 0;
+  white-space: nowrap;
+}
+
+.groupsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 0.5rem;
+}
+
+.mutedText {
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+@media (max-width: 640px) {
+  .flowSection {
+    padding: 1.5rem 1.25rem;
+    gap: 1.5rem;
+  }
+
+  .flowForm {
+    max-width: 100%;
+  }
+
+  .inlineFormRow {
+    flex-direction: column;
+  }
+
+  .inlineFormRow .primaryBtn {
+    width: 100%;
+  }
+}
+
+.heroHeadline {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -1px;
+  color: var(--white);
+  max-width: 520px;
+  margin: 0.75rem 0 1rem;
+}
+
+.accent {
+  color: var(--gold);
+}
+
+.heroSub {
+  font-size: 1.05rem;
+  color: var(--muted);
+  max-width: 420px;
+  line-height: 1.6;
+  margin: 0 0 2.5rem;
+}

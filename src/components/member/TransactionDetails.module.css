@@ -1,0 +1,401 @@
+/* ═══════════════════════════════════════
+   TRANSACTION DETAILS MODAL
+   Premium styled modal for viewing transaction details with
+   receipt download functionality and Payzarc branding
+═══════════════════════════════════════ */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(6, 8, 14, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: overlayFade 0.3s ease;
+}
+
+@keyframes overlayFade {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(6px);
+  }
+}
+
+.modalContent {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: linear-gradient(135deg, #1f2937 0%, #1a2332 100%);
+  border: 0.5px solid rgba(236, 201, 75, 0.12);
+  border-radius: 24px;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(236, 201, 75, 0.04);
+  padding: 0;
+  animation: contentSlideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes contentSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scrollbar styling */
+.modalContent::-webkit-scrollbar {
+  width: 6px;
+}
+.modalContent::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+.modalContent::-webkit-scrollbar-thumb {
+  background: rgba(236, 201, 75, 0.25);
+  border-radius: 3px;
+}
+.modalContent::-webkit-scrollbar-thumb:hover {
+  background: rgba(236, 201, 75, 0.4);
+}
+
+/* Modal Header */
+.modalHeader {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 1.75rem;
+  background: linear-gradient(
+    135deg,
+    rgba(28, 35, 51, 0.95),
+    rgba(26, 35, 50, 0.95)
+  );
+  border-bottom: 0.5px solid rgba(236, 201, 75, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.modalHeaderLeft h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.3px;
+}
+
+.closeButton {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(236, 201, 75, 0.08);
+  border: 0.5px solid rgba(236, 201, 75, 0.15);
+  border-radius: 50%;
+  color: #9ca3af;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.closeButton:hover {
+  background: rgba(236, 201, 75, 0.15);
+  color: #ececb4;
+  transform: rotate(90deg);
+}
+
+/* Modal Image Container */
+.modalImageContainer {
+  padding: 1.5rem 1.75rem 1rem;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
+}
+
+.modalImage {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(236, 201, 75, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  animation: imageScale 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes imageScale {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Details Table */
+.detailsTable {
+  width: 100%;
+  border-collapse: collapse;
+  padding: 0 1.75rem;
+}
+
+.detailsTable tbody {
+  display: block;
+  padding: 1.5rem 0;
+}
+
+.detailsTable tr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 0;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.06);
+  transition: background 0.2s ease;
+}
+
+.detailsTable tr:last-child {
+  border-bottom: none;
+}
+
+.detailsTable tr:hover {
+  background: rgba(236, 201, 75, 0.04);
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  border-radius: 6px;
+  margin: 0 -0.5rem;
+}
+
+.detailsTable th {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.detailsTable td {
+  font-size: 14px;
+  font-weight: 500;
+  color: #f3f4f6;
+  text-align: right;
+  word-break: break-word;
+}
+
+.amountCell {
+  color: #ececb4;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+/* Status Badge */
+.statusBadge {
+  display: inline-block;
+  padding: 0.4rem 0.85rem;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.statusBadge:hover {
+  transform: scale(1.05);
+}
+
+.statusPaid,
+.statusSent {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 0.5px solid rgba(34, 197, 94, 0.3);
+}
+
+.statusReceived {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border: 0.5px solid rgba(59, 130, 246, 0.3);
+}
+
+.statusPending {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+  border: 0.5px solid rgba(251, 146, 60, 0.3);
+}
+
+/* Flag Container */
+.flagContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.flagEmoji {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.countryName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f3f4f6;
+}
+
+/* Modal Actions */
+.modalActions {
+  display: flex;
+  gap: 0.85rem;
+  padding: 1.5rem 1.75rem;
+  border-top: 0.5px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.downloadButton,
+.closeActionButton {
+  flex: 1;
+  padding: 0.85rem 1.25rem;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.downloadButton {
+  background: linear-gradient(135deg, #ececb4, #d4af37);
+  color: #1a1a1a;
+  box-shadow: 0 4px 12px rgba(236, 201, 75, 0.25);
+}
+
+.downloadButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(236, 201, 75, 0.35);
+}
+
+.downloadButton:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.downloadButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.downloadButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+.closeActionButton {
+  background: rgba(255, 255, 255, 0.08);
+  color: #d1d5db;
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+}
+
+.closeActionButton:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f3f4f6;
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .modalOverlay {
+    padding: 0.75rem;
+  }
+
+  .modalContent {
+    max-width: 100%;
+    border-radius: 20px;
+  }
+
+  .modalHeader {
+    padding: 1.25rem 1.5rem;
+  }
+
+  .modalImageContainer {
+    padding: 1.25rem 1.5rem 0.85rem;
+  }
+
+  .detailsTable {
+    padding: 0 1.5rem;
+  }
+
+  .detailsTable tr {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 0.75rem 0;
+  }
+
+  .detailsTable td {
+    text-align: left;
+  }
+
+  .modalActions {
+    padding: 1.25rem 1.5rem;
+    flex-direction: column;
+  }
+
+  .downloadButton,
+  .closeActionButton {
+    width: 100%;
+  }
+}
+
+@media (max-width: 400px) {
+  .modalImageContainer {
+    padding: 1rem 1.25rem 0.75rem;
+  }
+
+  .modalImage {
+    width: 70px;
+    height: 70px;
+  }
+
+  .detailsTable {
+    padding: 0 1.25rem;
+  }
+
+  .detailsTable th {
+    font-size: 11px;
+  }
+
+  .detailsTable td {
+    font-size: 13px;
+  }
+
+  .modalHeader h3 {
+    font-size: 16px;
+  }
+
+  .downloadButton,
+  .closeActionButton {
+    padding: 0.75rem 1rem;
+    font-size: 12px;
+  }
+}
