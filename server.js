@@ -4,6 +4,8 @@ const url = require("url");
 
 const dbPath = "dummy_db.json";
 
+const saveDb = (db) => fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+
 const server = http.createServer((req, res) => {
   // Re-read DB on every request to ensure it's fresh
   let db;
@@ -38,14 +40,24 @@ const server = http.createServer((req, res) => {
   req.on("end", () => {
     console.log(`${req.method} ${path}`);
 
+    let parsedBody = {};
+    try {
+      parsedBody = body ? JSON.parse(body) : {};
+    } catch (e) {
+      parsedBody = {};
+    }
+
     // Auth & Dashboard Endpoints
     if (
       req.method === "POST" &&
       (normalizedPath === "/api/resolve-username" ||
         normalizedPath === "/resolve-username")
     ) {
+      const matches =
+        (parsedBody.username || "").toLowerCase() ===
+        db.profile[0].username.toLowerCase();
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ email: db.profile[0].email }));
+      res.end(JSON.stringify(matches ? { email: db.profile[0].email } : {}));
       return;
     }
 
@@ -53,6 +65,20 @@ const server = http.createServer((req, res) => {
       req.method === "POST" &&
       (normalizedPath === "/api/login" || normalizedPath === "/login")
     ) {
+      // Resend-OTP calls this same endpoint with password: "resend" — let
+      // those through without re-checking credentials.
+      const isResend = parsedBody.password === "resend";
+      const emailMatches =
+        (parsedBody.email || "").toLowerCase() ===
+        db.profile[0].email.toLowerCase();
+      const passwordMatches = parsedBody.password === db.profile[0].password;
+
+      if (!isResend && !(emailMatches && passwordMatches)) {
+        res.writeHead(401, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Incorrect username or password" }));
+        return;
+      }
+
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -98,6 +124,33 @@ const server = http.createServer((req, res) => {
       return;
     }
 
+    // Only contact/address fields are editable here — identity fields
+    // (name, DOB, ID, etc.) are KYC data and aren't meant to be freely
+    // self-edited in a real fintech app, so this endpoint ignores them even
+    // if sent.
+    if (
+      req.method === "POST" &&
+      (normalizedPath === "/api/profile-details" ||
+        normalizedPath === "/profile-details")
+    ) {
+      const editableFields = [
+        "phone",
+        "email",
+        "addressLine",
+        "townCity",
+        "postalCode",
+      ];
+      editableFields.forEach((field) => {
+        if (parsedBody[field] !== undefined) {
+          db.profile[0][field] = parsedBody[field];
+        }
+      });
+      saveDb(db);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(db.profile[0]));
+      return;
+    }
+
     if (
       req.method === "GET" &&
       (normalizedPath === "/api/secondary-contacts" ||
@@ -134,6 +187,16 @@ const server = http.createServer((req, res) => {
     ) {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(db.my_contact[0]));
+      return;
+    }
+
+    if (
+      req.method === "GET" &&
+      (normalizedPath === "/api/notifications" ||
+        normalizedPath === "/notifications")
+    ) {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(db.notifications || []));
       return;
     }
 
@@ -195,12 +258,21 @@ const server = http.createServer((req, res) => {
       return;
     }
 
-    // Settings Endpoints
+    // Settings Endpoints — a real two-step flow: /init checks the current
+    // password and stashes the requested new one; /verify (any 6-char code,
+    // since there's no real email/SMS provider here) applies it.
     if (
       req.method === "POST" &&
       (normalizedPath === "/api/change-password/init" ||
         normalizedPath === "/change-password/init")
     ) {
+      if (parsedBody.currentPassword !== db.profile[0].password) {
+        res.writeHead(401, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Current password is incorrect" }));
+        return;
+      }
+      db.pending_password_change = parsedBody.newPassword;
+      saveDb(db);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ success: true }));
       return;
@@ -211,8 +283,86 @@ const server = http.createServer((req, res) => {
       (normalizedPath === "/api/change-password/verify" ||
         normalizedPath === "/change-password/verify")
     ) {
+      if (!db.pending_password_change) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "No password change in progress" }));
+        return;
+      }
+      db.profile[0].password = db.pending_password_change;
+      delete db.pending_password_change;
+      saveDb(db);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ success: true }));
+      return;
+    }
+
+    // Payment Methods Endpoints (banks/cards linked from Profile, offered
+    // as funding sources by Add Money)
+    if (
+      req.method === "GET" &&
+      (normalizedPath === "/api/payment-methods" ||
+        normalizedPath === "/payment-methods")
+    ) {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(db.payment_methods));
+      return;
+    }
+
+    if (
+      req.method === "POST" &&
+      (normalizedPath === "/api/payment-methods/banks" ||
+        normalizedPath === "/payment-methods/banks")
+    ) {
+      const bank = {
+        id: Date.now(),
+        bankName: parsedBody.bankName,
+        accountNumber: parsedBody.accountNumber,
+        accountName: parsedBody.accountName,
+      };
+      db.payment_methods.banks.push(bank);
+      saveDb(db);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(db.payment_methods.banks));
+      return;
+    }
+
+    if (
+      req.method === "POST" &&
+      (normalizedPath === "/api/payment-methods/cards" ||
+        normalizedPath === "/payment-methods/cards")
+    ) {
+      // Only the last 4 digits are ever persisted — never store a full PAN,
+      // even in a mock DB.
+      const digits = String(parsedBody.cardNumber || "").replace(/\D/g, "");
+      const card = {
+        id: Date.now(),
+        brand: "Visa",
+        last4: digits.slice(-4),
+        cardholderName: parsedBody.cardholderName,
+        expiry: parsedBody.expiry,
+      };
+      db.payment_methods.cards.push(card);
+      saveDb(db);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(db.payment_methods.cards));
+      return;
+    }
+
+    if (
+      req.method === "POST" &&
+      (normalizedPath === "/api/payment-methods/mobile-money" ||
+        normalizedPath === "/payment-methods/mobile-money")
+    ) {
+      const mobileMoneyAccount = {
+        id: Date.now(),
+        provider: parsedBody.provider,
+        phoneNumber: parsedBody.phoneNumber,
+      };
+      db.payment_methods.mobileMoney = db.payment_methods.mobileMoney || [];
+      db.payment_methods.mobileMoney.push(mobileMoneyAccount);
+      saveDb(db);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(db.payment_methods.mobileMoney));
       return;
     }
 

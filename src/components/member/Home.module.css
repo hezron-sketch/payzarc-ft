@@ -9,6 +9,7 @@
 
 /* Balance Section */
 .balanceSection {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -47,7 +48,7 @@
 
 .balanceValue {
   font-size: clamp(2.5rem, 6vw, 3.75rem);
-  font-weight: 900;
+  font-weight: 700;
   color: var(--gold);
   letter-spacing: -2px;
   margin: 0 0 2rem 0;
@@ -55,15 +56,44 @@
   align-items: baseline;
   text-shadow: 0 0 40px rgba(236, 201, 75, 0.25);
 }
+/* Chrome now lives on the shared .balanceFlowWrap — this just lays out the
+   balance panel's own content and padding. */
 .bodyContainer {
-  background: var(--border-mid);
-  width: min(600px, 100%);
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 2.5rem 2rem;
+  background: var(--card);
+  border-radius: var(--radius-md);
+}
+
+/* Gives the flow section its own surface color when it's nested inside
+   .balanceFlowWrap (Home.js), matching .bodyContainer's tone so the two
+   read as distinct content cards sitting inside the translucent outer
+   shell, instead of everything being the same flat color. */
+.nestedCard {
+  background: var(--card);
+  border-radius: var(--radius-md);
+}
+
+/* One card — background + blur — shared by the balance panel and whichever
+   flow (Add Money/Withdraw/Send/Groups) is currently open, instead of two
+   separate stacked cards. gap gives .flowHeader's floating back button
+   (bottom: 100% of the flow section) room to sit between the two without
+   overlapping the balance panel's action grid. */
+.balanceFlowWrap {
+  width: min(600px, 100%);
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  background: rgba(19, 28, 46, 0.6);
+  backdrop-filter: blur(26px);
+  -webkit-backdrop-filter: blur(26px);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-mid);
   box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.5);
 }
 
@@ -73,6 +103,11 @@
   font-size: 0.55em;
   align-self: flex-start;
   margin-top: 0.35em;
+}
+
+.balanceMasked {
+  filter: blur(1rem);
+  user-select: none;
 }
 
 /* Action Grid */
@@ -213,17 +248,34 @@
   align-items: center;
 }
 
+/* History modal — replaces the Recent Activity card in place, matching its
+   width. History's own .section supplies the card background/padding, so
+   this wrapper only constrains width and hosts the back-button header. */
+.historyModal {
+  position: relative;
+  width: min(600px, 100%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  animation: flowFadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* Overview Section */
 .overviewSection {
-  background: var(--border-subtle);
+  background: var(--card2);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
   padding: 2rem;
-  animation: flowFadeIn 0.25s ease;
+  animation: flowFadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   width: min(600px, 100%);
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 40px -24px rgba(0, 0, 0, 0.5);
+}
+
+.flowTitle {
+  color: white;
 }
 
 .sectionHeader {
@@ -254,6 +306,153 @@
 
 .viewAllBtn:hover {
   opacity: 0.8;
+}
+
+/* Bleeds out of .flowSection's 2rem padding so the tab bar spans the full
+   width flush with the card's top/left/right edges, like a real tab strip,
+   instead of sitting inset with the rest of the card's content. */
+.groupsTabs {
+  display: flex;
+  align-items: stretch;
+  margin: -2rem -2rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  overflow: hidden;
+}
+
+.groupsTabDivider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border-subtle);
+}
+
+/* Each tab fills half the bar's width/height, with the label centered in
+   the middle of that whole cell — not hugged tightly inside a small pill. */
+.groupsTab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 1.1rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    background 0.2s;
+}
+
+.groupsTab:hover {
+  color: var(--white);
+}
+
+.groupsTabActive {
+  color: var(--gold);
+  background: var(--gold-pale);
+}
+
+/* Pulls the Friends table out of .flowSection's 2rem padding so it's flush
+   with the card's edges; clipped + rounded to match the card's own bottom
+   corners since the table itself no longer has a border-radius. flex:1
+   grows it to fill .flowSection's min-height, so the flush-bottom margin
+   trick still lands on the card's true bottom edge even when the table is
+   shorter than the fixed card height. */
+.groupsListing {
+  flex: 1;
+  margin: 0 -2rem -2rem;
+  overflow: hidden;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
+/* Directional slide — whichever pane comes in enters from the side the
+   other tab sits on (Friends is left, Groups is right), instead of a
+   direction-agnostic fade. */
+.slideFromRight {
+  animation: slideInFromRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slideFromLeft {
+  animation: slideInFromLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Floating market ticker — position: fixed by default; its `bottom` is
+   nudged up via inline style (see Home.js) as the footer scrolls into
+   view, so it stops right above the footer instead of covering it. */
+.marketTicker {
+  position: fixed;
+  right: 2rem;
+  z-index: 50;
+  max-width: 260px;
+  background: var(--card2);
+  border: 1px solid var(--gold-border);
+  color: var(--gold);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: left;
+  padding: 0.7rem 1.1rem;
+  border-radius: 1.25rem;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    bottom 0.15s linear;
+}
+
+.marketTicker:hover {
+  transform: translateY(-2px);
+}
+
+/* Remounted on every message change (key={tickerIndex} in Home.js), so this
+   animation replays each time instead of needing JS-driven transitions. */
+.marketTickerText {
+  display: block;
+  animation: tickerFade 0.35s ease;
+}
+
+@keyframes tickerFade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .marketTicker {
+    right: 1rem;
+    max-width: 190px;
+    font-size: 0.72rem;
+    padding: 0.6rem 0.9rem;
+  }
 }
 
 .transactionList {
@@ -419,13 +618,14 @@
 }
 
 .heroTitle {
-  font-size: 0.8rem;
+  font-size: clamp(2.5rem, 8vw, 5rem);
   font-weight: 700;
-  letter-spacing: 0.35em;
+  letter-spacing: 2px;
   color: var(--gold);
   text-align: center;
-  opacity: 0.85;
-  margin: 0;
+  line-height: 1.05;
+  display: flex;
+  padding: 0;
 }
 
 /* ═══════════════════════════════════════
@@ -434,46 +634,84 @@
    view inside Home. Mirrors .overviewSection's card language (same
    background, radius, border) so it reads as part of the same page.
 ═══════════════════════════════════════ */
-.flowSection {
+/* No animation of its own — Add Money/Withdraw/Send/Groups apply
+   .slideFromLeft/.slideFromRight instead, so switching between them slides
+   in from whichever side matches the action buttons' order. */
+/* Card chrome (background/border/rounding), split out from .flowSection so
+   Home.js's own Add Money/Withdraw/Send/Groups flows can share ONE outer
+   card (.balanceFlowWrap) with the balance panel instead of stacking as two
+   separate cards. PaymentMethods.js/Notifications.js (standalone pages)
+   still get their own card by pairing this with .flowSection. */
+.flowCard {
   background: var(--card2);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
+}
+
+.flowSection {
+  position: relative;
   padding: 2rem;
   width: min(600px, 100%);
   margin: 0 auto;
+  /* Fixed to fit the tallest flow (Send Money), so the smallest (Add
+     Money) and largest modal occupy the same vertical space instead of
+     the card shrinking/growing per flow. */
+  min-height: 560px;
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
-  animation: flowFadeIn 0.25s ease;
+  /* Home.js pins this to the previous flow's height on mount, then eases
+     it to the new content's real height — so each flow keeps its own
+     natural size, but switching between them doesn't jump instantly. */
+  transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes flowFadeIn {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(10px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
 .flowHeader {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  bottom: 100%;
+  margin-bottom: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  color: #fff;
+}
+
+.sendingFrom {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
 }
 
 .flowHeader h2 {
+  grid-column: 2;
+  justify-self: center;
   font-size: 1.25rem;
   font-weight: 700;
   margin: 0;
 }
 
 .backBtn {
+  grid-column: 1;
+  justify-self: start;
   background: none;
   border: none;
-  color: var(--gold);
+  color: #fff;
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
@@ -499,10 +737,18 @@
 }
 
 .formLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--muted);
   margin-bottom: -0.7rem;
+}
+
+.recipientFlag {
+  font-weight: 500;
+  color: var(--soft);
 }
 
 .formInput {
@@ -561,6 +807,95 @@
   margin-top: -0.6rem;
 }
 
+.addFavouriteBtn {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--gold);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-top: -0.6rem;
+  transition: opacity 0.2s;
+}
+
+.addFavouriteBtn:hover {
+  opacity: 0.75;
+}
+
+.convertedBox {
+  background: var(--gold-pale);
+  border: 1px dashed var(--gold-border);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  text-align: center;
+  margin-top: -0.6rem;
+}
+
+.convertedRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.feeBox {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--card);
+  border: 1px solid var(--border-mid);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin-top: -0.6rem;
+}
+
+.feeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--soft);
+}
+
+.feeTotal {
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.convertedAmount {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: -0.3px;
+}
+
+.currencySelect {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--gold);
+  border: 1px solid var(--gold-border);
+  border-radius: 8px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+}
+
+.currencySelect:disabled {
+  opacity: 0.85;
+  cursor: default;
+}
+
+.convertedMeta {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(236, 201, 75, 0.6);
+  margin-top: 4px;
+}
+
 .favouriteChip {
   background: var(--card);
   border: 1px solid var(--border-mid);
@@ -578,6 +913,200 @@
 .favouriteChip:hover {
   border-color: var(--gold);
   color: var(--gold);
+}
+
+.favouriteChipActive {
+  background: var(--gold-pale);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.methodRow {
+  display: flex;
+  gap: 8px;
+  margin-top: -0.6rem;
+}
+
+.methodBtn {
+  flex: 1;
+  background: var(--card);
+  border: 1px solid var(--border-mid);
+  color: var(--soft);
+  padding: 0.6rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s,
+    color 0.2s;
+}
+
+.methodBtn:hover {
+  border-color: var(--gold-border);
+  color: var(--white);
+}
+
+.methodBtnActive {
+  background: var(--gold-pale);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* Service-picker popups (Add Money / Withdraw), opened after the amount
+   step. Reuses .flowSection's card language so it reads as part of the
+   same flow rather than a separate design. */
+.popupOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 8, 14, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+  animation: overlayFade 0.2s ease;
+}
+
+@keyframes overlayFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.popupPanel {
+  background: var(--card2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  width: min(400px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  animation: flowFadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.popupTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--white);
+}
+
+/* Send Money "in transit" stepper — vertical, top to bottom: Sent ->
+   Processing -> Delivered, each with its own icon and a short description
+   for context, not just a bare label. */
+.progressTrackVertical {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 0.25rem;
+}
+
+.progressNodeVertical {
+  display: flex;
+  gap: 14px;
+}
+
+.progressDotColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.progressDotVertical {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 1px solid var(--border-mid);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.progressDotActive {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #000;
+  box-shadow: 0 4px 14px rgba(236, 201, 75, 0.35);
+}
+
+.progressDotPulse {
+  animation: progressPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes progressPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(236, 201, 75, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(236, 201, 75, 0);
+  }
+}
+
+.spinIcon {
+  animation: progressSpin 1s linear infinite;
+}
+
+@keyframes progressSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.progressConnector {
+  width: 2px;
+  flex: 1;
+  min-height: 26px;
+  background: var(--border-mid);
+  margin: 3px 0;
+  transition: background 0.4s ease;
+}
+
+.progressConnectorActive {
+  background: var(--gold);
+}
+
+.progressNodeContent {
+  padding: 4px 0 1.25rem;
+}
+
+.progressNodeTitle {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--white);
+  transition: color 0.3s ease;
+}
+
+.progressNodeTitleMuted {
+  color: var(--muted);
+}
+
+.progressNodeSub {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.progressSub {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0.25rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border-mid);
 }
 
 .inlineFormRow {
@@ -614,6 +1143,7 @@
   .flowSection {
     padding: 1.5rem 1.25rem;
     gap: 1.5rem;
+    min-height: 480px;
   }
 
   .flowForm {
@@ -631,7 +1161,7 @@
 
 .heroHeadline {
   font-size: clamp(1.75rem, 4vw, 2.5rem);
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.15;
   letter-spacing: -1px;
   color: var(--white);

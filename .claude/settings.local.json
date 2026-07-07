@@ -5,7 +5,22 @@
       "Bash(npm ls *)",
       "Bash(find / -maxdepth 6 -iname \"*playwright*\")",
       "Bash(npm --version)",
-      "Bash(timeout 5 curl -sI https://registry.npmjs.org)"
+      "Bash(timeout 5 curl -sI https://registry.npmjs.org)",
+      "Bash(python3 -c \"import json; json.load\\(open\\('/home/mtuhalf/Documents/react/frontend/payzarc/dummy_db.json'\\)\\)\")",
+      "Bash(awk 'NR==649,NR==740' /home/mtuhalf/Documents/react/frontend/payzarc/src/components/member/Home.js)",
+      "Bash(npx eslint *)",
+      "Bash(node -e \"require\\('@babel/core'\\)\")",
+      "Bash(npx --yes prettier --parser babel --check src/components/member/Home.js)",
+      "Bash(node --check server.js)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('dummy_db.json','utf8'\\)\\); console.log\\('dummy_db.json OK'\\)\")",
+      "Bash(npx --no-install babel-node)",
+      "Bash(node -e \"require\\('fs'\\).readFileSync\\('/home/mtuhalf/Documents/react/frontend/payzarc/src/components/member/Home.js','utf8'\\)\")",
+      "Bash(npm view *)",
+      "Bash(npm install *)",
+      "Bash(grep -E \"^[0-9]+\\\\.css$\")",
+      "Bash(grep *)",
+      "Bash(node -e \"require\\('fs'\\).readFileSync\\('/home/mtuhalf/Documents/react/frontend/payzarc/src/components/member/Dashboard.module.css','utf8'\\)\")",
+      "Bash(node -e ' *)"
     ]
   }
 }

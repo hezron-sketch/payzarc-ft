@@ -13,13 +13,6 @@ function Friends() {
 
   const fetchAllFavourites = async () => {
     try {
-      const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-      if (!token) {
-        setError("No token found. Please log in again.");
-        setLoading(false);
-        return;
-      }
-
       const response = await djangoApis.system2.get('/api/favorites/all/');
       const result = response.data;
 
@@ -58,7 +51,6 @@ function Friends() {
               <th>Name</th>
               <th>Email</th>
               <th>Phone</th>
-              <th>Label</th>
             </tr>
           </thead>
           <tbody>
@@ -67,7 +59,6 @@ function Friends() {
                 <td>{fav.display_name || '—'}</td>
                 <td className={styles.emailCell}>{fav.email || '—'}</td>
                 <td className={styles.phoneCell}>{fav.phone || '—'}</td>
-                <td className={styles.labelCell}>{fav.label || '—'}</td>
               </tr>
             ))}
           </tbody>

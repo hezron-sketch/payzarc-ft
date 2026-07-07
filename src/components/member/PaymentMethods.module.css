@@ -1,0 +1,113 @@
+/* Home.module.css's .flowSection no longer carries its own animation (Add
+   Money/Withdraw/Send/Groups apply a directional slide instead), so this
+   panel needs its own plain entrance fade. */
+.entrance {
+  animation: entranceFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes entranceFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.pageTitle {
+  margin: 0 0 0.5rem;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--white);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+
+.groupTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--white);
+}
+
+.methodCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--border-mid);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--white);
+}
+
+.muted {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.8rem;
+}
+
+.profileGrid {
+  display: flex;
+  flex-direction: column;
+}
+
+.profileRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.85rem;
+}
+
+.profileRow:last-child {
+  border-bottom: none;
+}
+
+.profileLabel {
+  color: var(--muted);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.profileValue {
+  color: var(--white);
+  font-weight: 600;
+  text-align: right;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.verifiedIcon {
+  color: var(--green);
+  flex-shrink: 0;
+}
+
+.unverifiedIcon {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.pwError {
+  margin: -0.4rem 0 0;
+  font-size: 0.8rem;
+  color: #f87171;
+}
+
+.pwSuccess {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--green);
+}

@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from "react";
 import TransactionDetails from "./TransactionDetails";
-import { countries } from "../../utility/countries";
 import styles from "./History.module.css";
 import { transactionsApi } from "../../utility/axiosInstance";
+
+const PAGE_SIZE = 25;
 
 function History({ selectedTransaction, openDetailsPopup, closeDetailsPopup }) {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
 
-  // Filter states
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  // Filter state
   const [searchTerm, setSearchTerm] = useState("");
 
   const fetchTransactions = async () => {
@@ -36,8 +36,6 @@ function History({ selectedTransaction, openDetailsPopup, closeDetailsPopup }) {
 
     try {
       const params = {};
-      if (dateFrom) params.date_from = dateFrom;
-      if (dateTo) params.date_to = dateTo;
       if (searchTerm.trim()) params.search = searchTerm.trim();
 
       // Using transactionsApi as it's proven to work in Home.js
@@ -53,6 +51,7 @@ function History({ selectedTransaction, openDetailsPopup, closeDetailsPopup }) {
         ? data
         : data.results || data.transactions || [];
       setTransactions(txArray);
+      setPage(1);
       setError(null);
     } catch (err) {
       console.error("❌ History Fetch Error:", err.response?.data || err);
@@ -77,18 +76,17 @@ function History({ selectedTransaction, openDetailsPopup, closeDetailsPopup }) {
     fetchTransactions();
   };
 
-  const getFlagEmoji = (countryName) => {
-    const country = countries.find(
-      (c) => c.name.toLowerCase() === countryName?.toLowerCase(),
-    );
-    return country ? country.flag : "🏳️";
-  };
-
   const formatAmount = (tx) => {
     const amount = Number(tx.amount || 0);
     const prefix = tx.transaction_type === "CREDIT" ? "+" : "-";
-    return `${prefix}$${amount.toFixed(2)}`;
+    return `${prefix}${amount.toFixed(2)}`;
   };
+
+  const totalPages = Math.max(1, Math.ceil(transactions.length / PAGE_SIZE));
+  const pagedTransactions = transactions.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  );
 
   return (
     <div className={styles.section}>
@@ -101,22 +99,6 @@ function History({ selectedTransaction, openDetailsPopup, closeDetailsPopup }) {
             className={styles.inputField}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className={styles.dateInput}>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className={styles.dateInput}
-          />
-        </div>
-        <div className={styles.dateInput}>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className={styles.dateInput}
           />
         </div>
         <button
@@ -145,19 +127,19 @@ function History({ selectedTransaction, openDetailsPopup, closeDetailsPopup }) {
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Ref. No.</th>
-                <th>Name</th>
-                <th>Country</th>
-                <th>Amt</th>
+                <th>Recipient</th>
+                <th>Currency</th>
+                <th>Amount</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              {transactions.map((tx, index) => {
+              {pagedTransactions.map((tx, index) => {
                 const status =
                   tx.status ||
                   (tx.transaction_type === "CREDIT" ? "Received" : "Paid");
-                const country = tx.country || tx.recipient_country || "Kenya";
+                const recipient =
+                  tx.name || tx.recipient_name || tx.sender_name || "N/A";
 
                 return (
                   <tr key={tx.id || tx.transaction_code || index}>
@@ -166,18 +148,8 @@ function History({ selectedTransaction, openDetailsPopup, closeDetailsPopup }) {
                         tx.created_at || tx.date || tx.timestamp,
                       ).toLocaleDateString()}
                     </td>
-                    <td>{tx.transaction_code || tx.refNo || tx.reference}</td>
-                    <td>
-                      {tx.name || tx.recipient_name || tx.sender_name || "N/A"}
-                    </td>
-                    <td>
-                      <span className={styles.flagContainer}>
-                        <span className={styles.flagEmoji}>
-                          {getFlagEmoji(country)}
-                        </span>
-                        <span className={styles.countryName}>{country}</span>
-                      </span>
-                    </td>
+                    <td>{recipient}</td>
+                    <td>{tx.currency || "USD"}</td>
                     <td
                       className={
                         tx.transaction_type === "CREDIT"
@@ -202,6 +174,28 @@ function History({ selectedTransaction, openDetailsPopup, closeDetailsPopup }) {
           </table>
         )}
       </div>
+
+      {transactions.length > PAGE_SIZE && (
+        <div className={styles.pagination}>
+          <button
+            className={styles.pageBtn}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            Prev
+          </button>
+          <span className={styles.pageInfo}>
+            Page {page} of {totalPages}
+          </span>
+          <button
+            className={styles.pageBtn}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {/* Popup */}
       {selectedTransaction && (

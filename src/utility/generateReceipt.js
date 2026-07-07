@@ -1,19 +1,38 @@
 /**
  * generateReceipt.js
- * Generates a professional, branded PDF receipt for Payzarc transactions
- * with company branding, transaction details, and a polished layout.
+ * Generates a branded Payzarc PDF receipt — a slip-sized "card" page
+ * (not a full A4 letter page) so the layout isn't floating in a mostly
+ * empty sheet.
  */
 
-export async function generateReceiptPDF(
-  transaction,
-  recipientFlagEmoji = "🏳️",
-) {
+const NAVY = [28, 35, 51];
+const GOLD = [236, 201, 75];
+const DARK = [30, 30, 30];
+const MUTED = [120, 120, 120];
+const FAINT = [180, 180, 180];
+const LINE = [220, 220, 220];
+
+const STATUS_COLORS = {
+  paid: [34, 197, 94],
+  sent: [34, 197, 94],
+  completed: [34, 197, 94],
+  received: [59, 130, 246],
+  pending: [251, 191, 36],
+};
+
+const PAGE_WIDTH = 110;
+const PAGE_HEIGHT = 204;
+const MARGIN = 10;
+
+// ponytail: jsPDF's default fonts can't render flag emoji glyphs (they'd
+// show as blank boxes), so the destination is text-only — swap in a custom
+// embedded font here if flag icons are ever needed.
+export async function generateReceiptPDF(transaction) {
   // Dynamic import of jsPDF - add this to your package.json dependencies:
   // npm install jspdf
   const jsPDFModule = await import("jspdf");
   const { jsPDF } = jsPDFModule;
 
-  // Extract transaction data with fallbacks
   const refNo =
     transaction.refNo ||
     transaction.transaction_code ||
@@ -37,226 +56,158 @@ export async function generateReceiptPDF(
   const status =
     transaction.status ||
     (transaction.transaction_type === "CREDIT" ? "Received" : "Paid");
-  const country = transaction.country || transaction.recipient_country || "N/A";
+  const country =
+    transaction.country || transaction.recipient_country || "N/A";
+  const statusKey = status.toLowerCase();
+  const statusColor = STATUS_COLORS[statusKey] || [156, 163, 175];
 
-  // Create PDF in portrait orientation
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
-    format: "a4",
+    format: [PAGE_WIDTH, PAGE_HEIGHT],
   });
 
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  let yPosition = 15;
+  const centerX = PAGE_WIDTH / 2;
 
-  // Helper to add text
-  const addText = (text, x = pageWidth / 2, y = yPosition, options = {}) => {
+  const text = (str, y, options = {}) => {
     const {
-      size = 12,
+      x = centerX,
+      size = 10,
       weight = "normal",
       align = "center",
-      color = [30, 30, 30],
+      color = DARK,
     } = options;
-
     doc.setFontSize(size);
     doc.setFont(undefined, weight);
     doc.setTextColor(...color);
-    doc.text(text, x, y, { align });
-    return y + size / 2 + 2;
+    doc.text(String(str), x, y, { align });
   };
 
-  const addLine = (y, color = [200, 200, 200]) => {
-    doc.setDrawColor(...color);
+  const dashedLine = (y) => {
+    doc.setDrawColor(...LINE);
     doc.setLineWidth(0.3);
-    doc.line(15, y, pageWidth - 15, y);
-    return y + 3;
+    doc.setLineDashPattern([1.5, 1.5], 0);
+    doc.line(MARGIN, y, PAGE_WIDTH - MARGIN, y);
+    doc.setLineDashPattern([], 0);
   };
 
-  // Header: Payzarc Branding
-  doc.setFillColor(28, 35, 51); // Dark navy background
-  doc.rect(0, 0, pageWidth, 35, "F");
+  // ── Header band ──────────────────────────────────────────────
+  doc.setFillColor(...NAVY);
+  doc.rect(0, 0, PAGE_WIDTH, 34, "F");
+  text("PAYZARC", 15, { size: 19, weight: "bold", color: GOLD });
+  text("TRANSACTION RECEIPT", 22, { size: 7.5, color: [200, 200, 200] });
+  doc.setDrawColor(...GOLD);
+  doc.setLineWidth(0.6);
+  doc.line(centerX - 12, 27, centerX + 12, 27);
 
-  yPosition = 12;
-  doc.setFontSize(24);
-  doc.setFont(undefined, "bold");
-  doc.setTextColor(236, 201, 75); // Gold color
-  doc.text("PAYZARC", pageWidth / 2, yPosition, { align: "center" });
+  // ── Status icon: a filled circle with a checkmark (or a simple
+  //    ring for pending, since a check misreads as "already sent"). ──
+  const iconY = 48;
+  doc.setFillColor(...statusColor);
+  doc.circle(centerX, iconY, 9, "F");
+  doc.setDrawColor(255, 255, 255);
+  doc.setLineWidth(1.1);
+  doc.setLineCap(1);
+  doc.setLineJoin(1);
+  if (statusKey === "pending") {
+    doc.circle(centerX, iconY, 4.5, "S");
+  } else {
+    doc.line(centerX - 4, iconY, centerX - 1.3, iconY + 3);
+    doc.line(centerX - 1.3, iconY + 3, centerX + 4.5, iconY - 4);
+  }
 
-  yPosition = 22;
-  doc.setFontSize(9);
-  doc.setFont(undefined, "normal");
-  doc.setTextColor(200, 200, 200); // Light gray
-  doc.text("TRANSACTION RECEIPT", pageWidth / 2, yPosition, {
-    align: "center",
-  });
-
-  yPosition = 40;
-
-  // Receipt Title
-  yPosition = addText("TRANSACTION RECEIPT", pageWidth / 2, yPosition, {
-    size: 14,
+  text(status.toUpperCase(), 65, {
+    size: 11,
     weight: "bold",
-    color: [30, 30, 30],
-  });
-  yPosition += 5;
-
-  // Status Badge
-  const statusColor =
-    status.toLowerCase() === "paid" || status.toLowerCase() === "sent"
-      ? [34, 197, 94] // Green
-      : status.toLowerCase() === "received"
-        ? [59, 130, 246] // Blue
-        : [156, 163, 175]; // Gray
-  const statusBackground = statusColor.map((c) =>
-    c + 200 > 255 ? 255 : c + 200,
-  );
-
-  doc.setFillColor(...statusBackground);
-  doc.roundedRect(15, yPosition - 4, pageWidth - 30, 8, 2, 2, "F");
-  doc.setFontSize(10);
-  doc.setFont(undefined, "bold");
-  doc.setTextColor(...statusColor);
-  doc.text(status.toUpperCase(), pageWidth / 2, yPosition + 1, {
-    align: "center",
+    color: statusColor,
   });
 
-  yPosition += 12;
-
-  // Reference Number
-  doc.setFontSize(10);
-  doc.setFont(undefined, "normal");
-  doc.setTextColor(120, 120, 120);
-  doc.text("Reference: " + refNo, 15, yPosition);
-  yPosition += 6;
-
-  // Date
-  doc.text("Date: " + date, 15, yPosition);
-  yPosition += 8;
-
-  yPosition = addLine(yPosition);
-
-  // Amount Section (highlighted)
-  yPosition += 3;
-  doc.setFillColor(249, 250, 251); // Light background
-  doc.rect(15, yPosition - 4, pageWidth - 30, 45, "F");
-
-  doc.setFontSize(9);
-  doc.setFont(undefined, "normal");
-  doc.setTextColor(120, 120, 120);
-  doc.text("Amount Sent", 20, yPosition);
-
+  // ── Amount ───────────────────────────────────────────────────
+  text("AMOUNT", 74, { size: 7.5, color: MUTED });
   const amountStr = typeof amount === "number" ? amount.toFixed(2) : amount;
-  doc.setFontSize(20);
-  doc.setFont(undefined, "bold");
-  doc.setTextColor(236, 201, 75); // Gold
-  doc.text(amountStr, pageWidth - 20, yPosition, { align: "right" });
-
-  yPosition += 12;
-  doc.setFontSize(9);
-  doc.setFont(undefined, "normal");
-  doc.setTextColor(120, 120, 120);
-  doc.text("Transaction Fee", 20, yPosition);
+  text(amountStr, 87, { size: 25, weight: "bold", color: NAVY });
 
   const feeStr = typeof fee === "number" ? fee.toFixed(2) : fee;
-  doc.setFontSize(11);
-  doc.setFont(undefined, "bold");
-  doc.setTextColor(100, 100, 100);
-  doc.text(feeStr, pageWidth - 20, yPosition, { align: "right" });
+  text(`+ Fee ${feeStr}`, 94, { size: 8.5, color: MUTED });
 
-  yPosition += 10;
-  doc.setDrawColor(200, 200, 200);
-  doc.setLineWidth(0.5);
-  doc.line(20, yPosition - 2, pageWidth - 20, yPosition - 2);
+  dashedLine(101);
 
-  yPosition += 4;
-  doc.setFontSize(9);
-  doc.setFont(undefined, "bold");
-  doc.setTextColor(30, 30, 30);
-  doc.text("Total Charged", 20, yPosition);
+  // ── Detail rows ──────────────────────────────────────────────
+  text("TRANSACTION DETAILS", 110, {
+    x: MARGIN,
+    align: "left",
+    size: 9,
+    weight: "bold",
+    color: DARK,
+  });
 
+  const rows = [
+    ["Reference", refNo],
+    ["Date", date],
+    ["Recipient", name],
+    ["Account / Phone", recipient],
+    ["Destination", country],
+  ];
+
+  let y = 118;
+  rows.forEach(([label, value]) => {
+    text(label, y, { x: MARGIN, align: "left", size: 8.5, color: MUTED });
+    text(value, y, {
+      x: PAGE_WIDTH - MARGIN,
+      align: "right",
+      size: 8.5,
+      weight: "bold",
+      color: DARK,
+    });
+    y += 7.5;
+  });
+
+  // ── Total charged, highlighted ───────────────────────────────
+  y += 3;
+  doc.setFillColor(252, 246, 227);
+  doc.roundedRect(MARGIN, y - 5.5, PAGE_WIDTH - MARGIN * 2, 11, 2, 2, "F");
+  text("TOTAL CHARGED", y, {
+    x: MARGIN + 4,
+    align: "left",
+    size: 8.5,
+    weight: "bold",
+    color: DARK,
+  });
   const totalCharged =
     typeof amount === "number" && typeof fee === "number"
       ? (amount + fee).toFixed(2)
       : "N/A";
-  doc.setFontSize(13);
-  doc.setFont(undefined, "bold");
-  doc.setTextColor(30, 30, 30);
-  doc.text(totalCharged, pageWidth - 20, yPosition, { align: "right" });
-
-  yPosition += 15;
-
-  yPosition = addLine(yPosition);
-
-  // Transaction Details
-  yPosition += 5;
-  doc.setFontSize(11);
-  doc.setFont(undefined, "bold");
-  doc.setTextColor(30, 30, 30);
-  doc.text("RECIPIENT DETAILS", 15, yPosition);
-  yPosition += 8;
-
-  // Detail rows
-  const detailRows = [
-    ["Recipient Name", name],
-    ["Account/Phone", recipient],
-    ["Destination Country", `${recipientFlagEmoji} ${country}`],
-  ];
-
-  detailRows.forEach(([label, value]) => {
-    doc.setFontSize(9);
-    doc.setFont(undefined, "normal");
-    doc.setTextColor(120, 120, 120);
-    doc.text(label, 15, yPosition);
-
-    doc.setFontSize(9);
-    doc.setFont(undefined, "bold");
-    doc.setTextColor(30, 30, 30);
-    doc.text(String(value), pageWidth - 15, yPosition, { align: "right" });
-
-    yPosition += 7;
+  text(totalCharged, y, {
+    x: PAGE_WIDTH - MARGIN - 4,
+    align: "right",
+    size: 10.5,
+    weight: "bold",
+    color: NAVY,
   });
 
-  yPosition += 5;
-  yPosition = addLine(yPosition);
+  dashedLine(y + 14);
 
-  // Footer
-  yPosition = pageHeight - 25;
+  // ── Footer ───────────────────────────────────────────────────
+  let footerY = y + 22;
+  text("Thank you for choosing Payzarc.", footerY, {
+    size: 8,
+    color: MUTED,
+  });
+  footerY += 6;
+  text("support@payzarc.com · www.payzarc.com", footerY, {
+    size: 7.5,
+    color: MUTED,
+  });
+  footerY += 6;
+  text(`Generated ${new Date().toLocaleString()}`, footerY, {
+    size: 6.5,
+    color: FAINT,
+  });
 
-  doc.setFontSize(8);
-  doc.setFont(undefined, "normal");
-  doc.setTextColor(150, 150, 150);
-  doc.text(
-    "This receipt confirms your transaction details. Please keep it safe for your records.",
-    pageWidth / 2,
-    yPosition,
-    { align: "center" },
-  );
+  doc.setDrawColor(...GOLD);
+  doc.setLineWidth(1);
+  doc.line(0, PAGE_HEIGHT - 4, PAGE_WIDTH, PAGE_HEIGHT - 4);
 
-  yPosition += 6;
-  doc.text(
-    "For support, visit www.payzarc.com or contact support@payzarc.com",
-    pageWidth / 2,
-    yPosition,
-    { align: "center" },
-  );
-
-  yPosition += 6;
-  doc.setFontSize(7);
-  doc.setTextColor(180, 180, 180);
-  doc.text(
-    `Receipt generated on ${new Date().toLocaleString()}`,
-    pageWidth / 2,
-    yPosition,
-    { align: "center" },
-  );
-
-  // Bottom border line
-  doc.setDrawColor(236, 201, 75);
-  doc.setLineWidth(0.8);
-  doc.line(15, pageHeight - 8, pageWidth - 15, pageHeight - 8);
-
-  // Download the PDF
   const filename = `Payzarc_Receipt_${refNo}.pdf`;
   doc.save(filename);
 }

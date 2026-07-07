@@ -2,10 +2,10 @@
   "dashboard": [
     {
       "id": 1,
-      "username": "johndoe",
-      "firstname": "John",
-      "surname": "Doe",
-      "email": "john.doe@example.com",
+      "username": "hezron",
+      "firstname": "Hezron",
+      "surname": "Wandera",
+      "email": "hezronwandera46@gmail.com",
       "phone": "+254712345678",
       "profileImageUrl": "/images/default-user.png",
       "balance": 1250.75,
@@ -15,10 +15,10 @@
   "profile": [
     {
       "id": 1,
-      "username": "johndoe",
-      "firstname": "John",
+      "username": "hezron",
+      "firstname": "Hezron",
       "middlename": "Quincy",
-      "surname": "Doe",
+      "surname": "Wandera",
       "othernames": "Junior",
       "gender": "Male",
       "dob": "1990-05-15",
@@ -35,8 +35,9 @@
       "addressLine": "123 Langata Road, Apt 4B",
       "phone": "+254712345678",
       "phoneVerified": true,
-      "email": "john.doe@example.com",
-      "emailVerified": true
+      "email": "hezronwandera46@gmail.com",
+      "emailVerified": true,
+      "password": "Hezron@123"
     }
   ],
   "secondary_contacts": [
@@ -77,20 +78,80 @@
       "phone": "+254712345678"
     }
   ],
+  "notifications": [
+    {
+      "id": 1,
+      "type": "receive",
+      "title": "Money received",
+      "message": "You received $250.00 from Jane Smith.",
+      "created_at": "2026-07-08 09:15:00",
+      "read": false
+    },
+    {
+      "id": 2,
+      "type": "security",
+      "title": "New login detected",
+      "message": "Your account was accessed from a new device in Nairobi, Kenya.",
+      "created_at": "2026-07-07 20:42:00",
+      "read": false
+    },
+    {
+      "id": 3,
+      "type": "transaction",
+      "title": "Transfer completed",
+      "message": "Your transfer of $50.00 to Bob Agent was successful.",
+      "created_at": "2026-07-06 14:05:00",
+      "read": true
+    }
+  ],
   "favorites": [
     {
       "id": 1,
       "display_name": "Jane Smith",
       "email": "jane@example.com",
       "phone": "+254788888888",
-      "label": "Sister"
+      "label": "Sister",
+      "country": "Kenya"
     },
     {
       "id": 2,
       "display_name": "Bob Agent",
       "email": "bob@agent.com",
       "phone": "+254799999999",
-      "label": "Work"
+      "label": "Work",
+      "country": "Kenya"
+    },
+    {
+      "id": 3,
+      "display_name": "Amara Okafor",
+      "email": "amara.okafor@example.com",
+      "phone": "+2348012345678",
+      "label": "Friend",
+      "country": "Nigeria"
+    },
+    {
+      "id": 4,
+      "display_name": "Priya Sharma",
+      "email": "priya.sharma@example.com",
+      "phone": "+919876543210",
+      "label": "College",
+      "country": "India"
+    },
+    {
+      "id": 5,
+      "display_name": "Kwame Mensah",
+      "email": "kwame.mensah@example.com",
+      "phone": "+233241234567",
+      "label": "Cousin",
+      "country": "Ghana"
+    },
+    {
+      "id": 6,
+      "display_name": "Grace Wanjiru",
+      "email": "grace.wanjiru@example.com",
+      "phone": "+254722334455",
+      "label": "Mom",
+      "country": "Kenya"
     }
   ],
   "transactions": [
@@ -129,6 +190,11 @@
     { "id": 3, "name": "Co-operative Bank" },
     { "id": 4, "name": "Standard Chartered" }
   ],
+  "payment_methods": {
+    "banks": [],
+    "cards": [],
+    "mobileMoney": []
+  },
   "groups": [
     {
       "id": 1,

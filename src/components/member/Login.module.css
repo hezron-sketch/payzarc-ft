@@ -7,8 +7,7 @@
 .app {
   background: #0d1117;
   min-height: 100vh;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+  font-family: var(--primary-page-font-family);
   color: #f9fafb;
 }
 
@@ -798,12 +797,24 @@
 .popupOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(6, 8, 14, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 1rem;
+  animation: overlayFade 0.2s ease;
+}
+
+@keyframes overlayFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .popupContent {
@@ -818,6 +829,18 @@
   align-items: center;
   gap: 0.875rem;
   text-align: center;
+  animation: popupIn 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes popupIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .popupIconWrap {

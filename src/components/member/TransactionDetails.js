@@ -55,7 +55,7 @@ function TransactionDetails({ transaction, closeDetailsPopup }) {
   const handleDownloadReceipt = async () => {
     try {
       setIsDownloading(true);
-      await generateReceiptPDF(transaction, flagEmoji);
+      await generateReceiptPDF(transaction);
     } catch (error) {
       console.error("Failed to generate receipt:", error);
       alert("Failed to download receipt. Please try again.");

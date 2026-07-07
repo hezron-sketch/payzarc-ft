@@ -1,9 +1,10 @@
-@import url("https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap");
-
+/* Self-hosted via @fontsource/ibm-plex-sans (imported in index.js) instead
+   of a Google Fonts CDN @import, so the app's default font doesn't depend
+   on an external network request. */
 :root {
   /* Font Family */
   --primary-page-font-family:
-    "Google Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     Helvetica, Arial, sans-serif;
 
   /* Colors */
@@ -66,7 +67,8 @@ body {
 }
 
 code {
-  font-family: "Google Sans", monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
 }
 
 button,

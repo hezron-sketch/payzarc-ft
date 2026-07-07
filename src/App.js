@@ -1,9 +1,4 @@
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useLayoutEffect,
-} from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   BrowserRouter,
@@ -20,7 +15,8 @@ import SetNewPassword from "./components/member/SetNewPassword";
 import Dashboard from "./components/member/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import styles from "./App.module.css";
-import { ArrowBigRight, ArrowBigRightDash, ArrowRightIcon } from "lucide-react";
+import { ArrowRightIcon } from "lucide-react";
+import { EXCHANGE_RATES } from "./utility/exchangeRates";
 
 const COUNTRIES = {
   "United States": "USD",
@@ -38,15 +34,6 @@ const COUNTRIES = {
   Japan: "JPY",
   China: "CNY",
   Brazil: "BRL",
-};
-
-const EXCHANGE_RATES = {
-  USD: { KES: 129.5, INR: 83.3, NGN: 1500, GHS: 15.5, UGX: 3700 },
-  GBP: { KES: 165, INR: 106, NGN: 1920, GHS: 19.8, UGX: 4730 },
-  EUR: { KES: 140, INR: 90, NGN: 1640, GHS: 16.8, UGX: 4020 },
-  CAD: { KES: 95, INR: 61, NGN: 1100, GHS: 11.4, UGX: 2720 },
-  AUD: { KES: 83, INR: 53, NGN: 960, GHS: 9.9, UGX: 2360 },
-  KES: { USD: 0.0077, INR: 0.64, NGN: 11.6, GHS: 0.12, UGX: 28.6 },
 };
 
 const QUICK_DESTINATIONS = [
@@ -73,19 +60,19 @@ function Navbar() {
             </div>
             {/* <span className={styles.navName}>Payzarc</span> */}
           </div>
-          <div className={styles.navLinks}>
-            <a href="#">Home</a>
-            <a href="#">Features</a>
-            <a href="#">Rates</a>
-            <a href="#">Help</a>
-            <a href="#">Contact</a>
-          </div>
+        </div>
+        <div className={styles.navLinks}>
+          <a href="#">Home</a>
+          <a href="#">Features</a>
+          <a href="#">Rates</a>
+          <a href="#">Help</a>
+          <a href="#">Contact</a>
         </div>
         <button
           className={styles.navBtn}
           onClick={() => navigate("/components/member/login")}
         >
-          Login →
+          Login <ArrowRightIcon size={14} />
         </button>
       </div>
     </nav>
@@ -194,7 +181,7 @@ function PhoneAuthStage({ overlay, onClose }) {
 
   // Start the shrink animation: snapshot the mockup's current rect (in case
   // of scroll/resize) and animate back to it before unmounting.
- useEffect(() => {
+  useEffect(() => {
     if (overlay) return undefined;
     if (phase !== "open" && phase !== "opening") return undefined;
     const r = anchorRef.current.getBoundingClientRect();
@@ -203,10 +190,9 @@ function PhoneAuthStage({ overlay, onClose }) {
     return undefined;
   }, [overlay]);
 
-
-useEffect(() => {
+  useEffect(() => {
     if (phase !== "closing") return undefined;
-    closeTimerRef.current = setTimeout(() => setPhase("closed"), 520);
+    closeTimerRef.current = setTimeout(() => setPhase("closed"), 320);
     return () => clearTimeout(closeTimerRef.current);
   }, [phase]);
   const isActive = phase !== "closed";
@@ -287,6 +273,25 @@ useEffect(() => {
 
               <div className={styles.phoneStageScreen}>
                 <div
+                  className={`${styles.phoneStagePreview} ${isExpanded ? styles.phoneStagePreviewHide : ""}`}
+                >
+                  <div className={styles.psHeader}>
+                    <div className={styles.psLogo} />
+                    <div className={styles.psDots}>
+                      <div className={styles.psDot} />
+                      <div className={styles.psDot} />
+                      <div className={styles.psDot} />
+                    </div>
+                  </div>
+                  <div className={styles.psGreeting}>Hello,</div>
+                  <div className={styles.psName}>Elaine W.</div>
+                  <div className={styles.psBalanceCard}>
+                    <div className={styles.psBalLabel}>Wallet balance</div>
+                    <div className={styles.psBalAmount}>$4,820.00</div>
+                  </div>
+                </div>
+
+                <div
                   className={`${styles.phoneStageContent} ${isExpanded ? styles.phoneStageContentShow : ""}`}
                 >
                   {overlay === "login" && (
@@ -330,6 +335,7 @@ function Hero({ overlay, onCloseAuth }) {
     <section className={styles.hero}>
       <div className={`${styles.bgRing} ${styles.ringLg}`} />
       <div className={`${styles.bgRing} ${styles.ringSm}`} />
+      <div className={`${styles.bgRing} ${styles.ringInner}`} />
 
       {/* <div className={styles.trustPill}>
         <div className={styles.avatars}>
@@ -363,8 +369,6 @@ function Hero({ overlay, onCloseAuth }) {
       </div>
 
       <div className={styles.illustrationArea}>
-        <div className={`${styles.bgRing} ${styles.ringInner}`} />
-
         <FloatCard
           side="left"
           iconBg="rgba(59,130,246,0.15)"
@@ -631,30 +635,32 @@ function Converter() {
 function Footer() {
   return (
     <footer className={styles.footer}>
-      <div className={styles.footerLeft}>
-        <div className={styles.navBrand}>
-          <div className={styles.navLogo}>
-            <img src="/images/payzarc.png" className={styles.logo} />
+      <div className={styles.footerInner}>
+        <div className={styles.footerLeft}>
+          <div className={styles.navBrand}>
+            <div className={styles.navLogo}>
+              <img src="/images/payzarc.png" className={styles.logo} />
+            </div>
+            {/* <span className={styles.navName}>Payzarc</span> */}
+            <p className={styles.footerTagline}>
+              Your trusted cross-border financial partner.
+            </p>
           </div>
-          {/* <span className={styles.navName}>Payzarc</span> */}
-          <p className={styles.footerTagline}>
-            Your trusted cross-border financial partner.
-          </p>
         </div>
+        <div className={styles.footerMid}>
+          <a href="mailto:info.e@payzarc.com" className={styles.footerEmail}>
+            info.e@payzarc.com
+          </a>
+          <span className={styles.footerPhone}>+1 (713) 822-8593</span>
+          <span className={styles.footerAddr}>
+            Kew Gardens Dr Houston Tx, USA
+          </span>
+        </div>
+        {/* <div className={styles.trustBadge}>
+          <div className={styles.trustDot} />
+          Secure &amp; live
+        </div> */}
       </div>
-      <div className={styles.footerMid}>
-        <a href="mailto:info.e@payzarc.com" className={styles.footerEmail}>
-          info.e@payzarc.com
-        </a>
-        <span className={styles.footerPhone}>+1 (713) 822-8593</span>
-        <span className={styles.footerAddr}>
-          Kew Gardens Dr Houston Tx, USA
-        </span>
-      </div>
-      {/* <div className={styles.trustBadge}>
-        <div className={styles.trustDot} />
-        Secure &amp; live
-      </div> */}
     </footer>
   );
 }
@@ -700,7 +706,7 @@ function AppContent() {
     "components/member/set-password",
     "components/member/reset-password",
     "components/member/set-new-password",
-    "components/member/dashboard",
+    "dashboard",
   ];
 
   if (standaloneRoutes.some((r) => path === `/${r}` || path === r)) {
@@ -720,7 +726,7 @@ function AppContent() {
           element={<SetNewPassword onBack={goHome} />}
         />
         <Route
-          path="components/member/dashboard"
+          path="dashboard"
           element={
             // <ProtectedRoute>
             <Dashboard onBack={goHome} />

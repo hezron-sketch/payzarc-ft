@@ -383,6 +383,16 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import {
+  ArrowLeft,
+  User,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  KeyRound,
+} from "lucide-react";
 import axiosInstance from "../../utility/axiosInstance";
 import styles from "./Login.module.css";
 
@@ -488,20 +498,7 @@ function ErrorPopup({ title, message, onClose }) {
     <div className={styles.popupOverlay}>
       <div className={styles.popupContent}>
         <div className={styles.popupIconWrap}>
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#f87171"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
+          <AlertCircle size={28} color="#f87171" strokeWidth={2} />
         </div>
         <h2 className={styles.popupTitle}>{title}</h2>
         <p className={styles.popupMessage}>{message}</p>
@@ -539,8 +536,7 @@ function Login({ onBack, embedded = false, compact = false }) {
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
   useEffect(() => {
-    if (localStorage.getItem("accessToken"))
-      navigate("/components/member/dashboard");
+    if (localStorage.getItem("accessToken")) navigate("/dashboard");
   }, [navigate]);
 
   useEffect(() => {
@@ -687,7 +683,7 @@ function Login({ onBack, embedded = false, compact = false }) {
       if (accessToken && user) {
         localStorage.setItem("accessToken", accessToken);
         localStorage.setItem("user", JSON.stringify(user));
-        navigate("/components/member/dashboard");
+        navigate("/dashboard");
       }
     } catch (err) {
       const r = err.response?.data;
@@ -772,18 +768,7 @@ function Login({ onBack, embedded = false, compact = false }) {
               onClick={onBack}
               title="Back to home"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M19 12H5M12 5l-7 7 7 7" />
-              </svg>
+              <ArrowLeft size={16} />
               Home
             </button>
 
@@ -821,29 +806,11 @@ function Login({ onBack, embedded = false, compact = false }) {
                       {useUsername ? "Username" : "Email address"}
                     </label>
                     <div className={styles.inputWrap}>
-                      <svg
-                        className={styles.inputIcon}
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        {useUsername ? (
-                          <>
-                            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                            <circle cx="12" cy="7" r="4" />
-                          </>
-                        ) : (
-                          <>
-                            <rect x="2" y="4" width="20" height="16" rx="2" />
-                            <path d="m2 7 10 7L22 7" />
-                          </>
-                        )}
-                      </svg>
+                      {useUsername ? (
+                        <User className={styles.inputIcon} size={16} />
+                      ) : (
+                        <Mail className={styles.inputIcon} size={16} />
+                      )}
                       <input
                         type={useUsername ? "text" : "email"}
                         placeholder={
@@ -863,27 +830,7 @@ function Login({ onBack, embedded = false, compact = false }) {
                   <div className={styles.fieldGroup}>
                     <label className={styles.fieldLabel}>Password</label>
                     <div className={styles.inputWrap}>
-                      <svg
-                        className={styles.inputIcon}
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <rect
-                          x="3"
-                          y="11"
-                          width="18"
-                          height="11"
-                          rx="2"
-                          ry="2"
-                        />
-                        <path d="M7 11V7a5 5 0 0110 0v4" />
-                      </svg>
+                      <Lock className={styles.inputIcon} size={16} />
                       <input
                         type={showPw ? "text" : "password"}
                         placeholder="Enter your password"
@@ -898,29 +845,7 @@ function Login({ onBack, embedded = false, compact = false }) {
                         onClick={() => setShowPw(!showPw)}
                         tabIndex={-1}
                       >
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          {showPw ? (
-                            <>
-                              <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
-                              <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
-                              <line x1="1" y1="1" x2="23" y2="23" />
-                            </>
-                          ) : (
-                            <>
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                              <circle cx="12" cy="12" r="3" />
-                            </>
-                          )}
-                        </svg>
+                        {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
                   </div>
@@ -936,20 +861,7 @@ function Login({ onBack, embedded = false, compact = false }) {
 
                   {error && (
                     <div className={styles.inlineError}>
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#f87171"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <circle cx="12" cy="12" r="10" />
-                        <line x1="12" y1="8" x2="12" y2="12" />
-                        <line x1="12" y1="16" x2="12.01" y2="16" />
-                      </svg>
+                      <AlertCircle size={14} color="#f87171" strokeWidth={2} />
                       {error}
                     </div>
                   )}
@@ -982,18 +894,7 @@ function Login({ onBack, embedded = false, compact = false }) {
               <>
                 <div className={styles.formHeader}>
                   <div className={styles.otpIconWrap}>
-                    <svg
-                      width="28"
-                      height="28"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#ecc94b"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013 12.07a19.79 19.79 0 01-3.07-8.67A2 2 0 011.9 1h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
-                    </svg>
+                    <KeyRound size={28} color="#ecc94b" strokeWidth={1.8} />
                   </div>
                   <h1 className={styles.formTitle}>Check your email</h1>
                   <p className={styles.formSub}>
@@ -1014,20 +915,7 @@ function Login({ onBack, embedded = false, compact = false }) {
 
                 {error && (
                   <div className={styles.inlineError}>
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#f87171"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" y1="8" x2="12" y2="12" />
-                      <line x1="12" y1="16" x2="12.01" y2="16" />
-                    </svg>
+                    <AlertCircle size={14} color="#f87171" strokeWidth={2} />
                     {error}
                   </div>
                 )}

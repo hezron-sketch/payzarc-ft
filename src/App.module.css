@@ -39,8 +39,7 @@
   background: radial-gradient(rgba(255, 242, 0, 0.067), var(--bg));
   background-attachment: fixed;
   color: var(--white);
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+  font-family: var(--primary-page-font-family);
   min-height: 100vh;
   line-height: 1.6;
 }
@@ -63,8 +62,8 @@
   backdrop-filter: blur(0px);
   -webkit-backdrop-filter: blur(0px);
   transition:
-    background 0.5s cubic-bezier(0.22, 1, 0.36, 1),
-    backdrop-filter 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    background 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    backdrop-filter 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .phoneStageBackdropOpen {
@@ -84,12 +83,14 @@
   border-radius: 26px;
   z-index: 1001;
   transition:
-    top 0.52s cubic-bezier(0.22, 1, 0.36, 1),
-    left 0.52s cubic-bezier(0.22, 1, 0.36, 1),
-    width 0.52s cubic-bezier(0.22, 1, 0.36, 1),
-    height 0.52s cubic-bezier(0.22, 1, 0.36, 1),
-    border-radius 0.52s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+    top 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+    left 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+    width 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+    height 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+    border-radius 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.32s ease,
+    border-color 0.32s ease;
 }
 
 .phoneStagePanelOpen {
@@ -99,6 +100,8 @@
   width: min(420px, 92vw);
   height: min(760px, 88vh);
   border-radius: 36px;
+  background: radial-gradient(circle at 30% 0%, #263252, #1c2333 60%);
+  border-color: rgba(236, 201, 75, 0.16);
 }
 
 .phoneStageNotch {
@@ -108,10 +111,15 @@
   border-radius: 4px;
   margin: 14px auto 0;
   flex-shrink: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.2s ease;
+}
+
+.phoneStagePanelOpen .phoneStageNotch {
+  opacity: 0;
 }
 
 .phoneStageScreen {
+  position: relative;
   flex: 1;
   margin: 10px 9px 12px;
   background: var(--card2);
@@ -130,19 +138,40 @@
   border-radius: 4px;
 }
 
+/* A condensed replay of the mockup's own header/balance card, painted over
+   the real form and faded out as it expands — so the phone's UI visibly
+   dissolves into the login/register screen instead of vanishing the
+   instant the morph starts and leaving an empty box until the form fades
+   in on its own. */
+.phoneStagePreview {
+  position: absolute;
+  inset: 0;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  opacity: 1;
+  transition: opacity 0.22s ease;
+  pointer-events: none;
+}
+
+.phoneStagePreviewHide {
+  opacity: 0;
+}
+
 .phoneStageContent {
   padding: 1.6rem 1.35rem 1.85rem;
   opacity: 0;
   transform: translateY(10px);
   transition:
-    opacity 0.35s ease,
-    transform 0.35s ease;
+    opacity 0.22s ease,
+    transform 0.22s ease;
 }
 
 .phoneStageContentShow {
   opacity: 1;
   transform: translateY(0);
-  transition-delay: 0.18s;
+  transition-delay: 0.1s;
 }
 
 .phoneStageCloseBtn {
@@ -162,7 +191,7 @@
   cursor: pointer;
   opacity: 0;
   transition:
-    opacity 0.25s ease,
+    opacity 0.18s ease,
     background 0.2s,
     color 0.2s,
     transform 0.15s;
@@ -200,9 +229,9 @@
 }
 
 .navInner {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   max-width: 1120px;
   margin: 0 auto;
   padding: 1rem 2rem;
@@ -212,6 +241,7 @@
   display: flex;
   align-items: center;
   gap: 2.25rem;
+  justify-self: start;
 }
 
 .navBrand {
@@ -245,6 +275,7 @@
 .navLinks {
   display: flex;
   gap: 1.5rem;
+  justify-self: center;
 }
 
 .navLinks a {
@@ -259,22 +290,37 @@
 }
 
 .navBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: var(--gold);
   color: #111;
   border: none;
   border-radius: 20px;
-  padding: 0.45rem 1.2rem;
+  padding: 0.55rem 1.3rem;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+  justify-self: end;
+  box-shadow: 0 4px 14px rgba(236, 201, 75, 0.25);
   transition:
     background 0.2s,
-    transform 0.15s;
+    transform 0.15s,
+    box-shadow 0.2s;
 }
 
 .navBtn:hover {
   background: var(--gold-dark);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(236, 201, 75, 0.4);
+}
+
+.navBtn svg {
+  transition: transform 0.2s ease;
+}
+
+.navBtn:hover svg {
+  transform: translateX(2px);
 }
 
 .hero {
@@ -284,13 +330,19 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  overflow: hidden;
-  height: 100vh;
+  /* min-height (not a fixed height + overflow:hidden) — the enlarged phone
+     mockup's full content is taller than 100vh on common screens, and a
+     hard clip made the bottom of it (transactions list, rate pill)
+     permanently unreachable no matter how far the page scrolled. The
+     decorative rings are position:fixed (viewport-relative), so they never
+     needed this container's overflow to stay contained in the first
+     place. */
+  min-height: 100vh;
 }
 
 .heroTitle {
   font-size: clamp(2.5rem, 8vw, 5rem);
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: 2px;
   color: var(--gold);
   text-align: center;
@@ -318,27 +370,28 @@
   position: fixed;
   width: 600px;
   height: 600px;
-  top: 50%;
+  top: -160px;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
 }
 
 .ringSm {
   position: fixed;
   width: 380px;
   height: 380px;
-  top: 50%;
+  top: -60px;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
 }
 
-.ringInner {
+/* .ringInner {
+  position: fixed;
   width: 300px;
   height: 300px;
   top: 10px;
   left: 50%;
   transform: translateX(-50%);
-}
+} */
 
 /* Trust pill */
 .trustPill {
@@ -387,7 +440,7 @@
 /* Headline */
 .heroHeadline {
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.1;
   letter-spacing: -1.5px;
   color: var(--white);
@@ -455,24 +508,35 @@
   position: relative;
   width: 100%;
   max-width: 680px;
-  height: 340px;
+  height: min(75vh, 540px);
   display: flex;
   align-items: flex-start;
   justify-content: center;
 }
 
-/* ─── Phone frame ─── */
+/* ─── Phone frame ───
+   Scaled up from its native 250px design so the whole mockup (frame +
+   everything drawn inside it) grows uniformly — occupies at least half the
+   viewport height, and the extra size alone makes it a much stronger focal
+   point instead of a small decorative aside. transform-origin keeps it
+   anchored to the top so it grows downward, not off both edges.
+   PhoneAuthStage measures this element's actual on-screen rect for its
+   morph animation, so the scale is automatically accounted for there too. */
 .phoneFrame {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%);
+  top: 0;
+  transform: translateX(-50%) scale(1.55);
+  transform-origin: top center;
   width: 250px;
   background: #1c2333;
   border-radius: 26px;
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(236, 201, 75, 0.18);
   padding: 10px 8px 14px;
+  box-shadow:
+    0 30px 70px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
   z-index: 2;
-  top: 0;
 }
 
 .phoneNotch {
@@ -532,10 +596,11 @@
 }
 
 .psBalanceCard {
-  background: #1e3a5f;
+  background: linear-gradient(135deg, #234876, #1a2f4d);
   border-radius: 8px;
   padding: 7px 8px;
-  border: 0.5px solid rgba(96, 165, 250, 0.2);
+  border: 0.5px solid rgba(96, 165, 250, 0.25);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
 }
 
 .psBalLabel {
@@ -545,7 +610,7 @@
 
 .psBalAmount {
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--white);
   margin-top: 1px;
 }
@@ -864,7 +929,7 @@
 
 .resultAmount {
   font-size: 28px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--gold);
   letter-spacing: -0.5px;
 }
@@ -952,11 +1017,16 @@
    FOOTER
 ═══════════════════════════════════════ */
 .footer {
+  border-top: 0.5px solid var(--border-subtle);
+}
+
+.footerInner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.25rem 2.5rem;
-  border-top: 0.5px solid var(--border-subtle);
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 1.25rem 2rem;
   flex-wrap: wrap;
   gap: 1rem;
 }
@@ -1066,7 +1136,7 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .footer {
+  .footerInner {
     flex-direction: column;
     align-items: flex-start;
     padding: 1.25rem;
