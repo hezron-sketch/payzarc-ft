@@ -13,57 +13,33 @@ const instanceConfig = {
   timeout: 15000, // Added timeout to prevent hanging on network blocks
 };
 
-const setupRefreshInterceptor = (instance) => {
+const DEV_BYPASS_AUTH = process.env.REACT_APP_BYPASS_AUTH === "true";
+
+// No /api/refresh endpoint exists on any backend (mock or real) yet, so a 401
+// just ends the session — nothing to silently retry.
+const setupSessionInterceptor = (instance) => {
   instance.interceptors.response.use(
     (response) => response,
-    async (error) => {
-      const originalRequest = error.config;
-
-      // Handle 401 Unauthorized
-      // if (error.response?.status === 401 && !originalRequest._retry) {
-      //   originalRequest._retry = true;
-      //   try {
-      //     const refreshResponse = await springApi.post("/api/refresh");
-      //     const newAccessToken = refreshResponse.data.accessToken;
-      //     localStorage.setItem("accessToken", newAccessToken);
-      //     originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-      //     return instance(originalRequest);
-      //   } catch (refreshError) {
-      //     localStorage.clear();if (error.response?.status === 401 && !originalRequest._retry) {
-      //   originalRequest._retry = true;
-      //   try {
-      //     const refreshResponse = await springApi.post("/api/refresh");
-      //     const newAccessToken = refreshResponse.data.accessToken;
-      //     localStorage.setItem("accessToken", newAccessToken);
-      //     originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-      //     return instance(originalRequest);
-      //   } catch (refreshError) {
-      //     localStorage.clear();
-      //     window.location.href = "/components/member/login";
-      //     return Promise.reject(refreshError);
-      //   }
-      // }
-      //     window.location.href = "/components/member/login";
-      //     return Promise.reject(refreshError);
-      //   }
-      // }
-
-      // For any other error (including 511 Network Auth Required),
-      // this returns a rejected promise.
+    (error) => {
+      if (error.response?.status === 401 && !DEV_BYPASS_AUTH) {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("user");
+        window.location.href = "/components/member/login";
+      }
       return Promise.reject(error);
     },
   );
 };
 
-// const addInterceptors = (instance) => {
-//   instance.interceptors.request.use((config) => {
-//     config.headers = { ...config.headers, ...getTunnelHeaders() };
-//     const accessToken = localStorage.getItem("accessToken");
-//     if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
-//     return config;
-//   });
-//   setupRefreshInterceptor(instance);
-// };
+const addInterceptors = (instance) => {
+  instance.interceptors.request.use((config) => {
+    config.headers = { ...config.headers, ...getTunnelHeaders() };
+    const accessToken = localStorage.getItem("accessToken");
+    if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+    return config;
+  });
+  setupSessionInterceptor(instance);
+};
 
 // Create instances
 export const springApi = axios.create({
@@ -80,9 +56,9 @@ export const contactsApi = axios.create({
 });
 
 // Apply interceptors
-// addInterceptors(springApi);
-// addInterceptors(transactionsApi);
-// addInterceptors(contactsApi);
+addInterceptors(springApi);
+addInterceptors(transactionsApi);
+addInterceptors(contactsApi);
 
 export const djangoApis = { system1: transactionsApi, system2: contactsApi };
 

@@ -64,7 +64,6 @@ const SEND_STEPS = [
 ];
 
 function Home({ onPageChange, user, navigateRequest }) {
-  // --- States from the provided functional Home.js ---
   const [activeSection, setActiveSection] = useState("dashboard");
   // Which way the incoming flow panel slides in from, based on the action
   // buttons' left-to-right order (Add Money, Withdraw, Send, Groups).
@@ -74,7 +73,6 @@ function Home({ onPageChange, user, navigateRequest }) {
   const [loadingBalance, setLoadingBalance] = useState(true);
   const [balanceError, setBalanceError] = useState(null);
 
-  // Transaction/Action States
   const [sendAmount, setSendAmount] = useState("");
   // Step-by-step "money in transit" visual shown while a send is in
   // flight — 0 hides it, 1-3 tracks which leg of the journey is reached.
@@ -111,7 +109,6 @@ function Home({ onPageChange, user, navigateRequest }) {
   });
   const [showWithdrawPopup, setShowWithdrawPopup] = useState(false);
 
-  // Recipient/Search States
   const [recipientSearchTerm, setRecipientSearchTerm] = useState("");
   const [selectedRecipient, setSelectedRecipient] = useState(null);
   const [favourites, setFavourites] = useState([]);
@@ -133,7 +130,6 @@ function Home({ onPageChange, user, navigateRequest }) {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
 
-  // Dialog States
   const [openDialog, setOpenDialog] = useState(false);
   const [dialogTitle, setDialogTitle] = useState("");
   const [dialogMessage, setDialogMessage] = useState("");
@@ -160,7 +156,6 @@ function Home({ onPageChange, user, navigateRequest }) {
   const [tickerIndex, setTickerIndex] = useState(0);
   const [tickerBottom, setTickerBottom] = useState(24);
 
-  // --- Initialization & Data Fetching ---
   useEffect(() => {
     fetchBalance();
     fetchFavourites();
@@ -240,11 +235,9 @@ function Home({ onPageChange, user, navigateRequest }) {
       const res = await transactionsApi.get(
         "/api/transactions/history/?limit=5",
       );
-      // Handle different response shapes
       const txs = res.data.results || res.data.transactions || res.data || [];
       setRecentTransactions(txs.slice(0, 3));
     } catch (err) {
-      // Fallback to placeholders if API fails
       setRecentTransactions([
         {
           id: 1,
@@ -286,7 +279,6 @@ function Home({ onPageChange, user, navigateRequest }) {
     }
   };
 
-  // --- Handlers ---
   const toggleBalance = () => setShowBalance(!showBalance);
 
   const formattedBalance = balanceData
@@ -889,7 +881,9 @@ function Home({ onPageChange, user, navigateRequest }) {
             <span className={styles.currency}>
               {balanceData?.currency || "$"}
             </span>
-            <span className={showBalance ? undefined : styles.balanceMasked}>
+            <span
+              className={`${styles.balanceMasked} ${showBalance ? "" : styles.balanceHidden}`}
+            >
               {formattedBalance}
             </span>
           </h1>

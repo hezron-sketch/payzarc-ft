@@ -11,39 +11,19 @@ function History({ selectedTransaction, openDetailsPopup, closeDetailsPopup }) {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
 
-  // Filter state
   const [searchTerm, setSearchTerm] = useState("");
 
   const fetchTransactions = async () => {
     setLoading(true);
     setError(null);
 
-    // --- Auth temporarily disabled — re-enable when ready ---
-    // let rawToken = localStorage.getItem("accessToken");
-    //
-    // if (!rawToken) {
-    //   setError("Please login again. No token found.");
-    //   setLoading(false);
-    //   return;
-    // }
-    //
-    // // Clean token
-    // let token = rawToken
-    //   .replace(/^["']|["']$/g, "")
-    //   .replace(/\\"/g, "")
-    //   .replace(/Bearer\s*/i, "")
-    //   .trim();
-
     try {
       const params = {};
       if (searchTerm.trim()) params.search = searchTerm.trim();
 
-      // Using transactionsApi as it's proven to work in Home.js
       const response = await transactionsApi.get(
         "/api/transactions/history/",
         { params },
-        // Auth temporarily disabled — re-enable when ready:
-        // { params, headers: { Authorization: `Bearer ${token}` } },
       );
 
       const data = response.data;
@@ -66,7 +46,6 @@ function History({ selectedTransaction, openDetailsPopup, closeDetailsPopup }) {
     }
   };
 
-  // Load on mount
   useEffect(() => {
     fetchTransactions();
   }, []);

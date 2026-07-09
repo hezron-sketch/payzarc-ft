@@ -41,30 +41,49 @@
   border-radius: 5px;
   cursor: pointer;
   font-size: 16px;
+  transition: transform 0.2s var(--ease-standard), box-shadow 0.2s var(--ease-standard), filter 0.2s var(--ease-standard);
+}
+
+.captureButton:hover:not(:disabled),
+.stopButton:hover:not(:disabled),
+.startButton:hover:not(:disabled),
+.submitButton:hover:not(:disabled),
+.cancelButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+  filter: brightness(1.08);
+}
+
+.captureButton:active:not(:disabled),
+.stopButton:active:not(:disabled),
+.startButton:active:not(:disabled),
+.submitButton:active:not(:disabled),
+.cancelButton:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .startButton {
-  background-color: #4CAF50;
+  background-color: var(--green, #4ade80);
   color: white;
 }
 
 .captureButton {
-  background-color: #2196F3;
+  background-color: var(--blue, #60a5fa);
   color: white;
 }
 
 .stopButton {
-  background-color: #f44336;
+  background-color: var(--danger, #ef4444);
   color: white;
 }
 
 .submitButton {
-  background-color: #4CAF50;
+  background-color: var(--green, #4ade80);
   color: white;
 }
 
 .cancelButton {
-  background-color: #f44336;
+  background-color: var(--danger, #ef4444);
   color: white;
 }
 

@@ -50,6 +50,12 @@
   border-color: var(--gold-border);
   background: var(--gold-pale);
   color: var(--gold);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--gold-pale);
+}
+
+.fundButton:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .createGroup {
@@ -70,5 +76,9 @@
 .createGroup:hover {
   background: var(--gold-dark);
   transform: translateY(-1px);
+}
+
+.createGroup:active {
+  transform: translateY(0) scale(0.98);
 }
 

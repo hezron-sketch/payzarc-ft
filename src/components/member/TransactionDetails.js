@@ -48,10 +48,6 @@ function TransactionDetails({ transaction, closeDetailsPopup }) {
 
   const flagEmoji = getFlagEmoji(country);
 
-  /**
-   * Handle receipt download
-   * Generates a branded Payzarc PDF receipt with transaction details
-   */
   const handleDownloadReceipt = async () => {
     try {
       setIsDownloading(true);

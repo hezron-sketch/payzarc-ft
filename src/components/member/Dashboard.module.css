@@ -31,10 +31,7 @@
   display: flex;
   width: 100%;
   min-height: 100vh;
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cg fill='none' stroke='rgba(236,201,75,0.05)' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M20 40 q10 -20 20 0 t20 0'/%3E%3Ccircle cx='150' cy='30' r='7'/%3E%3Cpath d='M120 90 q12 -18 24 0 t24 0'/%3E%3Cpath d='M40 130 l10 10 m-10 0 l10 -10'/%3E%3Ccircle cx='170' cy='150' r='4'/%3E%3Cpath d='M70 170 q8 -14 16 0 t16 0'/%3E%3Ccircle cx='30' cy='100' r='3'/%3E%3C/g%3E%3C/svg%3E")
-      repeat,
-    radial-gradient(rgba(255, 242, 0, 0.067), var(--bg));
+  background: radial-gradient(rgba(255, 242, 0, 0.067), var(--bg));
   background-attachment: fixed, fixed;
   color: var(--white);
   font-family: var(--primary-page-font-family);
@@ -403,6 +400,21 @@
   padding: 0 4%;
 }
 
+.pageTransition {
+  animation: pageEnter 0.3s var(--ease-standard);
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* ════════════════════════════════════════
    IN-DASHBOARD NAV — replaces the old floating dock
    ════════════════════════════════════════ */
@@ -610,6 +622,6 @@
    there instead of being fought by a second scaling mechanism. */
 @media (min-width: 900px) {
   .pageWrap {
-    zoom: clamp(0.72, calc(100vw / 1920px), 1.2);
+    zoom: clamp(0.72, calc(100vw / 1920), 1.2);
   }
 }

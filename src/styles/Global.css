@@ -49,6 +49,11 @@
   --spacing-unit: 0.75rem;
   --spacing-half: 0.5rem;
   --spacing-quarter: 0.25rem;
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 0.15s var(--ease-standard);
+  --transition: 0.25s var(--ease-standard);
 }
 
 * {
@@ -76,4 +81,15 @@ input,
 select,
 textarea {
   font-family: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

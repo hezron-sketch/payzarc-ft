@@ -8,7 +8,6 @@ function ImageUpload({ onBack }) {
   const canvasRef = useRef(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
 
-  // Ensure video element is available after render
   useEffect(() => {
     if (isCameraActive) {
       console.log('Checking video element:', videoRef.current);
@@ -19,7 +18,6 @@ function ImageUpload({ onBack }) {
     }
   }, [isCameraActive]);
 
-  // Start the camera
   const startCamera = async () => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setError('Camera access is not supported in this browser');
@@ -65,7 +63,6 @@ function ImageUpload({ onBack }) {
     }
   };
 
-  // Capture image from camera
   const captureImage = () => {
     if (videoRef.current && canvasRef.current) {
       const context = canvasRef.current.getContext('2d');
@@ -82,7 +79,6 @@ function ImageUpload({ onBack }) {
     }
   };
 
-  // Stop the camera
   const stopCamera = () => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject;
@@ -94,7 +90,6 @@ function ImageUpload({ onBack }) {
     }
   };
 
-  // Handle file upload
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -112,7 +107,6 @@ function ImageUpload({ onBack }) {
     }
   };
 
-  // Handle image submission (placeholder for backend API)
   const handleSubmit = async () => {
     if (!selectedImage) {
       setError('Please select or capture an image');
@@ -120,8 +114,7 @@ function ImageUpload({ onBack }) {
       return;
     }
     try {
-      // Placeholder for backend API call
-      // await axios.post(`${API_URL}/api/upload-profile-image', { image: selectedImage });
+      // Not wired to a real upload endpoint yet.
       console.log('Image ready for upload:', selectedImage);
       onBack();
     } catch (err) {

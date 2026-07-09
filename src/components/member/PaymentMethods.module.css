@@ -2,7 +2,7 @@
    Money/Withdraw/Send/Groups apply a directional slide instead), so this
    panel needs its own plain entrance fade. */
 .entrance {
-  animation: entranceFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: entranceFadeIn 0.3s var(--ease-standard);
 }
 
 @keyframes entranceFadeIn {

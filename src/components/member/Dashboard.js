@@ -23,6 +23,8 @@ import {
   UsersRound,
 } from "lucide-react";
 
+const DEV_BYPASS_AUTH = process.env.REACT_APP_BYPASS_AUTH === "true";
+
 // Top-bar search results — static services plus whatever friends match.
 const SEARCH_SERVICES = [
   { id: "send", label: "Send Money", section: "send" },
@@ -137,9 +139,13 @@ export default function Dashboard() {
         localStorage.setItem("user", JSON.stringify(userData));
       } catch (err) {
         console.error("Failed to load dashboard:", err);
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("user");
-        navigate("/components/member/login");
+        if (DEV_BYPASS_AUTH) {
+          setUser((u) => u || {});
+        } else {
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("user");
+          navigate("/components/member/login");
+        }
       } finally {
         setLoading(false);
       }
@@ -491,7 +497,9 @@ export default function Dashboard() {
                   History
                 </button>
               </nav> */}
-              {renderContent()}
+              <div key={activePage} className={styles.pageTransition}>
+                {renderContent()}
+              </div>
             </div>
           </main>
 

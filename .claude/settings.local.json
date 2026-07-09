@@ -20,7 +20,9 @@
       "Bash(grep -E \"^[0-9]+\\\\.css$\")",
       "Bash(grep *)",
       "Bash(node -e \"require\\('fs'\\).readFileSync\\('/home/mtuhalf/Documents/react/frontend/payzarc/src/components/member/Dashboard.module.css','utf8'\\)\")",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:8080/api/dashboard --max-time 3)",
+      "Bash(awk *)"
     ]
   }
 }

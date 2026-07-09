@@ -1,5 +1,4 @@
 /**
- * generateReceipt.js
  * Generates a branded Payzarc PDF receipt — a slip-sized "card" page
  * (not a full A4 letter page) so the layout isn't floating in a mostly
  * empty sheet.
@@ -28,8 +27,6 @@ const MARGIN = 10;
 // show as blank boxes), so the destination is text-only — swap in a custom
 // embedded font here if flag icons are ever needed.
 export async function generateReceiptPDF(transaction) {
-  // Dynamic import of jsPDF - add this to your package.json dependencies:
-  // npm install jspdf
   const jsPDFModule = await import("jspdf");
   const { jsPDF } = jsPDFModule;
 

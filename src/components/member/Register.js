@@ -65,7 +65,6 @@ function Register({ onBack, embedded = false, compact = false }) {
   const canvasRef = useRef(null);
   const otpRefs = useRef([]);
 
-  // Auto-detect country
   useEffect(() => {
     const fetchCountry = async () => {
       try {

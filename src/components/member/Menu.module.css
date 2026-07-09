@@ -23,7 +23,7 @@
   position: absolute;
   bottom: 80px; /* Adjusted to align with bottomNav height (80px) */
   right: 10px;
-  background-color: #334155; /* Match Dashboard's --primary-immediate-component-bgcolor */
+  background-color: var(--card2, #131c2e); /* Match Dashboard's --primary-immediate-component-bgcolor */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* Slightly stronger shadow for depth */
   border-radius: 8px; /* Consistent with other components */
   display: flex;
@@ -41,16 +41,17 @@
   border: none;
   cursor: pointer;
   font-size: 1rem;
-  color: #e2e8f0; /* Match text color from Settings and Home */
-  transition: background-color 0.2s ease;
+  color: var(--white, #f9fafb); /* Match text color from Settings and Home */
+  transition: background-color 0.2s var(--ease-standard), color 0.2s var(--ease-standard);
 }
 
 .dropdownMenu button:hover {
-  background-color: #475569; /* Match hover color from other components */
+  background-color: var(--card, #1f2937); /* Match hover color from other components */
+  color: var(--gold, #ecc94b);
 }
 
 .dropdownMenu button svg {
   width: 20px;
   height: 20px;
-  fill: #e2e8f0; /* Match text color for consistency */
+  fill: var(--white, #f9fafb); /* Match text color for consistency */
 }

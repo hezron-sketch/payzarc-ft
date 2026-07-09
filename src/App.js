@@ -728,9 +728,9 @@ function AppContent() {
         <Route
           path="dashboard"
           element={
-            // <ProtectedRoute>
-            <Dashboard onBack={goHome} />
-            // </ProtectedRoute>
+            <ProtectedRoute>
+              <Dashboard onBack={goHome} />
+            </ProtectedRoute>
           }
         />
       </Routes>

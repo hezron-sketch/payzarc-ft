@@ -15,7 +15,7 @@ function SetPassword({ onBack }) {
   const [success, setSuccess] = useState(false);
   const [blocked, setBlocked] = useState(false);
 
-  // EXACT same regex as your Spring Boot backend
+  // Must match the Spring Boot backend's password regex exactly.
   const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,15}$/;
 
   useEffect(() => {
@@ -54,7 +54,6 @@ function SetPassword({ onBack }) {
     e.preventDefault();
     setError('');
 
-    // Basic required checks
     if (!email || !password || !confirmPassword) {
       setError('All fields are required.');
       await logAttempt('All fields are required.');
@@ -67,7 +66,6 @@ function SetPassword({ onBack }) {
       return;
     }
 
-    // NEW: Use the same regex as backend
     const passwordError = validatePassword(password);
     if (passwordError) {
       setError(passwordError);

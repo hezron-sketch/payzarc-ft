@@ -1,4 +1,3 @@
-// src/components/member/ResetPassword.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -89,9 +88,7 @@ function ResetPassword({ onBack }) {
       });
 
       if (res.data.result === 'valid') {
-        // Fixed navigation path
         navigate('/components/member/set-new-password', { state: { email } });
-        // Or if you change routes to short paths: navigate('/set-new-password', { state: { email } });
       } else if (res.data.result === 'locked') {
         setIsBlocked(true);
         setError('Too many invalid attempts. Account temporarily locked.');
