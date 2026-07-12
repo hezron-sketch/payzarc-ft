@@ -1,4 +1,5 @@
 {
+  "active_profile_id": 1,
   "dashboard": [
     {
       "id": 1,
@@ -10,6 +11,39 @@
       "profileImageUrl": "/images/default-user.png",
       "balance": 1250.75,
       "currency": "KES"
+    },
+    {
+      "id": 2,
+      "username": "thandiwe",
+      "firstname": "Thandiwe",
+      "surname": "Nkosi",
+      "email": "thandiwe.nkosi@example.com",
+      "phone": "+27821234567",
+      "profileImageUrl": "/images/default-user.png",
+      "balance": 8300,
+      "currency": "ZAR"
+    },
+    {
+      "id": 3,
+      "username": "amaka",
+      "firstname": "Amaka",
+      "surname": "Okoye",
+      "email": "amaka.okoye@example.com",
+      "phone": "+2348012345678",
+      "profileImageUrl": "/images/default-user.png",
+      "balance": 420000,
+      "currency": "NGN"
+    },
+    {
+      "id": 4,
+      "username": "carlos",
+      "firstname": "Carlos",
+      "surname": "Garcia",
+      "email": "carlos.garcia@example.com",
+      "phone": "+34612345678",
+      "profileImageUrl": "/images/default-user.png",
+      "balance": 950,
+      "currency": "EUR"
     }
   ],
   "profile": [
@@ -38,6 +72,84 @@
       "email": "hezronwandera46@gmail.com",
       "emailVerified": true,
       "password": "Hezron@123"
+    },
+    {
+      "id": 2,
+      "username": "thandiwe",
+      "firstname": "Thandiwe",
+      "middlename": "",
+      "surname": "Nkosi",
+      "othernames": "",
+      "gender": "Female",
+      "dob": "1992-03-22",
+      "countryOfBirth": "South Africa",
+      "idType": "National ID",
+      "idNumber": "87654321",
+      "idVerified": true,
+      "issuedCountry": "South Africa",
+      "issueDate": "2016-01-01",
+      "expiryDate": "2026-01-01",
+      "residenceCountry": "South Africa",
+      "townCity": "Johannesburg",
+      "postalCode": "2000",
+      "addressLine": "45 Nelson Mandela Drive",
+      "phone": "+27821234567",
+      "phoneVerified": true,
+      "email": "thandiwe.nkosi@example.com",
+      "emailVerified": true,
+      "password": "Thandiwe@123"
+    },
+    {
+      "id": 3,
+      "username": "amaka",
+      "firstname": "Amaka",
+      "middlename": "",
+      "surname": "Okoye",
+      "othernames": "",
+      "gender": "Female",
+      "dob": "1988-11-09",
+      "countryOfBirth": "Nigeria",
+      "idType": "National ID",
+      "idNumber": "45678912",
+      "idVerified": true,
+      "issuedCountry": "Nigeria",
+      "issueDate": "2014-01-01",
+      "expiryDate": "2024-01-01",
+      "residenceCountry": "Nigeria",
+      "townCity": "Lagos",
+      "postalCode": "100001",
+      "addressLine": "12 Marina Road",
+      "phone": "+2348012345678",
+      "phoneVerified": true,
+      "email": "amaka.okoye@example.com",
+      "emailVerified": true,
+      "password": "Amaka@123"
+    },
+    {
+      "id": 4,
+      "username": "carlos",
+      "firstname": "Carlos",
+      "middlename": "",
+      "surname": "Garcia",
+      "othernames": "",
+      "gender": "Male",
+      "dob": "1995-07-30",
+      "countryOfBirth": "Spain",
+      "idType": "National ID",
+      "idNumber": "78912345",
+      "idVerified": true,
+      "issuedCountry": "Spain",
+      "issueDate": "2018-01-01",
+      "expiryDate": "2028-01-01",
+      "residenceCountry": "Spain",
+      "townCity": "Madrid",
+      "postalCode": "28001",
+      "addressLine": "10 Calle Gran Via",
+      "phone": "+34612345678",
+      "phoneVerified": true,
+      "email": "carlos.garcia@example.com",
+      "emailVerified": true,
+      "password": "Carlos@123"
     }
   ],
   "secondary_contacts": [
@@ -68,7 +180,25 @@
       "id": 1,
       "success": true,
       "balance": 1250.75,
-      "currency": "USD"
+      "currency": "KES"
+    },
+    {
+      "id": 2,
+      "success": true,
+      "balance": 8300,
+      "currency": "ZAR"
+    },
+    {
+      "id": 3,
+      "success": true,
+      "balance": 420000,
+      "currency": "NGN"
+    },
+    {
+      "id": 4,
+      "success": true,
+      "balance": 950,
+      "currency": "EUR"
     }
   ],
   "my_contact": [
@@ -76,6 +206,21 @@
       "id": 1,
       "success": true,
       "phone": "+254712345678"
+    },
+    {
+      "id": 2,
+      "success": true,
+      "phone": "+27821234567"
+    },
+    {
+      "id": 3,
+      "success": true,
+      "phone": "+2348012345678"
+    },
+    {
+      "id": 4,
+      "success": true,
+      "phone": "+34612345678"
     }
   ],
   "notifications": [
@@ -161,7 +306,7 @@
       "transaction_code": "TX123456789",
       "name": "Jane Smith",
       "country": "Kenya",
-      "amount": 50.0,
+      "amount": 50,
       "status": "Completed",
       "fee": 1.5,
       "recipient": "jane@example.com"
@@ -172,26 +317,57 @@
       "transaction_code": "TX987654321",
       "name": "Bob Agent",
       "country": "Kenya",
-      "amount": 100.0,
+      "amount": 100,
       "status": "Completed",
-      "fee": 2.0,
+      "fee": 2,
       "recipient": "+254799999999"
     }
   ],
   "reference_countries": [
-    { "id": 1, "name": "Kenya" },
-    { "id": 2, "name": "Uganda" },
-    { "id": 3, "name": "Tanzania" },
-    { "id": 4, "name": "Rwanda" }
+    {
+      "id": 1,
+      "name": "Kenya"
+    },
+    {
+      "id": 2,
+      "name": "Uganda"
+    },
+    {
+      "id": 3,
+      "name": "Tanzania"
+    },
+    {
+      "id": 4,
+      "name": "Rwanda"
+    }
   ],
   "reference_banks": [
-    { "id": 1, "name": "Equity Bank" },
-    { "id": 2, "name": "KCB Bank" },
-    { "id": 3, "name": "Co-operative Bank" },
-    { "id": 4, "name": "Standard Chartered" }
+    {
+      "id": 1,
+      "name": "Equity Bank"
+    },
+    {
+      "id": 2,
+      "name": "KCB Bank"
+    },
+    {
+      "id": 3,
+      "name": "Co-operative Bank"
+    },
+    {
+      "id": 4,
+      "name": "Standard Chartered"
+    }
   ],
   "payment_methods": {
-    "banks": [],
+    "banks": [
+      {
+        "id": 1783663496980,
+        "bankName": "Chase",
+        "accountNumber": "22994829832984",
+        "accountName": "Hezron Onyango"
+      }
+    ],
     "cards": [],
     "mobileMoney": []
   },
@@ -200,13 +376,13 @@
       "id": 1,
       "name": "Emergency Fund",
       "type": "Emergency",
-      "balance": 500.0
+      "balance": 500
     },
     {
       "id": 2,
       "name": "Wedding Savings",
       "type": "Wedding",
-      "balance": 2000.0
+      "balance": 2000
     }
   ]
 }

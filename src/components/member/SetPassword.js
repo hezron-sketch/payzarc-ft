@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import styles from './SetPassword.module.css';
 import axios from 'axios';
 import { API_URL } from '../../utility/constants';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+
+const inputFieldClass =
+  'h-auto w-full rounded-sm bg-secondary border-input px-2.5 py-2.5 text-base text-foreground focus-visible:ring-0 focus-visible:border-gold shadow-none';
+const setpswdButtonClass =
+  'h-auto w-full rounded-sm px-2.5 py-2.5 text-base font-bold text-[#1a202c] bg-gold hover:bg-gold-dark shadow-none';
+const popupOverlayClass =
+  'fixed inset-0 bg-black/50 flex justify-center items-center z-[1000]';
+const popupContentClass =
+  'bg-card border border-border p-6 rounded-md max-w-[400px] w-[90%] text-center';
+const popupButtonClass = 'px-5 py-2.5 rounded-sm text-base h-auto shadow-none';
 
 function SetPassword({ onBack }) {
   const navigate = useNavigate();
@@ -102,63 +113,63 @@ function SetPassword({ onBack }) {
   };
 
   return (
-    <div className={styles.app}>
+    <div className="min-h-screen w-full flex items-center justify-center bg-background text-foreground p-4 box-border">
       {blocked ? (
-        <div className={styles.popupOverlay}>
-          <div className={styles.popupContent}>
-            <h2 className={`${styles.popupTitle} ${styles.error}`}>Email Blocked</h2>
-            <p className={styles.popupMessage}>Your email is blocked. Please contact support.</p>
-            <div className={styles.popupButtonContainer}>
-              <button
+        <div className={popupOverlayClass}>
+          <div className={popupContentClass}>
+            <h2 className="text-xl font-bold mb-2 text-destructive">Email Blocked</h2>
+            <p className="text-foreground text-base mb-2">Your email is blocked. Please contact support.</p>
+            <div className="flex justify-center">
+              <Button
                 onClick={() => navigate('/')}
-                className={`${styles.popupButton} ${styles.errorButton}`}
+                className={`${popupButtonClass} bg-destructive text-white hover:opacity-85`}
               >
                 OK
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       ) : success ? (
-        <div className={styles.popupOverlay}>
-          <div className={styles.popupContent}>
-            <h2 className={`${styles.popupTitle} ${styles.success}`}>Password Set Successfully</h2>
-            <p className={styles.popupMessage}>
+        <div className={popupOverlayClass}>
+          <div className={popupContentClass}>
+            <h2 className="text-xl font-bold mb-2 text-gold">Password Set Successfully</h2>
+            <p className="text-foreground text-base mb-2">
               Dear {capitalizeFirstLetter(firstName)}, your password has been set successfully.
             </p>
-            <div className={styles.popupButtonContainer}>
-              <button
+            <div className="flex justify-center">
+              <Button
                 onClick={() => navigate('/components/member/login')}
-                className={`${styles.popupButton} ${styles.successButton}`}
+                className={`${popupButtonClass} font-bold bg-gold text-[#1a202c] hover:bg-gold-dark`}
               >
                 Now Login
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       ) : (
-        <div className={styles.setpswdContainer}>
-          <div className={styles.innerContainer}>
-            <img src="/images/payzarc.png" alt="Payzarc" className={styles.appLogo} />
-            <h2 className={styles.setpswdTitle}>Welcome!</h2>
-            <p className={styles.setpswdTitlee}>{capitalizeFirstLetter(firstName)}</p>
-            <p className={styles.setpswdTitlee}>{email}</p>
-            <p className={styles.setpswdInfo}>Let's secure your account with a strong password.</p>
+        <div className="p-4 text-center rounded-lg w-full max-w-[400px]">
+          <div className="bg-card border border-border flex flex-col items-center p-4 rounded-lg">
+            <img src="/images/payzarc.png" alt="Payzarc" className="w-[100px] max-w-[35%] h-auto mb-4 block mx-auto" />
+            <h2 className="text-lg font-bold text-foreground mb-1">Welcome!</h2>
+            <p className="text-base font-bold text-gold mb-1">{capitalizeFirstLetter(firstName)}</p>
+            <p className="text-base font-bold text-gold mb-1">{email}</p>
+            <p className="text-gold text-sm mb-1">Let's secure your account with a strong password.</p>
 
-            <form onSubmit={handleSetPassword} className={styles.setpswdForm}>
-              <input
+            <form onSubmit={handleSetPassword} className="w-[90%] flex flex-col gap-2 mx-auto text-foreground">
+              <Input
                 type="password"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className={styles.inputField}
+                className={inputFieldClass}
                 required
               />
-              <input
+              <Input
                 type="password"
                 placeholder="Confirm Password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className={styles.inputField}
+                className={inputFieldClass}
                 required
               />
 
@@ -173,14 +184,14 @@ function SetPassword({ onBack }) {
                 </ul>
               </div>
 
-              {error && <p className={styles.errorMessage}>{error}</p>}
+              {error && <p className="text-destructive text-sm my-2">{error}</p>}
 
-              <button type="submit" className={styles.setpswdButton}>
+              <Button type="submit" className={setpswdButtonClass}>
                 Set Password
-              </button>
+              </Button>
             </form>
 
-            <p className={styles.slogan}>Your financial trusted partner at a go.</p>
+            <p className="text-gold text-sm mt-4 text-center font-light">Your financial trusted partner at a go.</p>
           </div>
         </div>
       )}

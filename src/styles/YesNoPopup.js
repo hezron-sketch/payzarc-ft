@@ -1,94 +1,110 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
-import PropTypes from 'prop-types';
-import styles from './YesNoPopup.module.css';
+import React, { useState, useEffect, useRef } from "react";
+import PropTypes from "prop-types";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
-const YesNoPopup = ({ isOpen, onClose, onSubmit, title, message, type = 'default', isNotification = false }) => {
-  const [input, setInput] = useState('');
-  const [error, setError] = useState('');
+const YesNoPopup = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  title,
+  message,
+  type = "default",
+  isNotification = false,
+}) => {
+  const [input, setInput] = useState("");
+  const [error, setError] = useState("");
   const inputRef = useRef(null);
 
   useEffect(() => {
-    if (isOpen) {
-      // Clear input every time it opens
-      setInput('');
-      setError('');
-      inputRef.current?.focus();
-      document.body.style.overflow = 'hidden';
-      const handleEscape = (e) => {
-        if (e.key === 'Escape') onClose();
-      };
-      document.addEventListener('keydown', handleEscape);
-      return () => {
-        document.body.style.overflow = '';
-        document.removeEventListener('keydown', handleEscape);
-      };
-    }
-  }, [isOpen, onClose]);
+    if (!isOpen) return;
+    // Clear input every time it opens
+    setInput("");
+    setError("");
+    // Radix already focuses the first focusable element on open; nudge that
+    // to the text input specifically once it's actually mounted.
+    const id = setTimeout(() => inputRef.current?.focus(), 0);
+    return () => clearTimeout(id);
+  }, [isOpen]);
 
-  if (!isOpen) return null;
-
-  return createPortal(
-    <div className={styles.overlay} onClick={() => onClose()}>
-      <div
-        className={`${styles.popup} ${styles[type] || ''}`}
-        onClick={(e) => e.stopPropagation()}
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className={cn(
+          "max-w-[400px] bg-card border border-border rounded-lg p-7 gap-4 animate-popup-in",
+          type === "warning" && "border-amber-400/35",
+          type === "error" && "border-red-400/35",
+        )}
       >
-        <h2 className={styles.title}>{title}</h2>
-        <p className={styles.message}>{message}</p>
+        <DialogTitle
+          className={cn(
+            "text-[1.15rem] font-bold text-foreground",
+            type === "warning" && "text-amber-400",
+            type === "error" && "text-red-400",
+          )}
+        >
+          {title}
+        </DialogTitle>
+
+        <p className="whitespace-pre-line leading-[1.55] text-sm text-muted-foreground -mt-2">
+          {message}
+        </p>
 
         {/* Hide input if it's just a notification */}
         {!isNotification && (
-          <input
+          <Input
             type="text"
             value={input}
             onChange={(e) => {
               setInput(e.target.value);
-              setError('');
+              setError("");
             }}
             placeholder="Type exactly 1, then click Yes"
-            className={styles.input}
+            className="h-auto w-full rounded-xl bg-secondary border-input px-3.5 py-3 text-base text-foreground placeholder:text-[var(--muted)] focus-visible:ring-0 focus-visible:border-gold shadow-none"
             ref={inputRef}
             maxLength={1}
             autoComplete="off"
           />
         )}
 
-        {error && <p className={styles.error}>{error}</p>}
+        {error && <p className="text-red-400 text-[0.8rem] -mt-2">{error}</p>}
 
-        <div className={styles.buttons}>
+        <div className="flex justify-end gap-2.5">
           {/* Hide "No" button if it's just a notification */}
           {!isNotification && (
-            <button
+            <Button
+              type="button"
               onClick={() => {
-                onSubmit(input, 'no');
+                onSubmit(input, "no");
                 onClose();
               }}
-              className={styles.cancel}
+              className="h-auto rounded-xl px-[18px] py-2.5 bg-white/[0.06] border border-input text-foreground text-sm font-semibold hover:bg-white/10 shadow-none"
             >
               No (2)
-            </button>
+            </Button>
           )}
 
-          <button
+          <Button
+            type="button"
             onClick={() => {
               if (isNotification) {
                 onClose(); // Just close for notifications
-              } else if (input === '1') {
-                onSubmit(input, 'yes');
+              } else if (input === "1") {
+                onSubmit(input, "yes");
                 onClose();
               } else {
-                setError('You must type exactly 1 before clicking Yes');
+                setError("You must type exactly 1 before clicking Yes");
               }
             }}
-            className={styles.send}
+            className="h-auto rounded-xl px-[18px] py-2.5 bg-primary text-primary-foreground text-sm font-bold hover:bg-gold-dark shadow-none"
           >
-            {isNotification ? 'OK' : 'Yes (1)'}
-          </button>
+            {isNotification ? "OK" : "Yes (1)"}
+          </Button>
         </div>
-      </div>
-    </div>,
-    document.body
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -98,9 +114,8 @@ YesNoPopup.propTypes = {
   onSubmit: PropTypes.func.isRequired,
   title: PropTypes.string.isRequired,
   message: PropTypes.string.isRequired,
-  type: PropTypes.oneOf(['default', 'warning', 'error']),
+  type: PropTypes.oneOf(["default", "warning", "error"]),
   isNotification: PropTypes.bool,
 };
 
 export default YesNoPopup;
-

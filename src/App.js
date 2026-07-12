@@ -14,7 +14,7 @@ import ResetPassword from "./components/member/ResetPassword";
 import SetNewPassword from "./components/member/SetNewPassword";
 import Dashboard from "./components/member/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
-import styles from "./App.module.css";
+import { cn } from "@/lib/utils";
 import { ArrowRightIcon } from "lucide-react";
 import { EXCHANGE_RATES } from "./utility/exchangeRates";
 
@@ -43,36 +43,115 @@ const QUICK_DESTINATIONS = [
   { flag: "🇬🇭", name: "Ghana", currency: "GHS", country: "Ghana" },
 ];
 
+/* ─── Shared class strings for the "phone preview" snapshot markup, which
+   is duplicated verbatim between PhoneMockup and PhoneAuthStage's
+   phoneStagePreview clone (same as it was as duplicated CSS-Module classes
+   before this migration) — extracted here just so both copies pull from a
+   single source instead of two independently-drifting class strings. ─── */
+const psHeaderClass = "flex items-center justify-between mb-0.5";
+const psLogoClass = "w-[18px] h-[18px] bg-gold rounded-[5px]";
+const psDotsClass = "flex gap-[3px]";
+const psDotClass = "w-[5px] h-[5px] rounded-full bg-white/20";
+const psGreetingClass = "text-[9px] text-muted-foreground";
+const psNameClass = "text-[11px] font-bold text-foreground -mt-1";
+const psBalanceCardClass =
+  "bg-gradient-to-br from-[#234876] to-[#1a2f4d] rounded-sm py-[7px] px-2 border-[0.5px] border-[rgba(96,165,250,0.25)] shadow-[0_6px_16px_rgba(0,0,0,0.25)]";
+const psBalLabelClass = "text-[8px] text-info";
+const psBalAmountClass = "text-[15px] font-bold text-foreground mt-px";
+
+/* ─── Phone Auth Stage shell (backdrop/panel/notch/screen/preview/content) —
+   formerly a small CSS-Modules leftover (App.module.css), now expressed as
+   Tailwind classes like the rest of the app.
+
+   phoneStagePanelClass keeps its transition as one arbitrary `transition`
+   property (not the transition-/duration- utility classes) because the FLIP
+   "grow" animation needs all eight of top/left/width/height/border-radius/
+   transform/background/border-color animating at once, with transform/size/
+   radius on one easing curve and background/border-color on another —
+   Tailwind's utilities only apply a single duration+easing to the whole
+   transition-property list, which can't express two curves at once. The
+   320ms duration here must also stay in sync with the `setTimeout(..., 320)`
+   in PhoneAuthStage's close handler, which unmounts the clone once the
+   shrink-back animation finishes — writing it as one exact string removes
+   any risk of the utility classes and the JS timer drifting apart. */
+const phoneStageBackdropClass =
+  "fixed inset-0 z-[1000] flex items-center justify-center px-4 py-8 bg-[rgba(6,8,14,0)] [backdrop-filter:blur(0px)] [-webkit-backdrop-filter:blur(0px)] transition-[background,backdrop-filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]";
+const phoneStageBackdropOpenClass =
+  "bg-[rgba(6,8,14,0.62)] [backdrop-filter:blur(7px)] [-webkit-backdrop-filter:blur(7px)]";
+const phoneStagePanelClass =
+  "fixed flex flex-col bg-[#1c2333] border-[1.5px] border-white/10 shadow-[0_30px_80px_rgba(0,0,0,0.55)] overflow-hidden rounded-[26px] z-[1001] [transition:top_0.32s_cubic-bezier(0.16,1,0.3,1),left_0.32s_cubic-bezier(0.16,1,0.3,1),width_0.32s_cubic-bezier(0.16,1,0.3,1),height_0.32s_cubic-bezier(0.16,1,0.3,1),border-radius_0.32s_cubic-bezier(0.16,1,0.3,1),transform_0.32s_cubic-bezier(0.16,1,0.3,1),background_0.32s_ease,border-color_0.32s_ease]";
+const phoneStagePanelOpenClass =
+  "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(420px,92vw)] h-[min(760px,88vh)] rounded-[36px] bg-[radial-gradient(circle_at_30%_0%,#263252,#1c2333_60%)] border-[rgba(236,201,75,0.16)] max-[480px]:w-[94vw] max-[480px]:h-[90vh] max-[480px]:rounded-[28px]";
+const phoneStageNotchClass =
+  "w-[42px] h-2 bg-[#0d1117] rounded mx-auto mt-[14px] flex-shrink-0 transition-opacity duration-200 ease-in-out";
+const phoneStageScreenClass =
+  "relative flex-1 mt-[10px] mx-[9px] mb-3 bg-card rounded-[20px] overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.12)_transparent] [&::-webkit-scrollbar]:w-[5px] [&::-webkit-scrollbar-thumb]:bg-white/[0.12] [&::-webkit-scrollbar-thumb]:rounded";
+const phoneStagePreviewClass =
+  "absolute inset-0 py-[10px] px-2 flex flex-col gap-[7px] opacity-100 transition-opacity duration-[220ms] ease-in-out pointer-events-none";
+const phoneStagePreviewHideClass = "opacity-0";
+const phoneStageContentClass =
+  "px-[1.35rem] pt-[1.6rem] pb-[1.85rem] opacity-0 translate-y-[10px] transition-[opacity,transform] duration-[220ms] ease-in-out";
+const phoneStageContentShowClass = "opacity-100 translate-y-0 delay-100";
+
 /* ─── Navbar ─── */
 function Navbar() {
   const navigate = useNavigate();
   return (
-    <nav className={styles.navbar}>
-      <div className={styles.navInner}>
-        <div className={styles.navLeft}>
-          <div className={styles.navBrand}>
-            <div className={styles.navLogo}>
+    <nav className="border-b-[0.5px] border-border sticky top-0 bg-[rgba(13,17,23,0.85)] backdrop-blur-[12px] z-[100]">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center max-w-[1120px] mx-auto px-8 py-4 max-[768px]:px-5">
+        <div className="flex items-center gap-9 justify-self-start">
+          <div className="flex items-center gap-2">
+            <div className="w-[60px] h-[30px] rounded-sm flex items-center justify-center flex-shrink-0">
               <img
                 src="/images/payzarc.png"
-                className={styles.logo}
+                className="h-8 w-20"
                 alt="Payzarc-logo"
               />
             </div>
-            {/* <span className={styles.navName}>Payzarc</span> */}
+            {/* <span className="text-[17px] font-bold text-foreground tracking-[-0.3px]">Payzarc</span> */}
           </div>
         </div>
-        <div className={styles.navLinks}>
-          <a href="#">Home</a>
-          <a href="#">Features</a>
-          <a href="#">Rates</a>
-          <a href="#">Help</a>
-          <a href="#">Contact</a>
+        <div className="flex gap-6 justify-self-center max-[768px]:hidden">
+          <button
+            type="button"
+            className="bg-transparent border-0 p-0 text-[13px] text-[var(--muted)] no-underline transition-colors duration-200 hover:text-foreground cursor-pointer"
+          >
+            Home
+          </button>
+          <button
+            type="button"
+            className="bg-transparent border-0 p-0 text-[13px] text-[var(--muted)] no-underline transition-colors duration-200 hover:text-foreground cursor-pointer"
+          >
+            Features
+          </button>
+          <button
+            type="button"
+            className="bg-transparent border-0 p-0 text-[13px] text-[var(--muted)] no-underline transition-colors duration-200 hover:text-foreground cursor-pointer"
+          >
+            Rates
+          </button>
+          <button
+            type="button"
+            className="bg-transparent border-0 p-0 text-[13px] text-[var(--muted)] no-underline transition-colors duration-200 hover:text-foreground cursor-pointer"
+          >
+            Help
+          </button>
+          <button
+            type="button"
+            className="bg-transparent border-0 p-0 text-[13px] text-[var(--muted)] no-underline transition-colors duration-200 hover:text-foreground cursor-pointer"
+          >
+            Contact
+          </button>
         </div>
         <button
-          className={styles.navBtn}
+          className="group inline-flex items-center gap-1.5 bg-gold text-[#111] border-none rounded-[20px] px-[1.3rem] py-[0.55rem] text-[13px] font-bold cursor-pointer justify-self-end shadow-[0_4px_14px_rgba(236,201,75,0.25)] transition-[background,transform,box-shadow] duration-200 hover:bg-gold-dark hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(236,201,75,0.4)]"
           onClick={() => navigate("/components/member/login")}
         >
-          Login <ArrowRightIcon size={14} />
+          Login{" "}
+          <ArrowRightIcon
+            size={14}
+            className="transition-transform duration-200 group-hover:translate-x-0.5"
+          />
         </button>
       </div>
     </nav>
@@ -86,55 +165,64 @@ const PhoneMockup = React.forwardRef(function PhoneMockup({ hidden }, ref) {
   return (
     <div
       ref={ref}
-      className={styles.phoneFrame}
+      className="absolute left-1/2 top-0 -translate-x-1/2 scale-[1.55] origin-top w-[250px] bg-[#1c2333] rounded-[26px] border-[1.5px] border-[rgba(236,201,75,0.18)] pt-[10px] px-2 pb-[14px] shadow-[0_30px_70px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.04)_inset] z-[2] max-[768px]:w-[230px]"
       style={hidden ? { visibility: "hidden" } : undefined}
     >
-      <div className={styles.phoneNotch} />
-      <div className={styles.phoneScreen}>
-        <div className={styles.psHeader}>
-          <div className={styles.psLogo} />
-          <div className={styles.psDots}>
-            <div className={styles.psDot} />
-            <div className={styles.psDot} />
-            <div className={styles.psDot} />
+      <div className="w-[42px] h-2 bg-[#0d1117] rounded mx-auto mb-[9px]" />
+      <div className="bg-card rounded-2xl py-[10px] px-2 min-h-[240px] flex flex-col gap-[7px]">
+        <div className={psHeaderClass}>
+          <div className={psLogoClass} />
+          <div className={psDotsClass}>
+            <div className={psDotClass} />
+            <div className={psDotClass} />
+            <div className={psDotClass} />
           </div>
         </div>
-        <div className={styles.psGreeting}>Hello,</div>
-        <div className={styles.psName}>Elaine W.</div>
-        <div className={styles.psBalanceCard}>
-          <div className={styles.psBalLabel}>Wallet balance</div>
-          <div className={styles.psBalAmount}>$4,820.00</div>
+        <div className={psGreetingClass}>Hello,</div>
+        <div className={psNameClass}>Elaine W.</div>
+        <div className={psBalanceCardClass}>
+          <div className={psBalLabelClass}>Wallet balance</div>
+          <div className={psBalAmountClass}>$4,820.00</div>
         </div>
-        <div className={styles.psSendLabel}>Send to</div>
-        <div className={styles.psRecipients}>
+        <div className="text-[9px] text-[var(--muted)]">Send to</div>
+        <div className="flex gap-[7px]">
           {[
             { initials: "JM", bg: "#fde68a", color: "#78350f", name: "James" },
             { initials: "SA", bg: "#bfdbfe", color: "#1e3a5f", name: "Sarah" },
             { initials: "NK", bg: "#d9f99d", color: "#365314", name: "Nora" },
             { initials: "+", bg: "#fecdd3", color: "#881337", name: "More" },
           ].map((r) => (
-            <div key={r.name} className={styles.psRec}>
+            <div key={r.name} className="flex flex-col items-center gap-[3px]">
               <div
-                className={styles.psRecAv}
+                className="w-[23px] h-[23px] rounded-full flex items-center justify-center text-[8px] font-bold"
                 style={{ background: r.bg, color: r.color }}
               >
                 {r.initials}
               </div>
-              <div className={styles.psRecName}>{r.name}</div>
+              <div className="text-[7px] text-[var(--muted)]">{r.name}</div>
             </div>
           ))}
         </div>
-        <div className={styles.psActivity}>Recent activity</div>
-        <div className={styles.psTx}>
+        <div className="text-[9px] text-[var(--muted)] mt-0.5">
+          Recent activity
+        </div>
+        <div className="flex flex-col gap-1">
           {[
             { flag: "🇳🇬", name: "Nigeria", amt: "+NGN 90K" },
             { flag: "🇮🇳", name: "India", amt: "+INR 41K" },
             { flag: "🇰🇪", name: "Kenya", amt: "+KES 25K" },
           ].map((t) => (
-            <div key={t.name} className={styles.psRow}>
-              <span className={styles.psFlag}>{t.flag}</span>
-              <span className={styles.psTxName}>{t.name}</span>
-              <span className={styles.psTxAmt}>{t.amt}</span>
+            <div
+              key={t.name}
+              className="flex items-center gap-1 bg-white/[0.04] rounded-[5px] px-[5px] py-1"
+            >
+              <span className="text-[10px] flex-shrink-0">{t.flag}</span>
+              <span className="text-[8px] text-[#d1d5db] flex-1">
+                {t.name}
+              </span>
+              <span className="text-[8px] font-bold text-success">
+                {t.amt}
+              </span>
             </div>
           ))}
         </div>
@@ -151,7 +239,12 @@ const PhoneMockup = React.forwardRef(function PhoneMockup({ hidden }, ref) {
    above everything at position:fixed) that transitions from that exact spot
    to a large centered "phone" containing the real form. Reversing the same
    animation on close makes it feel like the form shrinks back into the
-   mockup rather than the page navigating away. */
+   mockup rather than the page navigating away.
+
+   The clone's shell (backdrop/panel/notch/screen/preview/content) uses the
+   phoneStage*Class Tailwind strings defined above PhoneMockup — see the
+   comment there for why the panel's transition is one arbitrary property
+   instead of Tailwind's transition-/duration- utility classes. */
 function PhoneAuthStage({ overlay, onClose }) {
   const anchorRef = useRef(null);
   const closeTimerRef = useRef(null);
@@ -188,6 +281,9 @@ function PhoneAuthStage({ overlay, onClose }) {
     setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
     setPhase("closing");
     return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- must only re-run
+    // when overlay flips, so it captures phase as of that moment; adding phase
+    // would re-fire this on every phase transition and re-snapshot the rect.
   }, [overlay]);
 
   useEffect(() => {
@@ -239,18 +335,27 @@ function PhoneAuthStage({ overlay, onClose }) {
       {isActive &&
         createPortal(
           <div
-            className={`${styles.phoneStageBackdrop} ${isExpanded ? styles.phoneStageBackdropOpen : ""}`}
+            className={cn(
+              phoneStageBackdropClass,
+              isExpanded && phoneStageBackdropOpenClass,
+            )}
             onMouseDown={(e) => {
               if (e.target === e.currentTarget) onClose();
             }}
           >
             <div
-              className={`${styles.phoneStagePanel} ${isExpanded ? styles.phoneStagePanelOpen : ""}`}
+              className={cn(
+                phoneStagePanelClass,
+                isExpanded && phoneStagePanelOpenClass,
+              )}
               style={panelStyle}
             >
               <button
                 type="button"
-                className={styles.phoneStageCloseBtn}
+                className={cn(
+                  "absolute top-[14px] right-[14px] z-[2] w-[30px] h-[30px] flex items-center justify-center bg-white/[0.06] border-[0.5px] border-white/[0.12] rounded-full text-[#9ca3af] cursor-pointer transition-[opacity,background,color,transform] duration-200 hover:bg-white/[0.12] hover:text-[#f9fafb] hover:rotate-90",
+                  isExpanded ? "opacity-100" : "opacity-0",
+                )}
                 onClick={onClose}
                 aria-label="Close"
               >
@@ -269,30 +374,36 @@ function PhoneAuthStage({ overlay, onClose }) {
                 </svg>
               </button>
 
-              <div className={styles.phoneStageNotch} />
+              <div className={cn(phoneStageNotchClass, isExpanded && "opacity-0")} />
 
-              <div className={styles.phoneStageScreen}>
+              <div className={phoneStageScreenClass}>
                 <div
-                  className={`${styles.phoneStagePreview} ${isExpanded ? styles.phoneStagePreviewHide : ""}`}
+                  className={cn(
+                    phoneStagePreviewClass,
+                    isExpanded && phoneStagePreviewHideClass,
+                  )}
                 >
-                  <div className={styles.psHeader}>
-                    <div className={styles.psLogo} />
-                    <div className={styles.psDots}>
-                      <div className={styles.psDot} />
-                      <div className={styles.psDot} />
-                      <div className={styles.psDot} />
+                  <div className={psHeaderClass}>
+                    <div className={psLogoClass} />
+                    <div className={psDotsClass}>
+                      <div className={psDotClass} />
+                      <div className={psDotClass} />
+                      <div className={psDotClass} />
                     </div>
                   </div>
-                  <div className={styles.psGreeting}>Hello,</div>
-                  <div className={styles.psName}>Elaine W.</div>
-                  <div className={styles.psBalanceCard}>
-                    <div className={styles.psBalLabel}>Wallet balance</div>
-                    <div className={styles.psBalAmount}>$4,820.00</div>
+                  <div className={psGreetingClass}>Hello,</div>
+                  <div className={psNameClass}>Elaine W.</div>
+                  <div className={psBalanceCardClass}>
+                    <div className={psBalLabelClass}>Wallet balance</div>
+                    <div className={psBalAmountClass}>$4,820.00</div>
                   </div>
                 </div>
 
                 <div
-                  className={`${styles.phoneStageContent} ${isExpanded ? styles.phoneStageContentShow : ""}`}
+                  className={cn(
+                    phoneStageContentClass,
+                    isExpanded && phoneStageContentShowClass,
+                  )}
                 >
                   {overlay === "login" && (
                     <Login onBack={onClose} embedded compact />
@@ -314,15 +425,25 @@ function PhoneAuthStage({ overlay, onClose }) {
 function FloatCard({ side, iconBg, icon, label, value, sub }) {
   return (
     <div
-      className={`${styles.floatCard} ${side === "left" ? styles.floatLeft : styles.floatRight}`}
+      className={cn(
+        "absolute bg-secondary border-[0.5px] border-input rounded-2xl py-[10px] px-[14px] flex items-center gap-2.5 z-[3] whitespace-nowrap max-[768px]:px-[10px] max-[768px]:py-2",
+        side === "left"
+          ? "left-0 top-[55px] max-[768px]:-left-[10px] max-[768px]:top-10"
+          : "right-0 top-[95px] max-[768px]:-right-[10px] max-[768px]:top-20",
+      )}
     >
-      <div className={styles.fcIcon} style={{ background: iconBg }}>
+      <div
+        className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center flex-shrink-0"
+        style={{ background: iconBg }}
+      >
         {icon}
       </div>
       <div>
-        <div className={styles.fcLabel}>{label}</div>
-        <div className={styles.fcValue}>{value}</div>
-        <div className={styles.fcSub}>{sub}</div>
+        <div className="text-[10px] text-[var(--muted)]">{label}</div>
+        <div className="text-[15px] font-bold text-foreground max-[768px]:text-[13px]">
+          {value}
+        </div>
+        <div className="text-[10px] text-[var(--muted)]">{sub}</div>
       </div>
     </div>
   );
@@ -332,43 +453,45 @@ function FloatCard({ side, iconBg, icon, label, value, sub }) {
 function Hero({ overlay, onCloseAuth }) {
   const navigate = useNavigate();
   return (
-    <section className={styles.hero}>
-      <div className={`${styles.bgRing} ${styles.ringLg}`} />
-      <div className={`${styles.bgRing} ${styles.ringSm}`} />
-      <div className={`${styles.bgRing} ${styles.ringInner}`} />
+    <section className="relative flex flex-col items-center text-center min-h-screen pt-16 px-8 pb-12">
+      <div className="fixed rounded-full border border-[rgba(236,201,75,0.07)] pointer-events-none w-[600px] h-[600px] -top-[160px] left-1/2 -translate-x-1/2" />
+      <div className="fixed rounded-full border border-[rgba(236,201,75,0.07)] pointer-events-none w-[380px] h-[380px] -top-[60px] left-1/2 -translate-x-1/2" />
+      <div className="absolute rounded-full border border-[rgba(236,201,75,0.07)] pointer-events-none" />
 
-      {/* <div className={styles.trustPill}>
-        <div className={styles.avatars}>
-          <div className={`${styles.av} ${styles.av1}`}>J</div>
-          <div className={`${styles.av} ${styles.av2}`}>A</div>
-          <div className={`${styles.av} ${styles.av3}`}>M</div>
+      {/* <div className="inline-flex items-center gap-2 bg-white/5 border-[0.5px] border-input rounded-[20px] py-1.5 px-4 text-xs text-[var(--soft)] mb-6">
+        <div className="flex">
+          <div className="w-5 h-5 rounded-full border-[1.5px] border-background -mr-[5px] text-[9px] font-bold flex items-center justify-center bg-success text-[#166534]">J</div>
+          <div className="w-5 h-5 rounded-full border-[1.5px] border-background -mr-[5px] text-[9px] font-bold flex items-center justify-center bg-info text-[#1e3a5f]">A</div>
+          <div className="w-5 h-5 rounded-full border-[1.5px] border-background -mr-[5px] text-[9px] font-bold flex items-center justify-center bg-pink text-[#831843]">M</div>
         </div>
-        phoneFrame Trusted by 21,000+ people worldwide
+        Trusted by 21,000+ people worldwide
       </div> */}
-      <h1 className={styles.heroTitle}>PAYZARC</h1>
-
-      <h1 className={styles.heroHeadline}>
-        Send money
-        <br />
-        at <span className={styles.accent}>Lower Rates</span>
+      <h1 className="text-[clamp(2.5rem,8vw,5rem)] font-bold tracking-[2px] text-gold text-center leading-[1.05] flex p-0 max-[768px]:text-[34px]">
+        PAYZARC
       </h1>
 
-      <p className={styles.heroSub}>
+      <h1 className="text-[2rem] font-bold leading-[1.1] tracking-[-1.5px] text-foreground max-w-[520px] m-12 max-[768px]:text-lg">
+        Send money
+        <br />
+        at <span className="text-gold">Lower Rates</span>
+      </h1>
+
+      <p className="text-[1.3rem] text-[var(--muted)] max-w-[400px] leading-[1.7] mb-8 max-[768px]:text-sm">
         Payzarc offers industry-leading exchange rates with no hidden fees. Save
         more for every transaction you make.
       </p>
 
-      <div className={styles.heroCta}>
+      <div className="flex gap-3 mb-14 max-[480px]:flex-col max-[480px]:items-stretch">
         <button
-          className={styles.ctaPrimary}
+          className="bg-gold text-[#111] border-none rounded-[2rem] py-3 px-7 text-2xl font-semibold cursor-pointer transition-[background,transform] duration-200 hover:bg-gold-dark hover:-translate-y-px max-[480px]:text-center"
           onClick={() => navigate("/components/member/register")}
         >
           Get started <ArrowRightIcon />
         </button>
-        {/* <button className={styles.ctaSecondary}>See how it works</button> */}
+        {/* <button className="bg-white/5 text-[#d1d5db] border-[0.5px] border-input rounded-[24px] py-3 px-7 text-sm font-medium cursor-pointer transition-colors duration-200 hover:bg-white/[0.09] max-[480px]:text-center">See how it works</button> */}
       </div>
 
-      <div className={styles.illustrationArea}>
+      <div className="relative w-full max-w-[680px] h-[min(75vh,540px)] flex items-start justify-center max-[768px]:h-[300px]">
         <FloatCard
           side="left"
           iconBg="rgba(59,130,246,0.15)"
@@ -410,8 +533,8 @@ function Hero({ overlay, onCloseAuth }) {
           sub="INR · fees: ₹0.00"
         />
 
-        <div className={styles.ratePill}>
-          <div className={styles.rateDot} />
+        <div className="absolute bottom-[10px] left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 bg-success/[0.08] border-[0.5px] border-success/25 rounded-[20px] py-[5px] px-3 text-[11px] text-success whitespace-nowrap">
+          <div className="w-1.5 h-1.5 rounded-full bg-success flex-shrink-0" />
           Live rate · updated 2s ago
         </div>
       </div>
@@ -456,12 +579,19 @@ const FEATURES = [
   },
 ];
 
+// eslint-disable-next-line no-unused-vars -- kept for when FeaturesStrip is re-enabled in Home()
 function FeaturesStrip() {
   return (
-    <div className={styles.featuresRow}>
+    <div className="flex flex-col gap-3 w-full px-10 py-8 border-t-[0.5px] border-border items-center flex-1 max-[768px]:py-6 max-[768px]:px-5">
       {FEATURES.map((f) => (
-        <div key={f.title} className={styles.featItem}>
-          <div className={styles.featIcon} style={{ background: f.iconBg }}>
+        <div
+          key={f.title}
+          className="bg-white/[0.03] border-[0.5px] border-border rounded-[14px] p-5 flex flex-col gap-1.5 transition-[border-color,background] duration-200 hover:bg-white/[0.055] hover:border-input"
+        >
+          <div
+            className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center mb-1.5"
+            style={{ background: f.iconBg }}
+          >
             <svg
               width="16"
               height="16"
@@ -475,8 +605,12 @@ function FeaturesStrip() {
               {f.iconPath}
             </svg>
           </div>
-          <div className={styles.featTitle}>{f.title}</div>
-          <div className={styles.featDesc}>{f.desc}</div>
+          <div className="text-[13px] font-bold text-foreground">
+            {f.title}
+          </div>
+          <div className="text-[12px] text-[var(--muted)] leading-[1.55]">
+            {f.desc}
+          </div>
         </div>
       ))}
     </div>
@@ -489,6 +623,7 @@ function isValidAmount(val) {
   return !isNaN(n) && n >= 1 && n <= 1000000;
 }
 
+// eslint-disable-next-line no-unused-vars -- kept for when Converter is re-enabled in Home()
 function Converter() {
   const navigate = useNavigate();
   const [fromCountry, setFromCountry] = useState("");
@@ -545,34 +680,44 @@ function Converter() {
     toValue;
 
   return (
-    <div className={styles.converterSection}>
-      <h2 className={styles.convTitle}>Calculate your transfer</h2>
-      <p className={styles.convSub}>Real-time rates, zero surprises.</p>
+    <div className="py-12 px-10 border-t-[0.5px] border-border max-w-[600px] mx-auto max-[768px]:py-8 max-[768px]:px-5">
+      <h2 className="text-[26px] font-bold text-foreground tracking-[-0.5px] mb-[0.3rem]">
+        Calculate your transfer
+      </h2>
+      <p className="text-[14px] text-[var(--muted)] mb-6">
+        Real-time rates, zero surprises.
+      </p>
 
-      <div className={styles.converterBox}>
-        <span className={styles.convLabel}>Exchange calculator</span>
+      <div className="bg-white/[0.03] border-[0.5px] border-border rounded-[20px] p-6 flex flex-col gap-4">
+        <span className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-[0.6px]">
+          Exchange calculator
+        </span>
 
-        <div className={styles.selectRow}>
+        <div className="flex gap-3">
           <select
-            className={styles.dropdown}
+            className="flex-1 py-[0.7rem] px-[0.875rem] bg-white/[0.06] text-foreground border-[0.5px] border-white/10 rounded-[10px] text-[13px] outline-none cursor-pointer appearance-none transition-colors duration-200 focus:border-gold"
             value={fromCountry}
             onChange={handleFrom}
           >
-            <option value="">From country</option>
+            <option value="" style={{ background: "#1f2937" }}>
+              From country
+            </option>
             {Object.keys(COUNTRIES).map((c) => (
-              <option key={c} value={c}>
+              <option key={c} value={c} style={{ background: "#1f2937" }}>
                 {c} ({COUNTRIES[c]})
               </option>
             ))}
           </select>
           <select
-            className={styles.dropdown}
+            className="flex-1 py-[0.7rem] px-[0.875rem] bg-white/[0.06] text-foreground border-[0.5px] border-white/10 rounded-[10px] text-[13px] outline-none cursor-pointer appearance-none transition-colors duration-200 focus:border-gold"
             value={toCountry}
             onChange={handleTo}
           >
-            <option value="">To country</option>
+            <option value="" style={{ background: "#1f2937" }}>
+              To country
+            </option>
             {Object.keys(COUNTRIES).map((c) => (
-              <option key={c} value={c}>
+              <option key={c} value={c} style={{ background: "#1f2937" }}>
                 {c} ({COUNTRIES[c]})
               </option>
             ))}
@@ -581,7 +726,7 @@ function Converter() {
 
         <input
           type="number"
-          className={styles.amountInput}
+          className="w-full p-4 bg-white/[0.06] text-foreground border-[0.5px] border-white/10 rounded-xl text-[22px] font-bold text-center outline-none transition-colors duration-200 focus:border-gold placeholder:text-[var(--muted)] placeholder:text-[15px] placeholder:font-normal [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           placeholder="Enter amount"
           value={fromValue}
           onChange={handleAmount}
@@ -590,11 +735,11 @@ function Converter() {
         />
 
         {toValue && (
-          <div className={styles.resultBox}>
-            <div className={styles.resultAmount}>
+          <div className="bg-[var(--gold-pale)] border border-dashed border-[var(--gold-border)] rounded-xl p-4 text-center">
+            <div className="text-[28px] font-bold text-gold tracking-[-0.5px]">
               {Number(toValue).toLocaleString()} {COUNTRIES[toCountry]}
             </div>
-            <div className={styles.resultMeta}>
+            <div className="text-[11px] text-[rgba(236,201,75,0.5)] mt-[3px] tracking-[0.2px]">
               1 {COUNTRIES[fromCountry]} ={" "}
               {EXCHANGE_RATES[COUNTRIES[fromCountry]]?.[COUNTRIES[toCountry]]}{" "}
               {COUNTRIES[toCountry]} · indicative rate
@@ -604,7 +749,7 @@ function Converter() {
 
         {canSend && (
           <button
-            className={styles.sendBtn}
+            className="w-full py-[0.9rem] bg-gold text-[#111] border-none rounded-md text-[15px] font-bold cursor-pointer transition-[background,transform] duration-200 hover:bg-gold-dark hover:-translate-y-px"
             onClick={() => navigate("/components/member/login")}
           >
             Send to {toCountry} →
@@ -612,17 +757,19 @@ function Converter() {
         )}
       </div>
 
-      <div className={styles.quickSection}>
-        <p className={styles.quickLabel}>Popular destinations</p>
-        <div className={styles.destinations}>
+      <div className="mt-6">
+        <p className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-[0.6px] mb-3">
+          Popular destinations
+        </p>
+        <div className="grid grid-cols-4 gap-2.5 max-[768px]:grid-cols-2">
           {QUICK_DESTINATIONS.map((d) => (
             <button
               key={d.name}
-              className={styles.destBtn}
+              className="bg-white/[0.04] border-[0.5px] border-border rounded-[10px] text-[var(--soft)] py-[0.7rem] px-1 cursor-pointer flex flex-col items-center gap-[5px] transition-colors duration-200 hover:bg-[var(--gold-pale)] hover:border-[var(--gold-border)] hover:text-gold"
               onClick={() => handleQuickDest(d)}
             >
-              <span className={styles.destFlag}>{d.flag}</span>
-              <span className={styles.destName}>{d.name}</span>
+              <span className="text-xl">{d.flag}</span>
+              <span className="text-[11px] font-medium">{d.name}</span>
             </button>
           ))}
         </div>
@@ -634,30 +781,35 @@ function Converter() {
 /* ─── Footer ─── */
 function Footer() {
   return (
-    <footer className={styles.footer}>
-      <div className={styles.footerInner}>
-        <div className={styles.footerLeft}>
-          <div className={styles.navBrand}>
-            <div className={styles.navLogo}>
-              <img src="/images/payzarc.png" className={styles.logo} />
+    <footer className="border-t-[0.5px] border-border">
+      <div className="flex items-center justify-between max-w-[1120px] mx-auto px-8 py-5 flex-wrap gap-4 max-[768px]:flex-col max-[768px]:items-start max-[768px]:p-5">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <div className="w-[60px] h-[30px] rounded-sm flex items-center justify-center flex-shrink-0">
+              <img src="/images/payzarc.png" className="h-8 w-20" alt="" />
             </div>
-            {/* <span className={styles.navName}>Payzarc</span> */}
-            <p className={styles.footerTagline}>
+            {/* <span className="text-[17px] font-bold text-foreground tracking-[-0.3px]">Payzarc</span> */}
+            <p className="text-[12px] text-[var(--muted)] pl-[38px] max-[768px]:pl-0 max-[768px]:mt-1">
               Your trusted cross-border financial partner.
             </p>
           </div>
         </div>
-        <div className={styles.footerMid}>
-          <a href="mailto:info.e@payzarc.com" className={styles.footerEmail}>
+        <div className="flex flex-col gap-[3px] text-center max-[768px]:text-left">
+          <a
+            href="mailto:info.e@payzarc.com"
+            className="text-[12px] font-semibold text-gold no-underline"
+          >
             info.e@payzarc.com
           </a>
-          <span className={styles.footerPhone}>+1 (713) 822-8593</span>
-          <span className={styles.footerAddr}>
+          <span className="text-[11px] text-[var(--muted)]">
+            +1 (713) 822-8593
+          </span>
+          <span className="text-[11px] text-[var(--muted)]">
             Kew Gardens Dr Houston Tx, USA
           </span>
         </div>
-        {/* <div className={styles.trustBadge}>
-          <div className={styles.trustDot} />
+        {/* <div className="flex items-center gap-1.5 bg-white/[0.04] border-[0.5px] border-border rounded-[20px] py-1.5 px-3.5 text-xs text-[var(--soft)]">
+          <div className="w-[7px] h-[7px] rounded-full bg-success flex-shrink-0" />
           Secure &amp; live
         </div> */}
       </div>
@@ -677,8 +829,8 @@ function Home({ overlay }) {
   const closeOverlay = () => navigate("/");
 
   return (
-    <div className={styles.pageWrap}>
-      <div className={styles.page}>
+    <div className="bg-[#0602145f] bg-fixed">
+      <div className="bg-[radial-gradient(ellipse_120%_60%_at_50%_-10%,rgba(38,50,82,0.6),var(--bg)_60%)] bg-fixed text-foreground font-sans min-h-screen leading-[1.6]">
         <Navbar />
 
         <Hero overlay={overlay} onCloseAuth={closeOverlay} />

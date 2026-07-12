@@ -1,7 +1,29 @@
 import React, { useState } from "react";
+import { Download } from "lucide-react";
 import { countries } from "../../utility/countries";
-import styles from "./TransactionDetails.module.css";
 import { generateReceiptPDF } from "../../utility/generateReceipt";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+
+// Exact-match status labels get a colored pill; anything else (e.g. an
+// unrecognized backend status string) renders as a plain pill, same as the
+// original CSS-module lookup silently no-op'ing on an unknown key.
+const statusStyles = {
+  Paid: "bg-success/15 text-success border border-success/30",
+  Sent: "bg-success/15 text-success border border-success/30",
+  Completed: "bg-success/15 text-success border border-success/30",
+  Received: "bg-info/15 text-info border border-info/30",
+  Pending:
+    "bg-[rgba(251,146,60,0.15)] text-[#fb923c] border border-[rgba(251,146,60,0.3)]",
+};
+
+const rowClass =
+  "flex justify-between items-center gap-3 py-[0.85rem] px-2 -mx-2 border-b border-border last:border-b-0 rounded-md transition-colors hover:bg-[var(--gold-pale)] max-[640px]:flex-col max-[640px]:items-start max-[640px]:gap-1";
+const rowLabelClass =
+  "text-xs font-semibold text-[var(--soft)] uppercase tracking-[0.5px] shrink-0";
+const rowValueClass =
+  "text-sm font-medium text-foreground text-right break-words min-w-0 max-[640px]:text-left";
 
 function TransactionDetails({ transaction, closeDetailsPopup }) {
   const [isDownloading, setIsDownloading] = useState(false);
@@ -61,22 +83,24 @@ function TransactionDetails({ transaction, closeDetailsPopup }) {
   };
 
   return (
-    <div className={styles.modalOverlay} onClick={closeDetailsPopup}>
-      <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.modalHeader}>
-          <div className={styles.modalHeaderLeft}>
-            <h3>Transaction Details</h3>
-          </div>
-          <button className={styles.closeButton} onClick={closeDetailsPopup}>
-            ✕
-          </button>
+    <Dialog
+      open
+      onOpenChange={(isOpen) => {
+        if (!isOpen) closeDetailsPopup();
+      }}
+    >
+      <DialogContent className="w-full max-w-[520px] max-h-[85vh] overflow-y-auto overflow-x-hidden bg-card border-border rounded-lg p-0 gap-0">
+        <div className="sticky top-0 z-[1] px-7 py-6 bg-card border-b border-border">
+          <DialogTitle className="text-lg font-bold text-foreground m-0 tracking-[-0.3px]">
+            Transaction Details
+          </DialogTitle>
         </div>
 
-        <div className={styles.modalImageContainer}>
+        <div className="px-7 pt-6 pb-4 text-center bg-white/[0.02] border-b border-border">
           <img
             src={transaction.image || "/images/default-user.png"}
             alt="BeneficiaryImg"
-            className={styles.modalImage}
+            className="w-20 h-20 rounded-full object-cover border-2 border-[var(--gold-border)] mx-auto"
             onError={(e) => {
               e.target.src = "/images/default-user.png";
             }}
@@ -84,86 +108,77 @@ function TransactionDetails({ transaction, closeDetailsPopup }) {
           />
         </div>
 
-        <table className={styles.detailsTable}>
-          <tbody>
-            <tr>
-              <th>Ref. ID</th>
-              <td>{refNo}</td>
-            </tr>
-            <tr>
-              <th>Name</th>
-              <td>{name}</td>
-            </tr>
-            <tr>
-              <th>Amount</th>
-              <td className={styles.amountCell}>{amount}</td>
-            </tr>
-            <tr>
-              <th>Fee</th>
-              <td>{fee}</td>
-            </tr>
-            <tr>
-              <th>Date</th>
-              <td>{date}</td>
-            </tr>
-            <tr>
-              <th>Recipient</th>
-              <td>{recipient}</td>
-            </tr>
-            <tr>
-              <th>Status</th>
-              <td>
-                <span
-                  className={`${styles.statusBadge} ${styles[`status${status}`.replace(/\s+/g, "")]}`}
-                >
-                  {status}
-                </span>
-              </td>
-            </tr>
-            <tr>
-              <th>Country</th>
-              <td>
-                <span className={styles.flagContainer}>
-                  <span className={styles.flagEmoji}>{flagEmoji}</span>
-                  <span className={styles.countryName}>{country}</span>
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="flex flex-col px-7 py-6">
+          <div className={rowClass}>
+            <span className={rowLabelClass}>Ref. ID</span>
+            <span className={rowValueClass}>{refNo}</span>
+          </div>
+          <div className={rowClass}>
+            <span className={rowLabelClass}>Name</span>
+            <span className={rowValueClass}>{name}</span>
+          </div>
+          <div className={rowClass}>
+            <span className={rowLabelClass}>Amount</span>
+            <span className={cn(rowValueClass, "text-gold font-bold text-[15px]")}>
+              {amount}
+            </span>
+          </div>
+          <div className={rowClass}>
+            <span className={rowLabelClass}>Fee</span>
+            <span className={rowValueClass}>{fee}</span>
+          </div>
+          <div className={rowClass}>
+            <span className={rowLabelClass}>Date</span>
+            <span className={rowValueClass}>{date}</span>
+          </div>
+          <div className={rowClass}>
+            <span className={rowLabelClass}>Recipient</span>
+            <span className={rowValueClass}>{recipient}</span>
+          </div>
+          <div className={rowClass}>
+            <span className={rowLabelClass}>Status</span>
+            <span className={rowValueClass}>
+              <span
+                className={cn(
+                  "inline-block px-3.5 py-1.5 rounded-full text-xs font-bold capitalize whitespace-nowrap transition-transform hover:scale-105",
+                  statusStyles[status],
+                )}
+              >
+                {status}
+              </span>
+            </span>
+          </div>
+          <div className={rowClass}>
+            <span className={rowLabelClass}>Country</span>
+            <span className={cn(rowValueClass, "flex items-center gap-2 justify-end max-[640px]:justify-start")}>
+              <span className="text-lg leading-none">{flagEmoji}</span>
+              <span className="text-[13px] font-semibold text-foreground">
+                {country}
+              </span>
+            </span>
+          </div>
+        </div>
 
-        <div className={styles.modalActions}>
-          <button
-            className={styles.downloadButton}
+        <div className="flex gap-3 px-7 py-6 border-t border-border bg-white/[0.02] max-[640px]:flex-col">
+          <Button
+            className="flex-1 h-auto rounded-md px-5 py-[0.85rem] text-[13px] font-semibold shadow-[0_4px_12px_rgba(236,201,75,0.25)] hover:-translate-y-0.5"
             onClick={handleDownloadReceipt}
             disabled={isDownloading}
             title="Download transaction receipt as PDF"
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
+            <Download size={16} />
             {isDownloading ? "Generating..." : "Download Receipt"}
-          </button>
-          <button
-            className={styles.closeActionButton}
+          </Button>
+          <Button
+            variant="secondary"
+            className="flex-1 h-auto rounded-md px-5 py-[0.85rem] text-[13px] font-semibold border border-input"
             onClick={closeDetailsPopup}
           >
             Close
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

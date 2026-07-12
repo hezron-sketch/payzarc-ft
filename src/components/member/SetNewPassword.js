@@ -4,7 +4,15 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHome } from '@fortawesome/free-solid-svg-icons';
 import axiosInstance from '../../utility/axiosInstance';
-import styles from './SetNewPassword.module.css';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+
+const homeButtonClass =
+  'self-start p-0 h-auto bg-transparent border-none text-foreground text-2xl cursor-pointer mb-4 hover:bg-transparent hover:text-gold-dark shadow-none';
+const inputFieldClass =
+  'h-auto w-full rounded-sm bg-secondary border-input px-3 py-3 text-base text-foreground focus-visible:ring-0 focus-visible:border-gold shadow-none';
+const loginButtonClass =
+  'h-auto w-full rounded-sm px-3 py-3 text-base font-bold text-[#1a202c] bg-gold hover:bg-gold-dark shadow-none';
 
 function SetNewPassword() {
   const { state } = useLocation();
@@ -55,42 +63,42 @@ function SetNewPassword() {
   };
 
   return (
-    <div className={styles.app}>
-      <div className={styles.apppLogo}>
-        <img src="/images/payzarc.png" alt="Payzarc" className={styles.appLogo} />
+    <div className="min-h-screen w-full flex items-center justify-center bg-background text-foreground p-4 box-border">
+      <div className="p-6 bg-card border border-border rounded-lg flex flex-col items-center w-full max-w-[400px] gap-4">
+        <img src="/images/payzarc.png" alt="Payzarc" className="block text-center max-w-[35%] mx-auto" />
 
-        <div className={styles.innerContainer}>
-          <button onClick={() => navigate('/reset-password')} className={styles.homeButton}>
+        <div className="bg-card rounded-lg w-full flex flex-col items-center p-6">
+          <button onClick={() => navigate('/reset-password')} className={homeButtonClass}>
             <FontAwesomeIcon icon={faHome} />
           </button>
 
-          <h2>Set New Password</h2>
-          <p>For account: <strong>{email}</strong></p>
+          <h2 className="text-[1.6rem] font-bold text-gold text-center mt-2 mb-4">Set New Password</h2>
+          <p className="text-foreground text-center mb-2">For account: <strong>{email}</strong></p>
 
-          <form onSubmit={handleSubmit} className={styles.form}>
-            <input
+          <form onSubmit={handleSubmit} className="w-[90%] flex flex-col gap-5">
+            <Input
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="New Password"
               required
-              className={styles.inputField}
+              className={inputFieldClass}
             />
 
-            <input
+            <Input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm Password"
               required
-              className={styles.inputField}
+              className={inputFieldClass}
             />
 
-            {error && <p className={styles.error}>{error}</p>}
+            {error && <p className="text-destructive text-sm text-center my-2">{error}</p>}
 
-            <button type="submit" disabled={loading} className={styles.loginButton}>
+            <Button type="submit" disabled={loading} className={loginButtonClass}>
               {loading ? 'Resetting...' : 'Reset Password'}
-            </button>
+            </Button>
           </form>
         </div>
       </div>

@@ -6,6 +6,12 @@ const dbPath = "dummy_db.json";
 
 const saveDb = (db) => fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
 
+// Multiple mock accounts (Kenya/South Africa/Nigeria/Spain/...) live side by
+// side in each array, keyed by matching `id`. There's no real session, so
+// login just remembers which one is "active" in the db file itself.
+const active = (db, arr) =>
+  arr.find((x) => x.id === db.active_profile_id) || arr[0];
+
 const server = http.createServer((req, res) => {
   // Re-read DB on every request to ensure it's fresh
   let db;
@@ -56,11 +62,13 @@ const server = http.createServer((req, res) => {
       (normalizedPath === "/api/resolve-username" ||
         normalizedPath === "/resolve-username")
     ) {
-      const matches =
-        (parsedBody.username || "").toLowerCase() ===
-        db.profile[0].username.toLowerCase();
+      const match = db.profile.find(
+        (p) =>
+          p.username.toLowerCase() ===
+          (parsedBody.username || "").toLowerCase(),
+      );
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify(matches ? { email: db.profile[0].email } : {}));
+      res.end(JSON.stringify(match ? { email: match.email } : {}));
       return;
     }
 
@@ -71,21 +79,27 @@ const server = http.createServer((req, res) => {
       // Resend-OTP calls this same endpoint with password: "resend" — let
       // those through without re-checking credentials.
       const isResend = parsedBody.password === "resend";
-      const emailMatches =
-        (parsedBody.email || "").toLowerCase() ===
-        db.profile[0].email.toLowerCase();
-      const passwordMatches = parsedBody.password === db.profile[0].password;
+      const matched = db.profile.find(
+        (p) =>
+          p.email.toLowerCase() === (parsedBody.email || "").toLowerCase() &&
+          p.password === parsedBody.password,
+      );
 
-      if (!isResend && !(emailMatches && passwordMatches)) {
+      if (!isResend && !matched) {
         res.writeHead(401, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Incorrect username or password" }));
         return;
       }
 
+      if (matched) {
+        db.active_profile_id = matched.id;
+        saveDb(db);
+      }
+      const account = matched || active(db, db.profile);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
-          fullName: `${db.profile[0].firstname} ${db.profile[0].surname}`,
+          fullName: `${account.firstname} ${account.surname}`,
           success: true,
         }),
       );
@@ -101,7 +115,7 @@ const server = http.createServer((req, res) => {
       res.end(
         JSON.stringify({
           accessToken: "dummy-access-token-12345",
-          user: db.dashboard[0],
+          user: active(db, db.dashboard),
         }),
       );
       return;
@@ -112,7 +126,7 @@ const server = http.createServer((req, res) => {
       (normalizedPath === "/api/dashboard" || normalizedPath === "/dashboard")
     ) {
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify(db.dashboard[0]));
+      res.end(JSON.stringify(active(db, db.dashboard)));
       return;
     }
 
@@ -123,7 +137,7 @@ const server = http.createServer((req, res) => {
         normalizedPath === "/profile-details")
     ) {
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify(db.profile[0]));
+      res.end(JSON.stringify(active(db, db.profile)));
       return;
     }
 
@@ -143,14 +157,15 @@ const server = http.createServer((req, res) => {
         "townCity",
         "postalCode",
       ];
+      const activeProfile = active(db, db.profile);
       editableFields.forEach((field) => {
         if (parsedBody[field] !== undefined) {
-          db.profile[0][field] = parsedBody[field];
+          activeProfile[field] = parsedBody[field];
         }
       });
       saveDb(db);
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify(db.profile[0]));
+      res.end(JSON.stringify(activeProfile));
       return;
     }
 
@@ -180,7 +195,7 @@ const server = http.createServer((req, res) => {
       (normalizedPath === "/api/balance" || normalizedPath === "/balance")
     ) {
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify(db.balance[0]));
+      res.end(JSON.stringify(active(db, db.balance)));
       return;
     }
 
@@ -189,7 +204,7 @@ const server = http.createServer((req, res) => {
       (normalizedPath === "/api/my-contact" || normalizedPath === "/my-contact")
     ) {
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify(db.my_contact[0]));
+      res.end(JSON.stringify(active(db, db.my_contact)));
       return;
     }
 
@@ -269,7 +284,7 @@ const server = http.createServer((req, res) => {
       (normalizedPath === "/api/change-password/init" ||
         normalizedPath === "/change-password/init")
     ) {
-      if (parsedBody.currentPassword !== db.profile[0].password) {
+      if (parsedBody.currentPassword !== active(db, db.profile).password) {
         res.writeHead(401, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Current password is incorrect" }));
         return;
@@ -291,7 +306,7 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({ error: "No password change in progress" }));
         return;
       }
-      db.profile[0].password = db.pending_password_change;
+      active(db, db.profile).password = db.pending_password_change;
       delete db.pending_password_change;
       saveDb(db);
       res.writeHead(200, { "Content-Type": "application/json" });

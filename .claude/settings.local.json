@@ -22,7 +22,34 @@
       "Bash(node -e \"require\\('fs'\\).readFileSync\\('/home/mtuhalf/Documents/react/frontend/payzarc/src/components/member/Dashboard.module.css','utf8'\\)\")",
       "Bash(node -e ' *)",
       "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:8080/api/dashboard --max-time 3)",
-      "Bash(awk *)"
+      "Bash(awk *)",
+      "Bash(python3 *)",
+      "Bash(node -c /home/mtuhalf/Documents/react/frontend/payzarc/server.js)",
+      "Bash(lsof -i :8080 -sTCP:LISTEN)",
+      "Bash(curl -s -X POST http://localhost:8080/api/login -H \"Content-Type: application/json\" -d '{\"email\":\"thandiwe.nkosi@example.com\",\"password\":\"Thandiwe@123\"}')",
+      "Bash(curl -s http://localhost:8080/api/balance/)",
+      "Bash(kill 10345)",
+      "Bash(node server.js)",
+      "Bash(disown)",
+      "Bash(curl -s -X POST http://localhost:8080/api/login -H \"Content-Type: application/json\" -d '{\"email\":\"hezronwandera46@gmail.com\",\"password\":\"Hezron@123\"}')",
+      "Bash(node *)",
+      "Bash(npx *)",
+      "Read(//home/mtuhalf/.claude/**)",
+      "Bash(env)",
+      "Bash(git rm *)",
+      "Bash(git *)",
+      "Bash(kill 22921 22928)",
+      "Bash(REACT_APP_BYPASS_AUTH=true BROWSER=none nohup npx craco start)",
+      "Bash(echo \"started with PID $!\")",
+      "Read(//tmp/**)",
+      "Bash(break)",
+      "Bash(timeout 30 bash -c 'until curl -sf http://localhost:3000 >/dev/null; do sleep 1; done')",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(curl -s -m 3 http://localhost:8080/api/profile-details -o /dev/null -w \"HTTP %{http_code}\\\\n\")",
+      "Bash(curl *)",
+      "mcp__plugin_21st_21st__generate",
+      "mcp__plugin_21st_21st__get_generation"
     ]
-  }
+  },
+  "skillOverrides": {}
 }

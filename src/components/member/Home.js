@@ -9,7 +9,6 @@ import {
   TrendingUp,
   TrendingDown,
   ArrowRight,
-  ArrowLeft,
   Plus,
   ArrowUpIcon,
   Handshake,
@@ -23,7 +22,13 @@ import {
 } from "lucide-react";
 import { transactionsApi, contactsApi } from "../../utility/axiosInstance";
 import axios from "axios";
-import styles from "./Home.module.css";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import History from "./History";
 import Friends from "./Friends";
 import Groups from "./Groups";
@@ -47,6 +52,18 @@ const isoToFlagEmoji = (iso) =>
 // Send, Groups) — used to pick which side a flow panel slides in from.
 const SECTION_ORDER = { "add-money": 0, withdraw: 1, send: 2, groups: 3 };
 
+// The four balance-card action buttons — one config-driven list instead of
+// four near-identical JSX blocks. Rendered as a single segmented tab strip
+// (icon + label side by side, active one filled gold) — same visual
+// language as the Friends/Groups TabsList further down this file — rather
+// than four separate icon-over-label tiles.
+const ACTION_TILES = [
+  { key: "add-money", label: "Add Money", icon: PlusCircle },
+  { key: "withdraw", label: "Withdraw", icon: ArrowDownCircle },
+  { key: "send", label: "Send", icon: Send },
+  { key: "groups", label: "Groups", icon: UsersRound },
+];
+
 // Send Money's in-transit stepper — each leg of the journey, top to bottom.
 const SEND_STEPS = [
   { label: "Sent", sub: "Payment initiated from your wallet", icon: Send },
@@ -62,6 +79,69 @@ const SEND_STEPS = [
     icon: Check,
   },
 ];
+
+// Shared class strings for the repeated form pieces across Add Money /
+// Withdraw / Send / the service-picker dialogs — kept as plain Tailwind
+// strings (not new components) since they're just markup, not behavior.
+// Restyled to match the sketch's surface language used everywhere else on
+// the dashboard now (translucent white/[0.0X] surfaces, rounded-xl/2xl,
+// gold-500-style CTAs with active:scale feedback) instead of the older
+// bg-secondary/rounded-md look these predate.
+const formLabelClass =
+  "flex items-center justify-between text-[11px] font-medium text-muted-foreground uppercase tracking-wider -mb-[0.4rem]";
+const formInputClass =
+  "w-full h-auto bg-white/[0.03] border-white/[0.06] rounded-xl px-4 py-3.5 text-foreground text-base md:text-base placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-gold/[0.08] focus-visible:border-gold/30 focus-visible:bg-white/[0.07] shadow-none transition-colors duration-200";
+const primaryBtnClass =
+  "w-full h-auto rounded-xl px-5 py-3.5 text-base font-bold text-black transition-all duration-200 hover:bg-primary active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 mt-1 shadow-lg shadow-gold/10 hover:shadow-gold/20";
+const addFavouriteBtnClass =
+  "self-start bg-transparent border-none text-gold text-[0.8rem] font-semibold cursor-pointer p-0 -mt-[0.6rem] transition-opacity hover:opacity-75";
+// Add Money modal's own "+ Save/Add/Use a saved..." links — a real
+// pill-shaped button with proper padding instead of addFavouriteBtnClass's
+// bare, zero-padding text link (which reads as squished right under the
+// field above it).
+const modalAddLinkClass =
+  "self-start inline-flex items-center gap-1 bg-white/[0.04] border border-white/[0.08] rounded-full px-3.5 py-1.5 text-gold text-[0.78rem] font-semibold cursor-pointer transition-colors hover:bg-white/[0.07] hover:border-gold/30";
+const methodBtnClass = (active) =>
+  cn(
+    "flex-1 bg-white/[0.02] border border-white/[0.05] text-muted-foreground px-2 py-2.5 rounded-xl text-[0.8rem] font-semibold transition-all duration-200 hover:bg-white/[0.05] hover:border-gold/20 hover:text-foreground",
+    active &&
+      "bg-gold/10 border-gold/30 text-gold hover:border-gold/40 hover:bg-gold/10 hover:text-gold",
+  );
+const favouriteChipClass = (active) =>
+  cn(
+    "bg-white/[0.03] border border-white/[0.08] text-foreground px-3.5 py-2 rounded-full text-[0.85rem] font-medium transition-colors hover:border-gold/40 hover:text-gold",
+    active && "bg-gold/10 border-gold/40 text-gold",
+  );
+// Recent Activity's per-row status chip — colored by keyword match on the
+// real tx.status string (no fixed enum from the API), default reads as
+// "completed" since that's the overwhelmingly common status. Split into a
+// pill class + dot class so the call site can render dot + label like the
+// sketch's status chips instead of a single flat-colored pill.
+const txStatusTone = (status) => {
+  const s = (status || "").toLowerCase();
+  if (s.includes("fail") || s.includes("declin")) return "destructive";
+  if (s.includes("pend")) return "gold";
+  return "success";
+};
+const txStatusBadgeClass = (status) => {
+  const tone = txStatusTone(status);
+  return cn(
+    "hidden sm:inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-semibold uppercase tracking-wide shrink-0",
+    tone === "destructive" &&
+      "bg-destructive/10 text-destructive border-destructive/10",
+    tone === "gold" && "bg-gold/10 text-gold border-gold/10",
+    tone === "success" && "bg-success/10 text-success border-success/10",
+  );
+};
+const txStatusDotClass = (status) => {
+  const tone = txStatusTone(status);
+  return cn(
+    "w-1 h-1 rounded-full mr-1.5",
+    tone === "destructive" && "bg-destructive",
+    tone === "gold" && "bg-gold",
+    tone === "success" && "bg-success",
+  );
+};
 
 function Home({ onPageChange, user, navigateRequest }) {
   const [activeSection, setActiveSection] = useState("dashboard");
@@ -281,6 +361,11 @@ function Home({ onPageChange, user, navigateRequest }) {
 
   const toggleBalance = () => setShowBalance(!showBalance);
 
+  // Currency shown for the account: trust the backend's currency for this
+  // account first, fall back to the currency of the user's detected country
+  // (myCountry) rather than hardcoding USD/"$".
+  const displayCurrency = balanceData?.currency || myCountry?.currency || "USD";
+
   const formattedBalance = balanceData
     ? Number(balanceData.balance).toLocaleString(undefined, {
         minimumFractionDigits: 2,
@@ -347,7 +432,18 @@ function Home({ onPageChange, user, navigateRequest }) {
     setActiveSection(nextSection);
   };
 
-  const flowSectionClass = `${styles.flowSection} ${styles.nestedCard} ${sectionDirection === "left" ? styles.slideFromLeft : styles.slideFromRight}`;
+  // Shared layout for whichever flow (Add Money/Withdraw/Send/Groups) is
+  // currently mounted — its own card now (balance card, tab strip and this
+  // are three separate cards, matching the redesign), not flush inside the
+  // balance card — just spacing + the directional slide-in, recomputed on
+  // every render since sectionDirection can change.
+  const flowSectionClass = cn(
+    "relative p-8 w-full min-h-[560px] flex flex-col gap-7 bg-card rounded-2xl transition-[height] duration-300 ease-in-out",
+    "max-[640px]:p-6 max-[640px]:px-5 max-[640px]:gap-6 max-[640px]:min-h-[480px]",
+    sectionDirection === "left"
+      ? "animate-slide-in-left"
+      : "animate-slide-in-right",
+  );
 
   // Lets each flow's card keep its own natural, content-driven height while
   // still animating smoothly between heights when switching — the newly
@@ -492,7 +588,7 @@ function Home({ onPageChange, user, navigateRequest }) {
   // so this field never has nothing to show. Live rates (covering every
   // currency the API tracks) take priority over the small mocked table,
   // which only kicks in if the live fetch failed.
-  const senderCurrency = balanceData?.currency || "USD";
+  const senderCurrency = displayCurrency;
   const availableCurrencies = Object.keys(
     liveRates || EXCHANGE_RATES[senderCurrency] || {},
   );
@@ -732,7 +828,7 @@ function Home({ onPageChange, user, navigateRequest }) {
 
     openConfirmationDialog(
       "Confirm Add Money",
-      `Add ${balanceData?.currency || "$"}${addAmount} from ${sourceLabel}?\n\nType 1 and click Yes to confirm.`,
+      `Add ${displayCurrency}${addAmount} from ${sourceLabel}?\n\nType 1 and click Yes to confirm.`,
       async (typedValue, buttonChoice) => {
         if (typedValue !== "1" || buttonChoice !== "yes") {
           showNotification("error", "Transaction cancelled");
@@ -805,7 +901,7 @@ function Home({ onPageChange, user, navigateRequest }) {
 
     openConfirmationDialog(
       "Confirm Withdrawal",
-      `Withdraw ${balanceData?.currency || "$"}${withdrawAmount} to ${withdrawDestination === "mpesa" ? "Mpesa" : "Payzarc agent"} ${withdrawDestinationValue}?\n\nType 1 and click Yes to confirm.`,
+      `Withdraw ${displayCurrency}${withdrawAmount} to ${withdrawDestination === "mpesa" ? "Mpesa" : "agent"} ${withdrawDestinationValue}?\n\nType 1 and click Yes to confirm.`,
       async (typedValue, buttonChoice) => {
         if (typedValue !== "1" || buttonChoice !== "yes") {
           showNotification("error", "Transaction cancelled");
@@ -844,750 +940,848 @@ function Home({ onPageChange, user, navigateRequest }) {
 
   // --- Render ---
   return (
-    <div className={styles.homeContainer}>
-      {/* Balance Section */}
-      <section className={styles.balanceSection}>
-        <div
-          className={`${styles.heroCollapse} ${activeSection !== "dashboard" ? styles.heroCollapsed : ""}`}
-        >
-          <div className={styles.heroCollapseInner}>
-            <h1 className={styles.heroTitle}>PAYZARC</h1>
-            <h1 className={styles.heroHeadline}>
-              Send money
-              <br />
-              at <span className={styles.accent}>Lower Rates</span>
-            </h1>
-
-            <p className={styles.heroSub}>
-              Payzarc offers industry-leading exchange rates with no hidden
-              fees. Save more for every transaction you make.
-            </p>
-          </div>
+    <>
+      <section className="w-full max-w-[1320px] mx-auto flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-10 pb-8">
+        <h1 className="text-[clamp(2.25rem,5vw,3.5rem)] font-bold tracking-[2px] text-gold leading-[1.05] m-0 shrink-0">
+          PAYZARC
+        </h1>
+        <div className="flex flex-col items-start text-left">
+          <h2 className="text-[clamp(1.4rem,2.6vw,1.85rem)] font-bold leading-[1.15] tracking-[-1px] text-foreground m-0 mb-2">
+            Send money
+            <br />
+            at <span className="text-gold">Lower Rates</span>
+          </h2>
+          <p className="text-[0.95rem] text-muted-foreground max-w-[420px] leading-[1.6] m-0">
+            We offer industry-leading exchange rates with no hidden fees.
+            Save more for every transaction you make.
+          </p>
         </div>
       </section>
 
-      {/* Balance card + whichever flow is active share one card (background
-          + blur) instead of stacking as two separate cards. bodyContainer
-          always renders; a flow section joins it once one is open. */}
-      <div className={styles.balanceFlowWrap}>
-        <div className={styles.bodyContainer}>
-          <div className={styles.balanceHeader}>
-            <span className={styles.balanceLabel}>Total Balance</span>
-            <button className={styles.eyeButton} onClick={toggleBalance}>
-              {showBalance ? <EyeOff size={20} /> : <Eye size={20} />}
-            </button>
-          </div>
-          <h1 className={styles.balanceValue}>
-            <span className={styles.currency}>
-              {balanceData?.currency || "$"}
-            </span>
-            <span
-              className={`${styles.balanceMasked} ${showBalance ? "" : styles.balanceHidden}`}
-            >
-              {formattedBalance}
-            </span>
-          </h1>
-          <div className={styles.actionGrid}>
-            <button
-              className={`${styles.actionBtn} ${activeSection === "add-money" ? styles.actionBtnActive : ""}`}
-              onClick={() => switchSection("add-money")}
-            >
-              <div className={`${styles.actionIcon} ${styles.bgGold}`}>
-                <PlusCircle size={24} />
-              </div>
-              <span>Add Money</span>
-            </button>
-
-            <button
-              className={`${styles.actionBtn} ${activeSection === "withdraw" ? styles.actionBtnActive : ""}`}
-              onClick={() => switchSection("withdraw")}
-            >
-              <div className={`${styles.actionIcon} ${styles.bgBlue}`}>
-                <ArrowDownCircle size={24} />
-              </div>
-              <span>Withdraw</span>
-            </button>
-
-            <button
-              className={`${styles.actionBtn} ${activeSection === "send" ? styles.actionBtnActive : ""}`}
-              onClick={() => switchSection("send")}
-            >
-              <div className={`${styles.actionIcon} ${styles.bgGreen}`}>
-                <Send size={24} />
-              </div>
-              <span>Send</span>
-            </button>
-
-            <button
-              className={`${styles.actionBtn} ${activeSection === "groups" ? styles.actionBtnActive : ""}`}
-              onClick={() => switchSection("groups")}
-            >
-              <div className={`${styles.actionIcon} ${styles.bgPink}`}>
-                <UsersRound size={24} />
-              </div>
-              <span>Groups</span>
-            </button>
-          </div>
-
-          {/* Action buttons stay visible & highlighted across every section —
-              only the panel below (Recent Activity vs. a flow) swaps out. */}
-        </div>
-
-        {activeSection === "add-money" && (
-          <section ref={flowSectionRef} className={flowSectionClass}>
-            <div className={styles.flowHeader}>
-              <button className={styles.backBtn} onClick={goToDashboard}>
-                <ArrowLeft size={18} /> Back
-              </button>
-              <h2 className={styles.flowTitle}>Add Money</h2>
-            </div>
-
-            <div className={styles.flowForm}>
-              <label className={styles.formLabel}>Amount</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                className={styles.formInput}
-                placeholder="0.00"
-                value={addAmount}
-                onChange={(e) => setAddAmount(e.target.value)}
-              />
-
-              <button
-                className={styles.primaryBtn}
-                onClick={handleAddMoneyClick}
-              >
-                Add {balanceData?.currency || "$"}
-                {addAmount || "0.00"}
-              </button>
-            </div>
-          </section>
-        )}
-
-        {activeSection === "withdraw" && (
-          <section ref={flowSectionRef} className={flowSectionClass}>
-            <div className={styles.flowHeader}>
-              <button className={styles.backBtn} onClick={goToDashboard}>
-                <ArrowLeft size={18} /> Back
-              </button>
-              <h2 className={styles.flowTitle}>Withdraw</h2>
-            </div>
-
-            <div className={styles.flowForm}>
-              <label className={styles.formLabel}>Amount</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                className={styles.formInput}
-                placeholder="0.00"
-                value={withdrawAmount}
-                onChange={(e) => setWithdrawAmount(e.target.value)}
-              />
-
-              <label className={styles.formLabel}>Transaction PIN</label>
-              <input
-                type="password"
-                inputMode="numeric"
-                maxLength={4}
-                className={styles.formInput}
-                placeholder="****"
-                value={inputPin}
-                onChange={(e) =>
-                  setInputPin(e.target.value.replace(/\D/g, "").slice(0, 4))
-                }
-              />
-
-              <button
-                className={styles.primaryBtn}
-                onClick={handleWithdrawClick}
-              >
-                Withdraw
-              </button>
-            </div>
-          </section>
-        )}
-
-        {activeSection === "send" && (
-          <section ref={flowSectionRef} className={flowSectionClass}>
-            <div className={styles.flowHeader}>
-              <button className={styles.backBtn} onClick={goToDashboard}>
-                <ArrowLeft size={18} /> Back
-              </button>
-              <h2 className={styles.flowTitle}>Send Money</h2>
-            </div>
-
-            <div className={styles.flowForm}>
-              {myCountry && (
-                <span className={styles.sendingFrom}>
-                  Sending From {isoToFlagEmoji(myCountry.flag)}
-                </span>
-              )}
-              <label className={styles.formLabel}>
-                Recipient
-                {recipientCountry && (
-                  <span className={styles.recipientFlag}>
-                    {isoToFlagEmoji(recipientCountry.flag)}{" "}
-                    {recipientCountry.name}
-                  </span>
-                )}
-              </label>
-              <input
-                className={styles.formInput}
-                placeholder="Search favourites or enter a number"
-                value={recipientSearchTerm}
-                onChange={(e) => {
-                  setRecipientSearchTerm(e.target.value);
-                  setSelectedRecipient(null);
-                }}
-              />
-              {recipientSearchTerm && filteredFavourites.length > 0 && (
-                <div className={styles.favouriteList}>
-                  {filteredFavourites.map((fav, idx) => (
-                    <button
-                      key={fav.id || idx}
-                      type="button"
-                      className={styles.favouriteChip}
-                      onClick={() => handleSelectRecipient(fav)}
-                    >
-                      {fav.name || fav.full_name || fav.phone || fav.value}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {recipientSearchTerm && !selectedRecipient && (
-                <button
-                  type="button"
-                  className={styles.addFavouriteBtn}
-                  onClick={handleAddRecipientToFavourites}
-                >
-                  + Add recipient to favourites
-                </button>
-              )}
-
-              <label className={styles.formLabel}>Amount</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                className={styles.formInput}
-                placeholder="0.00"
-                value={sendAmount}
-                onChange={(e) => setSendAmount(e.target.value)}
-              />
-              <div className={styles.convertedBox}>
-                {availableCurrencies.length > 0 ? (
-                  <>
-                    <div className={styles.convertedRow}>
-                      <span className={styles.convertedAmount}>
-                        ≈ {Number(convertedSendAmount || 0).toLocaleString()}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 w-full max-w-[1320px] mx-auto">
+        {/* LEFT COLUMN — balance card, tab strip, whichever flow is active,
+          and Recent Activity, all sharing the same column width (matches
+          the sketch's lg:col-span-8 left column instead of the balance
+          card being its own narrower centered block). */}
+        <div className="lg:col-span-8 flex flex-col gap-8">
+          <div className="flex flex-col gap-6">
+            <div className="bg-card rounded-lg overflow-hidden">
+              <div className="w-full flex flex-col items-center px-8 pt-9 pb-11">
+                <div className="w-full flex items-start justify-between mb-7">
+                  <div className="flex flex-col items-start">
+                    <div className="flex items-center gap-2.5 mb-2">
+                      <span className="text-muted-foreground text-[0.8rem] font-medium tracking-wide">
+                        Total Balance
                       </span>
-                      <select
-                        className={styles.currencySelect}
-                        value={recipientCurrency}
-                        disabled={!!recipientCountry}
-                        title={
-                          recipientCountry
-                            ? "Detected from recipient's number"
-                            : undefined
-                        }
-                        onChange={(e) =>
-                          setRecipientCurrencyChoice(e.target.value)
-                        }
+                      <button
+                        className="bg-transparent border-none text-[var(--muted)] flex items-center transition-colors duration-200 hover:text-foreground"
+                        onClick={toggleBalance}
                       >
-                        {availableCurrencies.map((ccy) => (
-                          <option key={ccy} value={ccy}>
-                            {ccy}
-                          </option>
-                        ))}
-                      </select>
+                        {showBalance ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
                     </div>
-                    <span className={styles.convertedMeta}>
-                      1 {senderCurrency} = {conversionRate} {recipientCurrency}{" "}
-                      · {liveRates ? "live rate" : "indicative rate"}
-                    </span>
-                  </>
-                ) : (
-                  <span className={styles.convertedMeta}>
-                    Conversion unavailable for {senderCurrency}
-                  </span>
-                )}
-              </div>
-
-              {sendAmountNum > 0 && (
-                <div className={styles.feeBox}>
-                  <div className={styles.feeRow}>
-                    <span>Transaction Fee</span>
-                    <span>
-                      {senderCurrency} {sendFee.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className={styles.feeRow}>
-                    <span>Total to pay</span>
-                    <span className={styles.feeTotal}>
-                      {senderCurrency} {sendTotal.toFixed(2)}
-                    </span>
+                    <h1 className="text-[clamp(1.85rem,4vw,2.75rem)] font-extrabold text-gold tracking-[-1px] m-0 flex items-baseline gap-2 max-[640px]:text-[2.25rem]">
+                      <span className="opacity-75">{displayCurrency}</span>
+                      <span
+                        className={cn(
+                          "relative overflow-hidden rounded-2xl before:content-[''] before:absolute before:inset-0 before:[backdrop-filter:blur(2rem)] before:rounded-[inherit] before:pointer-events-none before:opacity-0 before:transition-opacity before:duration-[250ms]",
+                          !showBalance && "select-none before:opacity-100",
+                        )}
+                      >
+                        {formattedBalance}
+                      </span>
+                    </h1>
                   </div>
                 </div>
-              )}
-
-              <label className={styles.formLabel}>Transaction PIN</label>
-              <input
-                type="password"
-                inputMode="numeric"
-                maxLength={4}
-                className={styles.formInput}
-                placeholder="****"
-                value={inputPin}
-                onChange={(e) =>
-                  setInputPin(e.target.value.replace(/\D/g, "").slice(0, 4))
-                }
-              />
-
-              <button className={styles.primaryBtn} onClick={handleSendMoney}>
-                Send
-              </button>
-            </div>
-          </section>
-        )}
-
-        {/* Groups — shows Friends.js and Groups.js as tabs inside the same
-            card. Back button floats above the card via .flowHeader (same as
-            the other flows), outside the card's own padding; the tab row is
-            the top element inside the card, and Friends/Groups no longer
-            bring their own chrome, so the listing sits flush against this
-            card's padding. */}
-        {activeSection === "groups" && (
-          <div ref={flowSectionRef} className={flowSectionClass}>
-            <div className={styles.flowHeader}>
-              <button className={styles.backBtn} onClick={goToDashboard}>
-                <ArrowLeft size={18} /> Back
-              </button>
-            </div>
-
-            <div className={styles.groupsTabs}>
-              <button
-                className={`${styles.groupsTab} ${groupsTab === "friends" ? styles.groupsTabActive : ""}`}
-                onClick={() => selectGroupsTab("friends")}
-              >
-                Friends
-              </button>
-              <span className={styles.groupsTabDivider} />
-              <button
-                className={`${styles.groupsTab} ${groupsTab === "groups" ? styles.groupsTabActive : ""}`}
-                onClick={() => selectGroupsTab("groups")}
-              >
-                Groups
-              </button>
-            </div>
-
-            {groupsTab === "friends" ? (
-              <div
-                key="friends"
-                className={`${styles.groupsListing} ${groupsTabDirection === "left" ? styles.slideFromLeft : styles.slideFromRight}`}
-              >
-                <Friends />
               </div>
-            ) : (
-              <div
-                key="groups"
-                className={
-                  groupsTabDirection === "left"
-                    ? styles.slideFromLeft
-                    : styles.slideFromRight
-                }
-              >
-                <Groups />
+              <div className="h-[2px] w-full bg-[linear-gradient(90deg,transparent_0%,rgba(236,201,75,0.15)_30%,rgba(236,201,75,0.3)_50%,rgba(236,201,75,0.15)_70%,transparent_100%)]" />
+            </div>
+
+            {/* Tab strip — action buttons stay visible & highlighted across
+            every section; only the content card below swaps out. */}
+            <div className="flex items-center gap-1 bg-card rounded-2xl p-1.5">
+              {ACTION_TILES.map(({ key, label, icon: Icon }) => {
+                const active = activeSection === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => switchSection(key)}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-2 rounded-xl py-3 px-4 text-[0.82rem] font-semibold cursor-pointer transition-all duration-200 max-[640px]:flex-none max-[640px]:px-4",
+                      active
+                        ? "bg-gold text-black shadow-lg shadow-gold/[0.15]"
+                        : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
+                    )}
+                  >
+                    <Icon size={16} />
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {activeSection === "add-money" && (
+              <section ref={flowSectionRef} className={flowSectionClass}>
+                <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
+                  <Label className={formLabelClass}>Amount</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className={formInputClass}
+                    placeholder="0.00"
+                    value={addAmount}
+                    onChange={(e) => setAddAmount(e.target.value)}
+                  />
+
+                  <Button
+                    className={primaryBtnClass}
+                    onClick={handleAddMoneyClick}
+                  >
+                    Add {displayCurrency}
+                    {addAmount || "0.00"}
+                  </Button>
+                </div>
+              </section>
+            )}
+
+            {activeSection === "withdraw" && (
+              <section ref={flowSectionRef} className={flowSectionClass}>
+                <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
+                  <Label className={formLabelClass}>Amount</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className={formInputClass}
+                    placeholder="0.00"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                  />
+
+                  <Label className={formLabelClass}>Transaction PIN</Label>
+                  <Input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    className={formInputClass}
+                    placeholder="****"
+                    value={inputPin}
+                    onChange={(e) =>
+                      setInputPin(e.target.value.replace(/\D/g, "").slice(0, 4))
+                    }
+                  />
+
+                  <Button
+                    className={primaryBtnClass}
+                    onClick={handleWithdrawClick}
+                  >
+                    Withdraw
+                  </Button>
+                </div>
+              </section>
+            )}
+
+            {activeSection === "send" && (
+              <section ref={flowSectionRef} className={flowSectionClass}>
+                <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
+                  {myCountry && (
+                    <span className="flex items-center gap-1.5 text-[0.85rem] font-semibold text-[var(--muted)]">
+                      Sending From {isoToFlagEmoji(myCountry.flag)}
+                    </span>
+                  )}
+                  <Label className={formLabelClass}>
+                    Recipient
+                    {recipientCountry && (
+                      <span className="font-medium text-muted-foreground">
+                        {isoToFlagEmoji(recipientCountry.flag)}{" "}
+                        {recipientCountry.name}
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    className={formInputClass}
+                    placeholder="Search favourites or enter a number"
+                    value={recipientSearchTerm}
+                    onChange={(e) => {
+                      setRecipientSearchTerm(e.target.value);
+                      setSelectedRecipient(null);
+                    }}
+                  />
+                  {recipientSearchTerm && filteredFavourites.length > 0 && (
+                    <div className="flex flex-wrap gap-2 -mt-[0.6rem]">
+                      {filteredFavourites.map((fav, idx) => (
+                        <button
+                          key={fav.id || idx}
+                          type="button"
+                          className={favouriteChipClass(false)}
+                          onClick={() => handleSelectRecipient(fav)}
+                        >
+                          {fav.name || fav.full_name || fav.phone || fav.value}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {recipientSearchTerm && !selectedRecipient && (
+                    <button
+                      type="button"
+                      className={addFavouriteBtnClass}
+                      onClick={handleAddRecipientToFavourites}
+                    >
+                      + Add recipient to favourites
+                    </button>
+                  )}
+
+                  <Label className={formLabelClass}>Amount</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className={formInputClass}
+                    placeholder="0.00"
+                    value={sendAmount}
+                    onChange={(e) => setSendAmount(e.target.value)}
+                  />
+                  <div className="bg-[var(--gold-pale)] border border-dashed border-[var(--gold-border)] rounded-xl px-4 py-[0.85rem] text-center -mt-[0.6rem]">
+                    {availableCurrencies.length > 0 ? (
+                      <>
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-[1.2rem] font-bold text-gold tracking-[-0.3px]">
+                            ≈{" "}
+                            {Number(convertedSendAmount || 0).toLocaleString()}
+                          </span>
+                          <select
+                            className="bg-white/[0.06] text-gold border border-[var(--gold-border)] rounded-sm px-2 py-1 text-[0.95rem] font-bold cursor-pointer outline-none disabled:opacity-85 disabled:cursor-default"
+                            value={recipientCurrency}
+                            disabled={!!recipientCountry}
+                            title={
+                              recipientCountry
+                                ? "Detected from recipient's number"
+                                : undefined
+                            }
+                            onChange={(e) =>
+                              setRecipientCurrencyChoice(e.target.value)
+                            }
+                          >
+                            {availableCurrencies.map((ccy) => (
+                              <option key={ccy} value={ccy}>
+                                {ccy}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <span className="block text-xs text-gold/60 mt-1">
+                          1 {senderCurrency} = {conversionRate}{" "}
+                          {recipientCurrency} ·{" "}
+                          {liveRates ? "live rate" : "indicative rate"}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="block text-xs text-gold/60 mt-1">
+                        Conversion unavailable for {senderCurrency}
+                      </span>
+                    )}
+                  </div>
+
+                  {sendAmountNum > 0 && (
+                    <div className="flex flex-col gap-1.5 bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-[0.85rem] -mt-[0.6rem]">
+                      <div className="flex items-center justify-between text-[0.85rem] text-muted-foreground">
+                        <span>Transaction Fee</span>
+                        <span>
+                          {senderCurrency} {sendFee.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[0.85rem] text-muted-foreground">
+                        <span>Total to pay</span>
+                        <span className="text-gold font-bold">
+                          {senderCurrency} {sendTotal.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <Label className={formLabelClass}>Transaction PIN</Label>
+                  <Input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    className={formInputClass}
+                    placeholder="****"
+                    value={inputPin}
+                    onChange={(e) =>
+                      setInputPin(e.target.value.replace(/\D/g, "").slice(0, 4))
+                    }
+                  />
+
+                  <Button className={primaryBtnClass} onClick={handleSendMoney}>
+                    Send
+                  </Button>
+                </div>
+              </section>
+            )}
+
+            {/* Groups — shows Friends.js and Groups.js as tabs inside the same
+            flowSectionClass card the other flows use (Add Money/Withdraw/
+            Send), for a consistent look across all four tabs. */}
+            {activeSection === "groups" && (
+              <div ref={flowSectionRef} className={flowSectionClass}>
+                <Tabs value={groupsTab} onValueChange={selectGroupsTab}>
+                  <TabsList className="grid grid-cols-2 w-full h-auto p-1 rounded-full bg-white/[0.04] gap-1">
+                    <TabsTrigger
+                      value="friends"
+                      className="rounded-full py-2 text-[0.85rem] font-semibold text-muted-foreground data-[state=active]:bg-gold data-[state=active]:text-black data-[state=active]:shadow-none hover:text-foreground"
+                    >
+                      Friends
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="groups"
+                      className="rounded-full py-2 text-[0.85rem] font-semibold text-muted-foreground data-[state=active]:bg-gold data-[state=active]:text-black data-[state=active]:shadow-none hover:text-foreground"
+                    >
+                      Groups
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+
+                {groupsTab === "friends" ? (
+                  <div
+                    key="friends"
+                    className={
+                      groupsTabDirection === "left"
+                        ? "animate-slide-in-left"
+                        : "animate-slide-in-right"
+                    }
+                  >
+                    <Friends />
+                  </div>
+                ) : (
+                  <div
+                    key="groups"
+                    className={
+                      groupsTabDirection === "left"
+                        ? "animate-slide-in-left"
+                        : "animate-slide-in-right"
+                    }
+                  >
+                    <Groups />
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
-      </div>
 
-      {/* Overview / Recent Activity Section — dashboard only */}
-      {activeSection === "dashboard" && (
-        <div className={styles.displayWindow}>
-          {showHistoryModal ? (
-            <div className={styles.historyModal}>
-              <div className={styles.flowHeader}>
-                <button
-                  className={styles.backBtn}
-                  onClick={() => setShowHistoryModal(false)}
-                >
-                  <ArrowLeft size={18} /> Back
-                </button>
-                <h2>All Transactions</h2>
+          {/* Recent Activity — always visible now (matches the sketch, where
+          the activity list sits below the tab content regardless of which
+          tab is selected), not just on a neutral "dashboard" state. */}
+          <div className="flex flex-col items-center">
+            {showHistoryModal ? (
+              <div className="relative w-full flex flex-col gap-4 animate-flow-fade-in">
+                <History
+                  selectedTransaction={selectedTransaction}
+                  openDetailsPopup={setSelectedTransaction}
+                  closeDetailsPopup={() => setSelectedTransaction(null)}
+                />
               </div>
-              <History
-                selectedTransaction={selectedTransaction}
-                openDetailsPopup={setSelectedTransaction}
-                closeDetailsPopup={() => setSelectedTransaction(null)}
-              />
-            </div>
-          ) : (
-            <section className={styles.overviewSection}>
-              <div className={styles.sectionHeader}>
-                <h2>Recent Activity</h2>
-                <button
-                  className={styles.viewAllBtn}
-                  onClick={() => setShowHistoryModal(true)}
-                >
-                  View All <ArrowRight size={16} />
-                </button>
-              </div>
+            ) : (
+              <div className="w-full">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-[1.05rem] font-bold text-foreground tracking-tight m-0">
+                    Recent Activity
+                  </h2>
+                  <button
+                    className="bg-transparent border-none text-gold text-xs font-medium cursor-pointer flex items-center gap-1 transition-colors hover:text-gold-dark"
+                    onClick={() => setShowHistoryModal(true)}
+                  >
+                    View all <ArrowRight size={14} />
+                  </button>
+                </div>
 
-              <div className={styles.transactionList}>
-                {recentTransactions.map((tx, idx) => (
-                  <div key={tx.id || idx} className={styles.transactionItem}>
-                    <div className={styles.txLeft}>
-                      <div
-                        className={`${styles.txIcon} ${tx.transaction_type === "CREDIT" || tx.type === "receive" ? styles.bgSuccess : styles.bgDanger}`}
-                      >
-                        {tx.transaction_type === "CREDIT" ||
-                        tx.type === "receive" ? (
-                          <TrendingUp size={20} />
-                        ) : (
-                          <TrendingDown size={20} />
-                        )}
-                      </div>
-                      <div className={styles.txInfo}>
-                        <span className={styles.txName}>
-                          {tx.name || tx.description || tx.transaction_type}
-                        </span>
-                        <span className={styles.txDate}>
-                          {tx.date ||
-                            new Date(tx.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                    <div className={styles.txRight}>
-                      <span
-                        className={`${styles.txAmount} ${tx.transaction_type === "CREDIT" || tx.type === "receive" ? styles.textSuccess : styles.textDanger}`}
-                      >
-                        {tx.amount}
-                      </span>
-                      <span className={styles.txStatus}>{tx.status}</span>
-                    </div>
-                  </div>
-                ))}
+                <div className="bg-card rounded-2xl overflow-hidden">
+                  {recentTransactions.length === 0 ? (
+                    <p className="text-center text-[0.9rem] text-muted-foreground py-8">
+                      No recent activity yet.
+                    </p>
+                  ) : (
+                    recentTransactions.map((tx, idx) => {
+                      const credit =
+                        tx.transaction_type === "CREDIT" ||
+                        tx.type === "receive";
+                      return (
+                        <div
+                          key={tx.id || idx}
+                          className="flex items-center gap-4 p-4 md:p-5 border-b border-white/[0.03] last:border-b-0 transition-all duration-200 hover:bg-white/[0.025] cursor-default"
+                        >
+                          <div
+                            className={cn(
+                              "w-11 h-11 rounded-xl flex items-center justify-center shrink-0",
+                              credit
+                                ? "bg-success/[0.08] text-success"
+                                : "bg-destructive/[0.08] text-destructive",
+                            )}
+                          >
+                            {credit ? (
+                              <TrendingUp size={18} />
+                            ) : (
+                              <TrendingDown size={18} />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-[0.85rem] font-semibold text-foreground truncate m-0">
+                                {tx.name ||
+                                  tx.description ||
+                                  tx.transaction_type}
+                              </p>
+                              {tx.status && (
+                                <span className={txStatusBadgeClass(tx.status)}>
+                                  <span
+                                    className={txStatusDotClass(tx.status)}
+                                  />
+                                  {tx.status}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[0.72rem] text-muted-foreground mt-0.5 m-0">
+                              {tx.date ||
+                                new Date(tx.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <p
+                            className={cn(
+                              "text-[0.9rem] font-bold font-mono shrink-0 m-0",
+                              credit ? "text-success" : "text-destructive",
+                            )}
+                          >
+                            {tx.amount}
+                          </p>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
-            </section>
-          )}
+            )}
+          </div>
         </div>
-      )}
+
+        {/* RIGHT SIDEBAR — Quick Send + Weekly Spending, always visible
+          alongside the left column regardless of which tab is active
+          (matches the sketch; Payzarc Plus banner excluded). */}
+        <div className="lg:col-span-4 flex flex-col gap-6">
+          <Card className="rounded-2xl bg-card border-none shadow-none animate-flow-fade-in">
+            <CardContent className="p-6 flex flex-col gap-5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-bold m-0">Quick Send</h2>
+                <button
+                  className="bg-transparent border-none text-gold font-medium text-[11px] cursor-pointer transition-colors hover:text-gold-dark"
+                  onClick={() => switchSection("groups")}
+                >
+                  See all
+                </button>
+              </div>
+
+              {favourites.length === 0 ? (
+                <p className="text-[0.85rem] text-muted-foreground">
+                  No saved recipients yet — add one from Send Money.
+                </p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-4 gap-3">
+                    {favourites.slice(0, 3).map((fav, idx) => {
+                      const name =
+                        fav.name ||
+                        fav.full_name ||
+                        fav.phone ||
+                        fav.value ||
+                        "?";
+                      return (
+                        <button
+                          key={fav.id || idx}
+                          type="button"
+                          onClick={() => {
+                            switchSection("send");
+                            handleSelectRecipient(fav);
+                          }}
+                          className="flex flex-col items-center gap-2 p-2.5 rounded-xl text-center bg-white/[0.02] transition-all duration-200 hover:bg-white/[0.05] hover:-translate-y-0.5"
+                        >
+                          <div className="w-12 h-12 rounded-full bg-gold/15 text-gold font-bold flex items-center justify-center text-sm ring-2 ring-transparent transition-all duration-200 hover:ring-gold/40">
+                            {name.slice(0, 1).toUpperCase()}
+                          </div>
+                          <span className="text-[11px] text-muted-foreground font-medium truncate w-full">
+                            {name.split(" ")[0]}
+                          </span>
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => switchSection("send")}
+                      className="flex flex-col items-center gap-2 p-2.5 rounded-xl text-center bg-white/[0.02] transition-all duration-200 hover:bg-white/[0.05] hover:-translate-y-0.5"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center transition-colors hover:bg-white/[0.07]">
+                        <PlusCircle
+                          size={18}
+                          className="text-muted-foreground"
+                        />
+                      </div>
+                      <span className="text-[11px] text-muted-foreground font-medium truncate w-full">
+                        Add
+                      </span>
+                    </button>
+                  </div>
+
+                  {favourites.length > 0 && (
+                    <div className="pt-4 border-t border-white/[0.04] flex flex-col gap-1">
+                      {favourites.slice(0, 3).map((fav, idx) => {
+                        const name =
+                          fav.name ||
+                          fav.full_name ||
+                          fav.phone ||
+                          fav.value ||
+                          "?";
+                        const sub = fav.phone || fav.email || "";
+                        return (
+                          <button
+                            key={fav.id || idx}
+                            type="button"
+                            onClick={() => {
+                              switchSection("send");
+                              handleSelectRecipient(fav);
+                            }}
+                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] transition-colors hover:bg-white/[0.05] group"
+                          >
+                            <div className="w-9 h-9 rounded-full bg-gold/15 text-gold font-bold flex items-center justify-center text-xs shrink-0">
+                              {name.slice(0, 1).toUpperCase()}
+                            </div>
+                            <div className="flex-1 text-left min-w-0">
+                              <p className="text-xs font-semibold text-foreground truncate m-0">
+                                {name}
+                              </p>
+                              {sub && (
+                                <p className="text-[11px] text-muted-foreground truncate m-0">
+                                  {sub}
+                                </p>
+                              )}
+                            </div>
+                            <div className="w-7 h-7 rounded-lg bg-white/[0.04] flex items-center justify-center transition-colors group-hover:bg-gold/10 shrink-0">
+                              <Send
+                                size={14}
+                                className="text-muted-foreground transition-colors group-hover:text-gold"
+                              />
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Floating market ticker — sits to the right, follows scroll, and
           stops just above the footer instead of covering it. */}
       {activeSection === "dashboard" && tickerMessages.length > 0 && (
         <button
           type="button"
-          className={styles.marketTicker}
+          className="fixed right-8 z-50 max-w-[260px] bg-card border border-[var(--gold-border)] text-gold text-[0.8rem] font-semibold leading-[1.4] text-left px-[1.1rem] py-[0.7rem] rounded-md cursor-pointer transition-[transform,bottom] duration-150 hover:-translate-y-0.5 max-[768px]:right-4 max-[768px]:max-w-[190px] max-[768px]:text-[0.72rem] max-[768px]:px-[0.9rem] max-[768px]:py-[0.6rem]"
           style={{ bottom: tickerBottom }}
           onClick={() => setTickerIndex((i) => i + 1)}
         >
-          <span key={tickerIndex} className={styles.marketTickerText}>
+          <span key={tickerIndex} className="block animate-ticker-fade">
             {tickerMessages[tickerIndex % tickerMessages.length]}
           </span>
         </button>
       )}
 
       {/* Add Money — service picker popup, shown once a valid amount is entered */}
-      {showAddMoneyPopup && (
-        <div
-          className={styles.popupOverlay}
-          onClick={() => setShowAddMoneyPopup(false)}
-        >
-          <div
-            className={styles.popupPanel}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className={styles.popupTitle}>Add money from</h3>
+      <Dialog open={showAddMoneyPopup} onOpenChange={setShowAddMoneyPopup}>
+        <DialogContent className="w-[min(400px,100%)] max-w-[400px] bg-[var(--card2)] border-white/[0.08] rounded-2xl p-7 flex flex-col gap-4 animate-popup-in shadow-2xl shadow-black/40">
+          <DialogTitle className="text-center text-[1.1rem] font-bold text-foreground m-0">
+            Add money from
+          </DialogTitle>
 
-            <div className={styles.methodRow}>
-              {region.mobileMoney.length > 0 && (
+          <div className="flex gap-2 -mt-[0.6rem]">
+            {region.mobileMoney.length > 0 && (
+              <button
+                type="button"
+                className={methodBtnClass(addMoneyCategory === "mobile")}
+                onClick={() => setAddMoneyCategory("mobile")}
+              >
+                Mobile Money
+              </button>
+            )}
+            <button
+              type="button"
+              className={methodBtnClass(addMoneyCategory === "bank")}
+              onClick={() => setAddMoneyCategory("bank")}
+            >
+              Bank Transfer
+            </button>
+            <button
+              type="button"
+              className={methodBtnClass(addMoneyCategory === "card")}
+              onClick={() => setAddMoneyCategory("card")}
+            >
+              Card
+            </button>
+          </div>
+
+          {addMoneyCategory === "mobile" && (
+            <>
+              <div className="flex gap-2 -mt-[0.6rem]">
+                {region.mobileMoney.map((provider) => (
+                  <button
+                    key={provider}
+                    type="button"
+                    className={methodBtnClass(mobileProvider === provider)}
+                    onClick={() => setMobileProvider(provider)}
+                  >
+                    {provider}
+                  </button>
+                ))}
+              </div>
+              <Label className={formLabelClass}>{mobileProvider} number</Label>
+              <Input
+                className={formInputClass}
+                placeholder="e.g. 254712345678"
+                value={mpesaNumber}
+                onChange={(e) => setMpesaNumber(e.target.value)}
+              />
+            </>
+          )}
+
+          {addMoneyCategory === "bank" &&
+            (showAddBankForm ? (
+              <>
+                <Label className={formLabelClass}>Bank</Label>
+                <select
+                  className={formInputClass}
+                  value={newBank.bankName}
+                  onChange={(e) =>
+                    setNewBank({ ...newBank, bankName: e.target.value })
+                  }
+                >
+                  <option value="">Select a bank</option>
+                  {region.partnerBanks.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </select>
+                <Label className={formLabelClass}>Account number</Label>
+                <Input
+                  className={formInputClass}
+                  value={newBank.accountNumber}
+                  onChange={(e) =>
+                    setNewBank({ ...newBank, accountNumber: e.target.value })
+                  }
+                />
+                <Label className={formLabelClass}>Account name</Label>
+                <Input
+                  className={formInputClass}
+                  value={newBank.accountName}
+                  onChange={(e) =>
+                    setNewBank({ ...newBank, accountName: e.target.value })
+                  }
+                />
                 <button
                   type="button"
-                  className={`${styles.methodBtn} ${addMoneyCategory === "mobile" ? styles.methodBtnActive : ""}`}
-                  onClick={() => setAddMoneyCategory("mobile")}
+                  className={modalAddLinkClass}
+                  onClick={handleAddBank}
                 >
-                  Mobile Money
+                  + Save bank account
                 </button>
-              )}
-              <button
-                type="button"
-                className={`${styles.methodBtn} ${addMoneyCategory === "bank" ? styles.methodBtnActive : ""}`}
-                onClick={() => setAddMoneyCategory("bank")}
-              >
-                Bank Transfer
-              </button>
-              <button
-                type="button"
-                className={`${styles.methodBtn} ${addMoneyCategory === "card" ? styles.methodBtnActive : ""}`}
-                onClick={() => setAddMoneyCategory("card")}
-              >
-                Card
-              </button>
-            </div>
-
-            {addMoneyCategory === "mobile" && (
+                {paymentMethods.banks.length > 0 && (
+                  <button
+                    type="button"
+                    className={modalAddLinkClass}
+                    onClick={() => setShowAddBankForm(false)}
+                  >
+                    Use a saved bank instead
+                  </button>
+                )}
+              </>
+            ) : (
               <>
-                <div className={styles.methodRow}>
-                  {region.mobileMoney.map((provider) => (
+                <Label className={formLabelClass}>Bank account</Label>
+                <div className="flex flex-wrap gap-2 -mt-[0.6rem]">
+                  {paymentMethods.banks.map((b) => (
                     <button
-                      key={provider}
+                      key={b.id}
                       type="button"
-                      className={`${styles.methodBtn} ${mobileProvider === provider ? styles.methodBtnActive : ""}`}
-                      onClick={() => setMobileProvider(provider)}
+                      className={favouriteChipClass(selectedBankId === b.id)}
+                      onClick={() => setSelectedBankId(b.id)}
                     >
-                      {provider}
+                      {b.bankName} •••• {String(b.accountNumber).slice(-4)}
                     </button>
                   ))}
                 </div>
-                <label className={styles.formLabel}>
-                  {mobileProvider} number
-                </label>
-                <input
-                  className={styles.formInput}
-                  placeholder="e.g. 254712345678"
-                  value={mpesaNumber}
-                  onChange={(e) => setMpesaNumber(e.target.value)}
-                />
+                <button
+                  type="button"
+                  className={modalAddLinkClass}
+                  onClick={() => setShowAddBankForm(true)}
+                >
+                  + Add another bank
+                </button>
               </>
-            )}
+            ))}
 
-            {addMoneyCategory === "bank" &&
-              (showAddBankForm ? (
-                <>
-                  <label className={styles.formLabel}>Bank</label>
-                  <select
-                    className={styles.formInput}
-                    value={newBank.bankName}
-                    onChange={(e) =>
-                      setNewBank({ ...newBank, bankName: e.target.value })
-                    }
-                  >
-                    <option value="">Select a bank</option>
-                    {region.partnerBanks.map((b) => (
-                      <option key={b} value={b}>
-                        {b}
-                      </option>
-                    ))}
-                  </select>
-                  <label className={styles.formLabel}>Account number</label>
-                  <input
-                    className={styles.formInput}
-                    value={newBank.accountNumber}
-                    onChange={(e) =>
-                      setNewBank({ ...newBank, accountNumber: e.target.value })
-                    }
-                  />
-                  <label className={styles.formLabel}>Account name</label>
-                  <input
-                    className={styles.formInput}
-                    value={newBank.accountName}
-                    onChange={(e) =>
-                      setNewBank({ ...newBank, accountName: e.target.value })
-                    }
-                  />
+          {addMoneyCategory === "card" &&
+            (showAddCardForm ? (
+              <>
+                <Label className={formLabelClass}>Cardholder name</Label>
+                <Input
+                  className={formInputClass}
+                  value={newCard.cardholderName}
+                  onChange={(e) =>
+                    setNewCard({ ...newCard, cardholderName: e.target.value })
+                  }
+                />
+                <Label className={formLabelClass}>Card number</Label>
+                <Input
+                  className={formInputClass}
+                  maxLength={19}
+                  placeholder="4111 1111 1111 1111"
+                  value={newCard.cardNumber}
+                  onChange={(e) =>
+                    setNewCard({ ...newCard, cardNumber: e.target.value })
+                  }
+                />
+                <Label className={formLabelClass}>Expiry (MM/YY)</Label>
+                <Input
+                  className={formInputClass}
+                  maxLength={5}
+                  placeholder="MM/YY"
+                  value={newCard.expiry}
+                  onChange={(e) =>
+                    setNewCard({ ...newCard, expiry: e.target.value })
+                  }
+                />
+                <button
+                  type="button"
+                  className={modalAddLinkClass}
+                  onClick={handleAddCard}
+                >
+                  + Save card
+                </button>
+                {paymentMethods.cards.length > 0 && (
                   <button
                     type="button"
-                    className={styles.addFavouriteBtn}
-                    onClick={handleAddBank}
+                    className={modalAddLinkClass}
+                    onClick={() => setShowAddCardForm(false)}
                   >
-                    + Save bank account
+                    Use a saved card instead
                   </button>
-                  {paymentMethods.banks.length > 0 && (
+                )}
+              </>
+            ) : (
+              <>
+                <Label className={formLabelClass}>Card</Label>
+                <div className="flex flex-wrap gap-2 -mt-[0.6rem]">
+                  {paymentMethods.cards.map((c) => (
                     <button
+                      key={c.id}
                       type="button"
-                      className={styles.addFavouriteBtn}
-                      onClick={() => setShowAddBankForm(false)}
+                      className={favouriteChipClass(selectedCardId === c.id)}
+                      onClick={() => setSelectedCardId(c.id)}
                     >
-                      Use a saved bank instead
+                      {c.brand} •••• {c.last4}
                     </button>
-                  )}
-                </>
-              ) : (
-                <>
-                  <label className={styles.formLabel}>Bank account</label>
-                  <div className={styles.favouriteList}>
-                    {paymentMethods.banks.map((b) => (
-                      <button
-                        key={b.id}
-                        type="button"
-                        className={`${styles.favouriteChip} ${selectedBankId === b.id ? styles.favouriteChipActive : ""}`}
-                        onClick={() => setSelectedBankId(b.id)}
-                      >
-                        {b.bankName} •••• {String(b.accountNumber).slice(-4)}
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    className={styles.addFavouriteBtn}
-                    onClick={() => setShowAddBankForm(true)}
-                  >
-                    + Add another bank
-                  </button>
-                </>
-              ))}
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className={modalAddLinkClass}
+                  onClick={() => setShowAddCardForm(true)}
+                >
+                  + Add another card
+                </button>
+              </>
+            ))}
 
-            {addMoneyCategory === "card" &&
-              (showAddCardForm ? (
-                <>
-                  <label className={styles.formLabel}>Cardholder name</label>
-                  <input
-                    className={styles.formInput}
-                    value={newCard.cardholderName}
-                    onChange={(e) =>
-                      setNewCard({ ...newCard, cardholderName: e.target.value })
-                    }
-                  />
-                  <label className={styles.formLabel}>Card number</label>
-                  <input
-                    className={styles.formInput}
-                    maxLength={19}
-                    placeholder="4111 1111 1111 1111"
-                    value={newCard.cardNumber}
-                    onChange={(e) =>
-                      setNewCard({ ...newCard, cardNumber: e.target.value })
-                    }
-                  />
-                  <label className={styles.formLabel}>Expiry (MM/YY)</label>
-                  <input
-                    className={styles.formInput}
-                    maxLength={5}
-                    placeholder="MM/YY"
-                    value={newCard.expiry}
-                    onChange={(e) =>
-                      setNewCard({ ...newCard, expiry: e.target.value })
-                    }
-                  />
-                  <button
-                    type="button"
-                    className={styles.addFavouriteBtn}
-                    onClick={handleAddCard}
-                  >
-                    + Save card
-                  </button>
-                  {paymentMethods.cards.length > 0 && (
-                    <button
-                      type="button"
-                      className={styles.addFavouriteBtn}
-                      onClick={() => setShowAddCardForm(false)}
-                    >
-                      Use a saved card instead
-                    </button>
-                  )}
-                </>
-              ) : (
-                <>
-                  <label className={styles.formLabel}>Card</label>
-                  <div className={styles.favouriteList}>
-                    {paymentMethods.cards.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        className={`${styles.favouriteChip} ${selectedCardId === c.id ? styles.favouriteChipActive : ""}`}
-                        onClick={() => setSelectedCardId(c.id)}
-                      >
-                        {c.brand} •••• {c.last4}
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    className={styles.addFavouriteBtn}
-                    onClick={() => setShowAddCardForm(true)}
-                  >
-                    + Add another card
-                  </button>
-                </>
-              ))}
-
-            <button
-              className={styles.primaryBtn}
-              onClick={() => {
-                setShowAddMoneyPopup(false);
-                handleAddMoney();
-              }}
-            >
-              Continue
-            </button>
-          </div>
-        </div>
-      )}
+          <Button
+            className={primaryBtnClass}
+            onClick={() => {
+              setShowAddMoneyPopup(false);
+              handleAddMoney();
+            }}
+          >
+            Continue
+          </Button>
+        </DialogContent>
+      </Dialog>
 
       {/* Withdraw — service picker popup, shown once amount + PIN are entered */}
-      {showWithdrawPopup && (
-        <div
-          className={styles.popupOverlay}
-          onClick={() => setShowWithdrawPopup(false)}
-        >
-          <div
-            className={styles.popupPanel}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className={styles.popupTitle}>Withdraw via</h3>
-            <div className={styles.methodRow}>
-              {(region.mobileMoney.length > 0
-                ? ["mpesa", "agent"]
-                : ["agent"]
-              ).map((dest) => (
-                <button
-                  key={dest}
-                  type="button"
-                  className={`${styles.methodBtn} ${withdrawDestination === dest ? styles.methodBtnActive : ""}`}
-                  onClick={() => setWithdrawDestination(dest)}
-                >
-                  {dest === "mpesa" ? "Mpesa" : "Payzarc Agent"}
-                </button>
-              ))}
-            </div>
-
-            <label className={styles.formLabel}>
-              {withdrawDestination === "mpesa"
-                ? "Mpesa number"
-                : "Agent number"}
-            </label>
-            <input
-              className={styles.formInput}
-              placeholder={
-                withdrawDestination === "mpesa"
-                  ? "e.g. 254712345678"
-                  : "e.g. AG-10293"
-              }
-              value={
-                withdrawDestination === "mpesa" ? mpesaNumber : agentNumber
-              }
-              onChange={(e) =>
-                withdrawDestination === "mpesa"
-                  ? setMpesaNumber(e.target.value)
-                  : setAgentNumber(e.target.value)
-              }
-            />
-
-            <button
-              className={styles.primaryBtn}
-              onClick={() => {
-                setShowWithdrawPopup(false);
-                handleWithdraw();
-              }}
-            >
-              Continue
-            </button>
+      <Dialog open={showWithdrawPopup} onOpenChange={setShowWithdrawPopup}>
+        <DialogContent className="w-[min(400px,100%)] max-w-[400px] bg-[var(--card2)] border-white/[0.08] rounded-2xl p-7 flex flex-col gap-4 animate-popup-in shadow-2xl shadow-black/40">
+          <DialogTitle className="text-center text-[1.1rem] font-bold text-foreground m-0">
+            Withdraw via
+          </DialogTitle>
+          <div className="flex gap-2 -mt-[0.6rem]">
+            {(region.mobileMoney.length > 0
+              ? ["mpesa", "agent"]
+              : ["agent"]
+            ).map((dest) => (
+              <button
+                key={dest}
+                type="button"
+                className={methodBtnClass(withdrawDestination === dest)}
+                onClick={() => setWithdrawDestination(dest)}
+              >
+                {dest === "mpesa" ? "Mpesa" : "Agent"}
+              </button>
+            ))}
           </div>
-        </div>
-      )}
+
+          <Label className={formLabelClass}>
+            {withdrawDestination === "mpesa" ? "Mpesa number" : "Agent number"}
+          </Label>
+          <Input
+            className={formInputClass}
+            placeholder={
+              withdrawDestination === "mpesa"
+                ? "e.g. 254712345678"
+                : "e.g. AG-10293"
+            }
+            value={withdrawDestination === "mpesa" ? mpesaNumber : agentNumber}
+            onChange={(e) =>
+              withdrawDestination === "mpesa"
+                ? setMpesaNumber(e.target.value)
+                : setAgentNumber(e.target.value)
+            }
+          />
+
+          <Button
+            className={primaryBtnClass}
+            onClick={() => {
+              setShowWithdrawPopup(false);
+              handleWithdraw();
+            }}
+          >
+            Continue
+          </Button>
+        </DialogContent>
+      </Dialog>
 
       {/* Send Money — step-by-step "money in transit" visual, shown while
-          the transfer is in flight after confirming. */}
+          the transfer is in flight after confirming. Non-dismissible (no
+          close button, no click-outside/Escape) — same as the original
+          custom overlay, which had no close handler either. */}
       {sendProgressStep > 0 && (
-        <div className={styles.popupOverlay}>
-          <div className={styles.popupPanel}>
-            <h3 className={styles.popupTitle}>Sending money…</h3>
+        <Dialog open onOpenChange={() => {}}>
+          <DialogContent
+            className="w-[min(400px,100%)] max-w-[400px] bg-[var(--card2)] border-white/[0.08] rounded-2xl p-7 flex flex-col gap-4 animate-popup-in shadow-2xl shadow-black/40 [&>button:last-child]:hidden"
+            onEscapeKeyDown={(e) => e.preventDefault()}
+            onPointerDownOutside={(e) => e.preventDefault()}
+          >
+            <DialogTitle className="text-center text-[1.1rem] font-bold text-foreground m-0">
+              Sending money…
+            </DialogTitle>
 
-            <div className={styles.progressTrackVertical}>
+            <div className="flex flex-col py-2 px-1">
               {SEND_STEPS.map((step, idx) => {
                 const stepNum = idx + 1;
                 const isLast = idx === SEND_STEPS.length - 1;
@@ -1596,46 +1790,59 @@ function Home({ onPageChange, user, navigateRequest }) {
                 const reached = sendProgressStep >= stepNum;
                 const StepIcon = isPast ? Check : step.icon;
                 return (
-                  <div key={step.label} className={styles.progressNodeVertical}>
-                    <div className={styles.progressDotColumn}>
+                  <div key={step.label} className="flex gap-3.5">
+                    <div className="flex flex-col items-center flex-shrink-0">
                       <div
-                        className={`${styles.progressDotVertical} ${reached ? styles.progressDotActive : ""} ${isCurrent && !isLast ? styles.progressDotPulse : ""}`}
+                        className={cn(
+                          "w-[34px] h-[34px] rounded-full bg-white/[0.03] border border-white/[0.06] text-[var(--muted)] flex items-center justify-center flex-shrink-0 transition-all duration-300",
+                          reached &&
+                            "bg-gold border-gold text-black shadow-[0_4px_14px_rgba(236,201,75,0.35)]",
+                          isCurrent && !isLast && "animate-progress-pulse",
+                        )}
                       >
                         <StepIcon
                           size={15}
                           className={
-                            isCurrent && step.spin ? styles.spinIcon : undefined
+                            isCurrent && step.spin ? "animate-spin" : undefined
                           }
                         />
                       </div>
                       {!isLast && (
                         <div
-                          className={`${styles.progressConnector} ${sendProgressStep > stepNum ? styles.progressConnectorActive : ""}`}
+                          className={cn(
+                            "w-0.5 flex-1 min-h-[26px] bg-white/[0.08] my-[3px] transition-colors duration-[400ms]",
+                            sendProgressStep > stepNum && "bg-gold",
+                          )}
                         />
                       )}
                     </div>
-                    <div className={styles.progressNodeContent}>
+                    <div className="pb-5 pt-1">
                       <span
-                        className={`${styles.progressNodeTitle} ${reached ? "" : styles.progressNodeTitleMuted}`}
+                        className={cn(
+                          "text-[0.9rem] font-bold text-foreground transition-colors duration-300",
+                          !reached && "text-[var(--muted)]",
+                        )}
                       >
                         {step.label}
                       </span>
-                      <p className={styles.progressNodeSub}>{step.sub}</p>
+                      <p className="mt-0.5 text-[0.78rem] text-[var(--muted)]">
+                        {step.sub}
+                      </p>
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            <p className={styles.progressSub}>
-              {balanceData?.currency || "$"}
+            <p className="text-center text-[var(--muted)] text-[0.85rem] mt-1 pt-3 border-t border-dashed border-white/[0.08]">
+              {displayCurrency}
               {sendAmount} to{" "}
               {selectedRecipient?.display_name ||
                 selectedRecipient?.name ||
                 recipientSearchTerm}
             </p>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Confirmation Popup */}
@@ -1647,7 +1854,7 @@ function Home({ onPageChange, user, navigateRequest }) {
         onClose={() => setOpenDialog(false)}
         isNotification={notificationOnly}
       />
-    </div>
+    </>
   );
 }
 

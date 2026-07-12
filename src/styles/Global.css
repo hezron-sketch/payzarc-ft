@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Self-hosted via @fontsource/ibm-plex-sans (imported in index.js) instead
    of a Google Fonts CDN @import, so the app's default font doesn't depend
    on an external network request. */
@@ -54,6 +58,34 @@
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --transition-fast: 0.15s var(--ease-standard);
   --transition: 0.25s var(--ease-standard);
+
+  /* ── Shared component design tokens ──
+     Single source of truth for every *.module.css file (previously
+     App.module.css, Dashboard.module.css, and Profile.module.css each
+     redeclared their own :root with overlapping-but-different values,
+     so which one "won" depended on webpack's bundling order). --bg is the
+     app-wide background and must stay #0f1a2e everywhere. */
+  --bg: #0f1a2e;
+  --gold: #ecc94b;
+  --gold-dark: #d6b02e;
+  --gold-pale: rgba(236, 201, 75, 0.12);
+  --gold-border: rgba(236, 201, 75, 0.3);
+  --card: #314566;
+  --card2: #1c2a46;
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-mid: rgba(255, 255, 255, 0.12);
+  --white: #f9fafb;
+  --muted: #6b7280;
+  --soft: #9ca3af;
+  --green: #4ade80;
+  --blue: #60a5fa;
+  --pink: #f472b6;
+  --danger: #ef4444;
+
+  /* Flat/minimal radius scale — sharper than the old 10/16/24 defaults */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
 }
 
 * {
@@ -72,8 +104,8 @@ body {
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-    monospace;
+  font-family:
+    source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
 
 button,

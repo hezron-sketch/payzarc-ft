@@ -1,19 +1,89 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import styles from "./Register.module.css";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faHome,
-  faPen,
-  faCheck,
-  faCamera,
-  faRotateRight,
-} from "@fortawesome/free-solid-svg-icons";
+import { ArrowLeft, Check, Camera, RotateCw, Mail } from "lucide-react";
 import axios from "axios";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { countries } from "../../utility/countries";
 import { getCurrentCountry } from "../../utility/getCurrentCountry";
 import { API_URL } from "../../utility/constants";
 import * as faceapi from "face-api.js";
+
+// Shared class-builders for pieces whose sizing changes in compact mode
+// (Register rendered inside the phone-width Phone Auth Stage) — mirrors
+// Login.js's approach: functions rather than static strings since they
+// depend on the `compact` prop, replacing the `.page.compact .foo` CSS
+// Module modifiers.
+const formHeaderClass = (compact) => cn("flex flex-col gap-1.5", compact && "gap-1");
+const formTitleClass = (compact) =>
+  cn(
+    "font-extrabold text-[#f9fafb] tracking-[-0.5px]",
+    compact ? "text-[20px]" : "text-[26px] max-[480px]:text-[22px]",
+  );
+const formSubClass = (compact) =>
+  cn("text-[var(--muted)] leading-[1.55]", compact ? "text-xs" : "text-[13px]");
+const formGapClass = (compact) =>
+  cn("flex flex-col", compact ? "gap-[0.85rem]" : "gap-4");
+const stepRowClass = (compact) =>
+  cn("flex items-center mb-1", compact ? "gap-[5px]" : "gap-2");
+const stepDotClass = (state, compact) =>
+  cn(
+    "rounded-full flex items-center justify-center font-bold border-[0.5px]",
+    compact ? "w-6 h-6 text-[10px]" : "w-7 h-7 text-[11px]",
+    state === "active" &&
+      "bg-[rgba(236,201,75,0.12)] border-[rgba(236,201,75,0.35)] text-gold",
+    state === "completed" &&
+      "bg-[rgba(74,222,128,0.1)] border-[rgba(74,222,128,0.3)] text-[#4ade80]",
+    state === "default" && "bg-white/5 border-white/10 text-[var(--muted)]",
+  );
+const fieldLabelClass = "text-xs font-semibold text-[#9ca3af] tracking-[0.2px]";
+const inputFieldClass = (compact) =>
+  cn(
+    "h-auto w-full bg-white/5 text-[#f9fafb] border-[0.5px] border-white/10 rounded-[10px] outline-none transition-colors focus-visible:ring-0 focus-visible:border-gold focus-visible:bg-white/[0.07] placeholder:text-[#4b5563] shadow-none",
+    compact
+      ? "py-[0.65rem] pr-[0.85rem] pl-9 text-[13px] h-10"
+      : "py-3 pr-4 pl-10 text-sm h-11",
+  );
+const selectFieldClass = (compact) =>
+  cn(
+    inputFieldClass(compact),
+    "appearance-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed",
+  );
+const optionClass = "bg-[#1f2937] text-[#f9fafb]";
+const inlineErrorClass =
+  "flex items-center gap-1.5 bg-red-400/[0.08] border-[0.5px] border-red-400/25 rounded-sm px-3 py-2 text-xs text-red-400 mt-1";
+const primaryBtnClass = (compact) =>
+  cn(
+    "w-full h-auto bg-gold text-[#111] border-none rounded-[10px] font-bold cursor-pointer transition-all flex items-center justify-center gap-1.5 hover:bg-gold-dark hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed shadow-none",
+    compact ? "py-3 text-sm" : "py-[0.85rem] text-[15px]",
+  );
+const secondaryBtnClass = (compact) =>
+  cn(
+    "w-full bg-white/5 text-[#9ca3af] border-[0.5px] border-white/10 rounded-[10px] font-bold cursor-pointer transition-all flex items-center justify-center gap-1.5 hover:bg-white/[0.08] hover:text-[#f9fafb] font-sans",
+    compact ? "py-3 text-sm" : "py-[0.85rem] text-[15px]",
+  );
+const buttonGroupClass = "flex gap-3 mt-2 [&>*]:flex-1";
+const otpIconWrapClass = "w-[52px] h-[52px] rounded-[14px] flex items-center justify-center";
+const otpBoxClass = (compact) =>
+  cn(
+    "w-full max-w-[200px] px-0 bg-white/5 text-[#f9fafb] border-[0.5px] border-white/[0.12] rounded-[10px] font-bold text-center outline-none transition-colors caret-gold focus-visible:ring-0 focus-visible:border-gold focus-visible:bg-[rgba(236,201,75,0.06)] shadow-none",
+    compact ? "h-12 text-[17px]" : "h-[54px] text-xl",
+  );
+const timerRowClass = "text-center text-xs text-[var(--muted)]";
+const resendButtonClass =
+  "bg-[rgba(236,201,75,0.1)] text-gold border-[0.5px] border-[rgba(236,201,75,0.3)] rounded-sm py-2 px-4 text-[13px] font-semibold cursor-pointer transition-colors hover:bg-[rgba(236,201,75,0.18)]";
+const successTableClass = (compact) =>
+  cn(
+    "w-full border-collapse bg-white/[0.03] border-[0.5px] border-white/[0.07] rounded-[14px] overflow-hidden mb-4",
+    "[&_td]:border-b-[0.5px] [&_td]:border-white/[0.06] [&_tr:last-child_td]:border-b-0",
+    "[&_td:nth-child(1)]:text-[var(--muted)] [&_td:nth-child(1)]:w-[40%]",
+    "[&_td:nth-child(2)]:text-[#f9fafb] [&_td:nth-child(2)]:font-medium",
+    compact
+      ? "[&_td]:py-[10px] [&_td]:px-3 [&_td]:text-xs"
+      : "[&_td]:py-3 [&_td]:px-4 [&_td]:text-[13px]",
+  );
 
 function Register({ onBack, embedded = false, compact = false }) {
   const navigate = useNavigate();
@@ -325,81 +395,92 @@ function Register({ onBack, embedded = false, compact = false }) {
   const countryOptions = countries.sort((a, b) => a.name.localeCompare(b.name));
 
   const StepIndicator = () => (
-    <div className={styles.stepRow}>
+    <div className={stepRowClass(compact)}>
       {[1, 2, 3, 4, 5, 6, 7].map((s) => (
         <React.Fragment key={s}>
           <div
-            className={`${styles.stepDot} ${step === s ? styles.stepDotActive : step > s ? styles.stepDotCompleted : ""}`}
+            className={stepDotClass(
+              step === s ? "active" : step > s ? "completed" : "default",
+              compact,
+            )}
           >
-            {step > s ? <FontAwesomeIcon icon={faCheck} /> : s}
+            {step > s ? <Check size={12} /> : s}
           </div>
-          {s < 7 && <div className={styles.stepLine} />}
+          {s < 7 && <div className="flex-1 h-[0.5px] bg-white/[0.08]" />}
         </React.Fragment>
       ))}
     </div>
   );
 
   return (
-    <div className={`${styles.app} ${embedded ? styles.embedded : ""} ${compact ? styles.compact : ""}`}>
-      <div className={`${styles.page} ${embedded ? styles.embedded : ""} ${compact ? styles.compact : ""}`}>
+    <div className={cn("text-foreground", embedded ? "bg-transparent min-h-0" : "bg-background min-h-screen")}>
+      <div className={cn("min-h-screen grid grid-cols-1 md:grid-cols-2", embedded && "block min-h-0")}>
         {/* Left Panel */}
-        <div className={styles.leftPanel}>
-          <div className={styles.leftInner}>
-            <h2 className={styles.leftHeadline}>
-              <span className={styles.leftAccent}>PAYZARC</span>
+        <div
+          className={cn(
+            "relative overflow-hidden items-center justify-center p-12 px-10 border-r-[0.5px] border-white/[0.07] bg-[#111827]",
+            "before:content-[''] before:absolute before:rounded-full before:border-[0.5px] before:border-[rgba(236,201,75,0.07)] before:pointer-events-none before:w-[480px] before:h-[480px] before:-top-[100px] before:-left-[100px]",
+            "after:content-[''] after:absolute after:rounded-full after:border-[0.5px] after:border-[rgba(236,201,75,0.07)] after:pointer-events-none after:w-[320px] after:h-[320px] after:-bottom-20 after:-right-20",
+            embedded ? "hidden" : "hidden md:flex",
+          )}
+        >
+          <div className="flex flex-col gap-6 max-w-[360px] w-full relative z-[1]">
+            <h2 className="text-[32px] font-extrabold leading-[1.15] tracking-[-0.8px] text-[#f9fafb]">
+              <span className="text-gold tracking-[1.2rem] font-black">PAYZARC</span>
             </h2>
-            {/* <h2 className={styles.leftHeadline}>
-              Join the <span className={styles.leftAccent}>Future</span> of
-              Cross-Border Payments
-            </h2> */}
-            <p className={styles.leftSub}>
+            <p className="text-[13px] text-[var(--muted)] leading-[1.65] -mt-2">
               Create an account in minutes and start sending money worldwide
               with real-time exchange rates and zero hidden fees.
             </p>
-            <div className={styles.leftStats}>
-              <div className={styles.stat}>
-                {/* <div className={styles.statValue}>5min</div> */}
-                <div className={styles.statLabel}>Setup</div>
+            <div className="flex items-center gap-4 px-5 py-4 bg-white/[0.03] border-[0.5px] border-white/[0.07] rounded-[14px]">
+              <div className="flex-1 text-center">
+                <div className="text-[10px] text-[var(--muted)] mt-0.5">Setup</div>
               </div>
-              <div className={styles.statDiv} />
-              <div className={styles.stat}>
-                <div className={styles.statValue}>100%</div>
-                <div className={styles.statLabel}>Secure</div>
+              <div className="w-[0.5px] h-7 bg-white/[0.08]" />
+              <div className="flex-1 text-center">
+                <div className="text-base font-extrabold text-gold tracking-[-0.5px]">100%</div>
+                <div className="text-[10px] text-[var(--muted)] mt-0.5">Secure</div>
               </div>
-              <div className={styles.statDiv} />
-              <div className={styles.stat}>
-                <div className={styles.statValue}>24/7</div>
-                <div className={styles.statLabel}>Support</div>
+              <div className="w-[0.5px] h-7 bg-white/[0.08]" />
+              <div className="flex-1 text-center">
+                <div className="text-base font-extrabold text-gold tracking-[-0.5px]">24/7</div>
+                <div className="text-[10px] text-[var(--muted)] mt-0.5">Support</div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Right Panel */}
-        <div className={styles.rightPanel}>
-          <div className={styles.formCard}>
+        <div
+          className={cn(
+            "flex items-center justify-center bg-background",
+            embedded
+              ? "p-0 bg-transparent items-stretch justify-stretch"
+              : "p-10 px-8 max-[768px]:p-8 max-[768px]:px-5 max-[768px]:items-start max-[768px]:pt-12",
+          )}
+        >
+          <div
+            className={cn(
+              "w-full flex flex-col gap-5",
+              embedded ? "max-w-full" : "max-w-[440px] max-[768px]:max-w-full",
+            )}
+          >
             <button
-              className={`${styles.backBtn} ${embedded ? styles.hiddenWhenEmbedded : ""}`}
+              className={cn(
+                "inline-flex items-center gap-1.5 bg-transparent border-[0.5px] border-white/10 rounded-[20px] text-[#9ca3af] text-xs font-medium px-3 py-[5px] cursor-pointer w-fit transition-colors hover:text-[#f9fafb] hover:border-white/20",
+                embedded && "hidden",
+              )}
               onClick={onBack}
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M19 12H5M12 5l-7 7 7 7" />
-              </svg>
+              <ArrowLeft size={16} />
               Home
             </button>
 
-            <div className={styles.formHeader}>
-              <h1 className={styles.formTitle} id="register-modal-title">
+            <div className={formHeaderClass(compact)}>
+              <h1 className={formTitleClass(compact)} id="register-modal-title">
                 Create Account
               </h1>
-              <p className={styles.formSub}>
+              <p className={formSubClass(compact)}>
                 Complete the steps to get started
               </p>
             </div>
@@ -407,299 +488,294 @@ function Register({ onBack, embedded = false, compact = false }) {
             <StepIndicator />
 
             {/* Step Content */}
-            <div className={styles.form}>
+            <div className={formGapClass(compact)}>
               {step === 1 && (
                 <>
-                  <div className={styles.fieldGroup}>
-                    <label className={styles.fieldLabel}>First Name</label>
-                    <input
+                  <div className="flex flex-col gap-1.5">
+                    <label className={fieldLabelClass}>First Name</label>
+                    <Input
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleChange}
                       placeholder="Enter first name"
-                      className={styles.inputField}
+                      className={inputFieldClass(compact)}
                     />
                     {errors.firstName && (
-                      <p className={styles.inlineError}>{errors.firstName}</p>
+                      <p className={inlineErrorClass}>{errors.firstName}</p>
                     )}
                   </div>
-                  <div className={styles.fieldGroup}>
-                    <label className={styles.fieldLabel}>Surname</label>
-                    <input
+                  <div className="flex flex-col gap-1.5">
+                    <label className={fieldLabelClass}>Surname</label>
+                    <Input
                       name="surname"
                       value={formData.surname}
                       onChange={handleChange}
                       placeholder="Enter surname"
-                      className={styles.inputField}
+                      className={inputFieldClass(compact)}
                     />
                     {errors.surname && (
-                      <p className={styles.inlineError}>{errors.surname}</p>
+                      <p className={inlineErrorClass}>{errors.surname}</p>
                     )}
                   </div>
-                  <div className={styles.fieldGroup}>
-                    <label className={styles.fieldLabel}>
+                  <div className="flex flex-col gap-1.5">
+                    <label className={fieldLabelClass}>
                       Middle Name (Optional)
                     </label>
-                    <input
+                    <Input
                       name="middleName"
                       value={formData.middleName}
                       onChange={handleChange}
                       placeholder="Enter middle name"
-                      className={styles.inputField}
+                      className={inputFieldClass(compact)}
                     />
                   </div>
-                  <button onClick={handleNext} className={styles.nextButton}>
+                  <Button onClick={handleNext} className={primaryBtnClass(compact)}>
                     Next Step
-                  </button>
+                  </Button>
                 </>
               )}
 
               {step === 2 && (
                 <>
-                  <div className={styles.fieldGroup}>
-                    <label className={styles.fieldLabel}>Gender</label>
+                  <div className="flex flex-col gap-1.5">
+                    <label className={fieldLabelClass}>Gender</label>
                     <select
                       name="gender"
                       value={formData.gender}
                       onChange={handleChange}
-                      className={styles.countrySelect}
+                      className={selectFieldClass(compact)}
                     >
-                      <option value="">Select Gender</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
+                      <option value="" className={optionClass}>Select Gender</option>
+                      <option value="Male" className={optionClass}>Male</option>
+                      <option value="Female" className={optionClass}>Female</option>
                     </select>
                     {errors.gender && (
-                      <p className={styles.inlineError}>{errors.gender}</p>
+                      <p className={inlineErrorClass}>{errors.gender}</p>
                     )}
                   </div>
-                  <div className={styles.fieldGroup}>
-                    <label className={styles.fieldLabel}>Date of Birth</label>
-                    <input
+                  <div className="flex flex-col gap-1.5">
+                    <label className={fieldLabelClass}>Date of Birth</label>
+                    <Input
                       type="date"
                       name="dob"
                       value={formData.dob}
                       onChange={handleChange}
-                      className={styles.inputField}
+                      className={inputFieldClass(compact)}
                     />
                     {errors.dob && (
-                      <p className={styles.inlineError}>{errors.dob}</p>
+                      <p className={inlineErrorClass}>{errors.dob}</p>
                     )}
                   </div>
-                  <div className={styles.fieldGroup}>
-                    <label className={styles.fieldLabel}>ID Type</label>
+                  <div className="flex flex-col gap-1.5">
+                    <label className={fieldLabelClass}>ID Type</label>
                     <select
                       name="idType"
                       value={formData.idType}
                       onChange={handleChange}
-                      className={styles.countrySelect}
+                      className={selectFieldClass(compact)}
                     >
-                      <option value="">Select ID Type</option>
-                      <option value="Passport">Passport</option>
-                      <option value="Government">Government ID</option>
+                      <option value="" className={optionClass}>Select ID Type</option>
+                      <option value="Passport" className={optionClass}>Passport</option>
+                      <option value="Government" className={optionClass}>Government ID</option>
                     </select>
                     {errors.idType && (
-                      <p className={styles.inlineError}>{errors.idType}</p>
+                      <p className={inlineErrorClass}>{errors.idType}</p>
                     )}
                   </div>
-                  <div className={styles.fieldGroup}>
-                    <label className={styles.fieldLabel}>ID Number</label>
-                    <input
+                  <div className="flex flex-col gap-1.5">
+                    <label className={fieldLabelClass}>ID Number</label>
+                    <Input
                       name="idNumber"
                       value={formData.idNumber}
                       onChange={handleChange}
                       placeholder="Enter ID number"
-                      className={styles.inputField}
+                      className={inputFieldClass(compact)}
                     />
                     {errors.idNumber && (
-                      <p className={styles.inlineError}>{errors.idNumber}</p>
+                      <p className={inlineErrorClass}>{errors.idNumber}</p>
                     )}
                   </div>
-                  <div className={styles.buttonGroup}>
+                  <div className={buttonGroupClass}>
                     <button
                       onClick={() => handleBack(1)}
-                      className={styles.backButton}
+                      className={secondaryBtnClass(compact)}
                     >
                       Back
                     </button>
-                    <button onClick={handleNext} className={styles.nextButton}>
+                    <Button onClick={handleNext} className={primaryBtnClass(compact)}>
                       Next Step
-                    </button>
+                    </Button>
                   </div>
                 </>
               )}
 
               {step === 3 && (
                 <>
-                  <div className={styles.fieldGroup}>
-                    <label className={styles.fieldLabel}>
+                  <div className="flex flex-col gap-1.5">
+                    <label className={fieldLabelClass}>
                       Country of Birth
                     </label>
                     <select
                       name="countryOfBirth"
                       value={formData.countryOfBirth}
                       onChange={handleChange}
-                      className={styles.countrySelect}
+                      className={selectFieldClass(compact)}
                     >
-                      <option value="">Select Country</option>
+                      <option value="" className={optionClass}>Select Country</option>
                       {countryOptions.map((c) => (
-                        <option key={c.name} value={c.name}>
+                        <option key={c.name} value={c.name} className={optionClass}>
                           {c.flag} {c.name}
                         </option>
                       ))}
                     </select>
                     {errors.countryOfBirth && (
-                      <p className={styles.inlineError}>
+                      <p className={inlineErrorClass}>
                         {errors.countryOfBirth}
                       </p>
                     )}
                   </div>
-                  <div className={styles.fieldGroup}>
-                    <label className={styles.fieldLabel}>
+                  <div className="flex flex-col gap-1.5">
+                    <label className={fieldLabelClass}>
                       Town/City of Residency
                     </label>
-                    <input
+                    <Input
                       name="townCity"
                       value={formData.townCity}
                       onChange={handleChange}
                       placeholder="Enter town or city"
-                      className={styles.inputField}
+                      className={inputFieldClass(compact)}
                     />
                     {errors.townCity && (
-                      <p className={styles.inlineError}>{errors.townCity}</p>
+                      <p className={inlineErrorClass}>{errors.townCity}</p>
                     )}
                   </div>
-                  <div className={styles.buttonGroup}>
+                  <div className={buttonGroupClass}>
                     <button
                       onClick={() => handleBack(2)}
-                      className={styles.backButton}
+                      className={secondaryBtnClass(compact)}
                     >
                       Back
                     </button>
-                    <button onClick={handleNext} className={styles.nextButton}>
+                    <Button onClick={handleNext} className={primaryBtnClass(compact)}>
                       Next Step
-                    </button>
+                    </Button>
                   </div>
                 </>
               )}
 
               {step === 4 && (
                 <>
-                  <div className={styles.fieldGroup}>
-                    <label className={styles.fieldLabel}>Email Address</label>
-                    <input
+                  <div className="flex flex-col gap-1.5">
+                    <label className={fieldLabelClass}>Email Address</label>
+                    <Input
                       name="email"
                       type="email"
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="Enter email"
-                      className={styles.inputField}
+                      className={inputFieldClass(compact)}
                     />
                     {errors.email && (
-                      <p className={styles.inlineError}>{errors.email}</p>
+                      <p className={inlineErrorClass}>{errors.email}</p>
                     )}
                   </div>
-                  <div className={styles.fieldGroup}>
-                    <label className={styles.fieldLabel}>Phone Number</label>
-                    <div className={styles.inputWrap}>
-                      <span
-                        style={{
-                          position: "absolute",
-                          left: "10px",
-                          color: "#6b7280",
-                          fontSize: "14px",
-                        }}
-                      >
+                  <div className="flex flex-col gap-1.5">
+                    <label className={fieldLabelClass}>Phone Number</label>
+                    <div className="relative flex items-center">
+                      <span className="absolute left-[10px] text-[#6b7280] text-sm pointer-events-none">
                         {formData.countryCode}
                       </span>
-                      <input
+                      <Input
                         name="phone"
                         type="tel"
                         value={formData.phone}
                         onChange={handleChange}
                         placeholder="Enter phone number"
-                        className={styles.inputField}
-                        style={{ paddingLeft: "45px" }}
+                        className={cn(inputFieldClass(compact), "pl-[45px]")}
                       />
                     </div>
                     {errors.phone && (
-                      <p className={styles.inlineError}>{errors.phone}</p>
+                      <p className={inlineErrorClass}>{errors.phone}</p>
                     )}
                   </div>
-                  <div className={styles.buttonGroup}>
+                  <div className={buttonGroupClass}>
                     <button
                       onClick={() => handleBack(3)}
-                      className={styles.backButton}
+                      className={secondaryBtnClass(compact)}
                     >
                       Back
                     </button>
-                    <button onClick={handleNext} className={styles.nextButton}>
+                    <Button onClick={handleNext} className={primaryBtnClass(compact)}>
                       Next Step
-                    </button>
+                    </Button>
                   </div>
                 </>
               )}
 
               {step === 5 && (
-                <div className={styles.captureContainer}>
-                  <div className={styles.captureVideoContainer}>
+                <div className="flex flex-col gap-4">
+                  <div className="relative w-full aspect-[4/3] bg-black rounded-2xl overflow-hidden border border-white/10">
                     {formData.memberImage ? (
                       <img
                         src={formData.memberImage}
-                        className={styles.captureImage}
+                        className="w-full h-full object-cover"
                         alt="Captured"
                       />
                     ) : (
-                      <video ref={videoRef} autoPlay playsInline muted />
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full h-full object-cover"
+                      />
                     )}
-                    <canvas ref={canvasRef} style={{ display: "none" }} />
+                    <canvas ref={canvasRef} className="hidden" />
                   </div>
                   {cameraError && (
-                    <p className={styles.inlineError}>{cameraError}</p>
+                    <p className={inlineErrorClass}>{cameraError}</p>
                   )}
-                  <div className={styles.buttonGroup}>
+                  <div className={buttonGroupClass}>
                     {formData.memberImage ? (
                       <button
                         onClick={() => {
                           setFormData({ ...formData, memberImage: "" });
                           startCamera();
                         }}
-                        className={styles.backButton}
+                        className={secondaryBtnClass(compact)}
                       >
-                        <FontAwesomeIcon icon={faRotateRight} /> Retake
+                        <RotateCw size={16} /> Retake
                       </button>
                     ) : (
-                      <button
-                        onClick={captureImage}
-                        className={styles.submitBtn}
-                      >
-                        <FontAwesomeIcon icon={faCamera} /> Capture Face
-                      </button>
+                      <Button onClick={captureImage} className={primaryBtnClass(compact)}>
+                        <Camera size={16} /> Capture Face
+                      </Button>
                     )}
                   </div>
-                  <div className={styles.buttonGroup}>
+                  <div className={buttonGroupClass}>
                     <button
                       onClick={() => handleBack(4)}
-                      className={styles.backButton}
+                      className={secondaryBtnClass(compact)}
                     >
                       Back
                     </button>
-                    <button
+                    <Button
                       onClick={handleNext}
-                      className={styles.nextButton}
+                      className={primaryBtnClass(compact)}
                       disabled={!formData.memberImage}
                     >
                       Next Step
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
 
               {step === 6 && (
-                <div className={styles.formGroup}>
-                  <h2 className={styles.formTitle} style={{ fontSize: "18px" }}>
+                <div>
+                  <h2 className="text-[18px] font-extrabold text-[#f9fafb] tracking-[-0.5px] mb-3">
                     Review Details
                   </h2>
-                  <table className={styles.successTable}>
+                  <table className={successTableClass(compact)}>
                     <tbody>
                       <tr>
                         <td>Name</td>
@@ -727,130 +803,115 @@ function Register({ onBack, embedded = false, compact = false }) {
                         <td>
                           <img
                             src={formData.memberImage}
-                            className={styles.tableImage}
+                            className="w-12 h-12 object-cover rounded-sm border-[1.5px] border-gold"
                             alt="Profile"
                           />
                         </td>
                       </tr>
                     </tbody>
                   </table>
-                  <div className={styles.buttonGroup}>
+                  <div className={buttonGroupClass}>
                     <button
                       onClick={() => handleBack(5)}
-                      className={styles.backButton}
+                      className={secondaryBtnClass(compact)}
                     >
                       Back
                     </button>
-                    <button onClick={handleNext} className={styles.nextButton}>
+                    <Button onClick={handleNext} className={primaryBtnClass(compact)}>
                       Verify & Submit
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
 
               {step === 7 && (
-                <div style={{ textAlign: "center" }}>
+                <div className="text-center">
                   <div
-                    className={styles.otpIconWrap}
-                    style={{ margin: "0 auto 1rem" }}
+                    className={cn(
+                      otpIconWrapClass,
+                      "mx-auto mb-4 bg-[rgba(236,201,75,0.1)] border-[0.5px] border-[rgba(236,201,75,0.25)]",
+                    )}
                   >
-                    <svg
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#ecc94b"
-                      strokeWidth="2"
-                    >
-                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                      <polyline points="22,6 12,13 2,6" />
-                    </svg>
+                    <Mail size={24} color="#ecc94b" strokeWidth={2} />
                   </div>
-                  <p className={styles.formSub}>
+                  <p className={formSubClass(compact)}>
                     Enter the code sent to {formData.email}
                   </p>
-                  <div className={styles.otpContainer}>
-                    <input
+                  <div className="flex justify-center my-4">
+                    <Input
                       name="emailCode"
                       value={formData.emailCode}
                       onChange={handleChange}
                       placeholder="000000"
-                      className={styles.otpBox}
-                      style={{ width: "100%", maxWidth: "200px" }}
+                      className={otpBoxClass(compact)}
                       maxLength={6}
                     />
                   </div>
-                  <div className={styles.timerRow}>
+                  <div className={timerRowClass}>
                     {remainingTime > 0 ? (
                       `Code expires in ${remainingTime}s`
                     ) : (
                       <button
                         onClick={handleNext}
-                        className={styles.resendButton}
+                        className={resendButtonClass}
                       >
                         Resend Code
                       </button>
                     )}
                   </div>
-                  <div
-                    className={styles.buttonGroup}
-                    style={{ marginTop: "1.5rem" }}
-                  >
+                  <div className={cn(buttonGroupClass, "mt-6")}>
                     <button
                       onClick={() => handleBack(6)}
-                      className={styles.backButton}
+                      className={secondaryBtnClass(compact)}
                     >
                       Back
                     </button>
-                    <button
+                    <Button
                       onClick={handleSubmit}
-                      className={styles.submitBtn}
+                      className={primaryBtnClass(compact)}
                       disabled={isSubmitting}
                     >
                       {isSubmitting ? (
-                        <div className={styles.spinner} />
+                        <span className="inline-block w-[18px] h-[18px] rounded-full border-2 border-black/20 border-t-[#111] animate-spin" />
                       ) : (
                         "Complete Registration"
                       )}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
 
               {step === 8 && (
-                <div style={{ textAlign: "center", padding: "2rem 0" }}>
+                <div className="text-center py-8">
                   <div
-                    className={styles.otpIconWrap}
-                    style={{
-                      margin: "0 auto 1.5rem",
-                      background: "rgba(74, 222, 128, 0.1)",
-                      borderColor: "#4ade80",
-                    }}
+                    className={cn(
+                      otpIconWrapClass,
+                      "mx-auto mb-6 bg-[rgba(74,222,128,0.1)] border-[0.5px] border-[#4ade80]",
+                    )}
                   >
-                    <FontAwesomeIcon
-                      icon={faCheck}
-                      style={{ color: "#4ade80", fontSize: "24px" }}
-                    />
+                    <Check size={24} color="#4ade80" strokeWidth={2.5} />
                   </div>
-                  <h2 className={styles.formTitle}>Success!</h2>
-                  <p className={styles.formSub}>
+                  <h2 className={formTitleClass(compact)}>Success!</h2>
+                  <p className={formSubClass(compact)}>
                     Your account has been created successfully. You can now log
                     in to your dashboard.
                   </p>
-                  <button
+                  <Button
                     onClick={() => navigate("/components/member/login")}
-                    className={styles.submitBtn}
-                    style={{ marginTop: "2rem" }}
+                    className={cn(primaryBtnClass(compact), "mt-8")}
                   >
                     Go to Login
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
 
-            <p className={styles.loginPrompt}>
+            <p className="text-[13px] text-[var(--muted)] text-center">
               Already have an account?{" "}
-              <Link to="/components/member/login" className={styles.loginLink}>
+              <Link
+                to="/components/member/login"
+                className="text-gold font-semibold no-underline transition-opacity hover:opacity-80"
+              >
                 Log in
               </Link>
             </p>
@@ -860,20 +921,25 @@ function Register({ onBack, embedded = false, compact = false }) {
 
       {/* Error Popup */}
       {errorPopup && (
-        <div className={styles.popupOverlay}>
-          <div className={styles.popupContent}>
-            <h2 className={styles.popupTitle} style={{ color: "#f87171" }}>
+        <Dialog open onOpenChange={(open) => !open && setErrorPopup("")}>
+          <DialogContent
+            className={cn(
+              "max-w-[360px] bg-[#1f2937] border border-white/10 rounded-[20px] flex flex-col items-center gap-4 text-center animate-popup-in",
+              compact ? "p-6" : "p-8",
+            )}
+          >
+            <DialogTitle className="text-[17px] font-bold text-red-400">
               Error
-            </h2>
-            <p className={styles.popupMessage}>{errorPopup}</p>
-            <button
+            </DialogTitle>
+            <p className="text-[13px] text-[#9ca3af] leading-[1.55]">{errorPopup}</p>
+            <Button
               onClick={() => setErrorPopup("")}
-              className={styles.popupButton}
+              className="w-full h-auto py-3 rounded-[10px] bg-red-400/[0.12] text-red-400 border border-red-400/30 text-sm font-semibold hover:bg-red-400/20 shadow-none"
             >
               OK
-            </button>
-          </div>
-        </div>
+            </Button>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

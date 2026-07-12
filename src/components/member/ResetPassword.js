@@ -3,7 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHome, faRedo } from '@fortawesome/free-solid-svg-icons';
 import axiosInstance from '../../utility/axiosInstance';
-import styles from './ResetPassword.module.css';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+
+const homeButtonClass =
+  'self-start ml-[5%] w-10 h-10 p-0 bg-transparent border-none text-foreground text-2xl cursor-pointer mb-4 flex items-center justify-center hover:bg-transparent hover:text-gold-dark shadow-none';
+const inputFieldClass =
+  'h-auto w-full rounded-sm bg-secondary border-input px-3 py-3 text-base text-foreground focus-visible:ring-0 focus-visible:border-gold shadow-none';
+const submitBtnClass =
+  'h-auto w-full rounded-sm px-3 py-3 text-base font-bold text-[#1a202c] bg-gold hover:bg-gold-dark shadow-none';
 
 function ResetPassword({ onBack }) {
   const [step, setStep] = useState('email');
@@ -128,15 +136,15 @@ function ResetPassword({ onBack }) {
 
   if (isBlocked) {
     return (
-      <div className={styles.app}>
-        <div className={styles.apppLogo}>
-          <img src="/images/payzarc.png" alt="Payzarc" className={styles.appLogo} />
-          <div className={styles.innerContainer}>
-            <h2 style={{ color: '#ff6347' }}>Temporarily Blocked</h2>
-            <p style={{ color: '#cbd5e1', margin: '1.5rem 0', textAlign: 'center' }}>
+      <div className="min-h-screen w-full flex items-center justify-center bg-background text-foreground p-4 box-border">
+        <div className="p-6 bg-card border border-border rounded-lg flex flex-col items-center w-full max-w-[400px] gap-4">
+          <img src="/images/payzarc.png" alt="Payzarc" className="block text-center max-w-[35%] mx-auto" />
+          <div className="bg-card rounded-lg w-full flex flex-col items-center p-6">
+            <h2 className="text-[1.6rem] font-bold text-[#ff6347] text-center mt-2 mb-4">Temporarily Blocked</h2>
+            <p className="text-[#cbd5e1] my-6 text-center">
               Too many reset attempts. Please try again later or contact support.
             </p>
-            <button onClick={onBack} className={styles.homeButton}>
+            <button onClick={onBack} className={homeButtonClass}>
               <FontAwesomeIcon icon={faHome} /> Return Home
             </button>
           </div>
@@ -146,40 +154,40 @@ function ResetPassword({ onBack }) {
   }
 
   return (
-    <div className={styles.app}>
-      <div className={styles.apppLogo}>
-        <img src="/images/payzarc.png" alt="Payzarc" className={styles.appLogo} />
+    <div className="min-h-screen w-full flex items-center justify-center bg-background text-foreground p-4 box-border">
+      <div className="p-6 bg-card border border-border rounded-lg flex flex-col items-center w-full max-w-[400px] gap-4">
+        <img src="/images/payzarc.png" alt="Payzarc" className="block text-center max-w-[35%] mx-auto" />
 
-        <div className={styles.innerContainer}>
-          <button onClick={onBack} className={styles.homeButton}>
+        <div className="bg-card rounded-lg w-full flex flex-col items-center p-6">
+          <button onClick={onBack} className={homeButtonClass}>
             <FontAwesomeIcon icon={faHome} />
           </button>
 
           {step === 'email' ? (
             <>
-              <h2>Forgot Password</h2>
-              <p>We'll send a reset code to your registered email</p>
-              <form onSubmit={handleSendOtp} className={styles.form}>
-                <input
+              <h2 className="text-[1.6rem] font-bold text-gold text-center mt-2 mb-4">Forgot Password</h2>
+              <p className="text-foreground text-center mb-2">We'll send a reset code to your registered email</p>
+              <form onSubmit={handleSendOtp} className="w-[90%] flex flex-col gap-4">
+                <Input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Email address"
                   required
-                  className={styles.inputField}
+                  className={inputFieldClass}
                 />
-                {error && <p className={styles.error}>{error}</p>}
-                <button type="submit" disabled={loading} className={styles.loginButton}>
+                {error && <p className="text-destructive text-sm text-center my-2">{error}</p>}
+                <Button type="submit" disabled={loading} className={submitBtnClass}>
                   {loading ? 'Sending...' : 'Send Reset Code'}
-                </button>
+                </Button>
               </form>
             </>
           ) : (
             <>
-              <h2>Enter Reset Code</h2>
-              <p>Code sent to <strong>{email}</strong></p>
-              <form onSubmit={handleVerifyOtp} className={styles.form}>
-                <input
+              <h2 className="text-[1.6rem] font-bold text-gold text-center mt-2 mb-4">Enter Reset Code</h2>
+              <p className="text-foreground text-center mb-2">Code sent to <strong>{email}</strong></p>
+              <form onSubmit={handleVerifyOtp} className="w-[90%] flex flex-col gap-4">
+                <Input
                   type="text"
                   maxLength={6}
                   value={otp}
@@ -187,23 +195,27 @@ function ResetPassword({ onBack }) {
                   placeholder="Enter 6-digit code"
                   required
                   autoFocus
-                  className={styles.inputField}
+                  className={inputFieldClass}
                 />
-                {error && <p className={styles.error}>{error}</p>}
+                {error && <p className="text-destructive text-sm text-center my-2">{error}</p>}
                 {remainingTime > 0 && (
-                  <p className={styles.timer}>Time remaining: {formatTime(remainingTime)}</p>
+                  <p className="text-foreground text-sm text-center my-4">Time remaining: {formatTime(remainingTime)}</p>
                 )}
-                <button
+                <Button
                   type="submit"
                   disabled={loading || remainingTime === 0}
-                  className={styles.verifyButton}
+                  className={submitBtnClass}
                 >
                   {loading ? 'Verifying...' : 'Verify & Continue'}
-                </button>
+                </Button>
               </form>
 
               {remainingTime === 0 && (
-                <button onClick={handleResend} disabled={loading} className={styles.resendButton}>
+                <button
+                  onClick={handleResend}
+                  disabled={loading}
+                  className="bg-transparent border-none text-gold text-[0.95rem] cursor-pointer flex items-center gap-2 mt-4 hover:text-gold-dark disabled:opacity-60 disabled:cursor-not-allowed"
+                >
                   <FontAwesomeIcon icon={faRedo} /> Resend Code
                 </button>
               )}

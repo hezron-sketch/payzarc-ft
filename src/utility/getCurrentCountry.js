@@ -41,6 +41,7 @@ export async function getCurrentCountry(countries = []) {
         name: matchedCountry.name,
         flag: matchedCountry.flag,
         code: matchedCountry.code,
+        currency: matchedCountry.currency,
       };
     }
 

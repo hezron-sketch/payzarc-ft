@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, Bell, ArrowDownCircle, ShieldAlert, CheckCircle2 } from "lucide-react";
 import { transactionsApi } from "../../utility/axiosInstance";
-import homeStyles from "./Home.module.css";
-import styles from "./Notifications.module.css";
+import { Button } from "@/components/ui/button";
 
 const ICONS = {
   receive: ArrowDownCircle,
   security: ShieldAlert,
   transaction: CheckCircle2,
 };
+
+// Same outer card/header class strings PaymentMethods.js (and, before it,
+// Home.js) use — this is a standalone page, so it needs its own card chrome
+// rather than sharing Home's balance card.
+const flowCardClass =
+  "relative p-8 w-full max-w-[600px] mx-auto min-h-[560px] flex flex-col gap-7 bg-card border border-border rounded-lg animate-flow-fade-in max-[640px]:p-6 max-[640px]:px-5 max-[640px]:gap-6 max-[640px]:min-h-[480px]";
+const flowHeaderClass =
+  "absolute left-0 w-full bottom-full mb-3 grid grid-cols-[1fr_auto_1fr] items-center text-white";
+const backBtnClass =
+  "col-start-1 justify-self-start h-auto gap-1 px-1 py-1.5 text-white text-[0.9rem] font-semibold transition-opacity duration-200 hover:bg-transparent hover:text-white hover:opacity-75 [&_svg]:size-auto";
 
 function Notifications({ onBack }) {
   const [notifications, setNotifications] = useState([]);
@@ -21,40 +30,48 @@ function Notifications({ onBack }) {
   }, []);
 
   return (
-    <section
-      className={`${homeStyles.flowCard} ${homeStyles.flowSection} ${styles.entrance}`}
-    >
-      <div className={homeStyles.flowHeader}>
-        <button className={homeStyles.backBtn} onClick={onBack}>
+    <section className={flowCardClass}>
+      <div className={flowHeaderClass}>
+        <Button variant="ghost" onClick={onBack} className={backBtnClass}>
           <ArrowLeft size={18} /> Back
-        </button>
+        </Button>
       </div>
-      <h2 className={styles.pageTitle}>Notifications</h2>
+      <h2 className="text-[1.6rem] font-bold text-foreground mb-2">Notifications</h2>
 
       {notifications.length === 0 ? (
-        <p className={styles.empty}>You're all caught up — no notifications yet.</p>
+        <p className="text-center text-[var(--muted)] text-sm py-8">
+          You're all caught up — no notifications yet.
+        </p>
       ) : (
-        <div className={styles.list}>
+        <div className="flex flex-col gap-[0.6rem]">
           {notifications.map((n) => {
             const Icon = ICONS[n.type] || Bell;
             return (
               <div
                 key={n.id}
-                className={`${styles.item} ${n.read ? "" : styles.itemUnread}`}
+                className={
+                  n.read
+                    ? "relative flex gap-3 bg-secondary border border-input rounded-xl px-4 py-[0.85rem]"
+                    : "relative flex gap-3 bg-[var(--gold-pale)] border border-[var(--gold-border)] rounded-xl px-4 py-[0.85rem]"
+                }
               >
-                <div className={styles.itemIcon}>
+                <div className="w-9 h-9 rounded-full bg-white/[0.06] text-gold flex items-center justify-center shrink-0">
                   <Icon size={18} />
                 </div>
-                <div className={styles.itemBody}>
-                  <div className={styles.itemHeader}>
-                    <span className={styles.itemTitle}>{n.title}</span>
-                    <span className={styles.itemTime}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-baseline gap-2">
+                    <span className="text-sm font-bold text-foreground">{n.title}</span>
+                    <span className="text-[0.7rem] text-[var(--muted)] whitespace-nowrap">
                       {new Date(n.created_at).toLocaleString()}
                     </span>
                   </div>
-                  <p className={styles.itemMessage}>{n.message}</p>
+                  <p className="mt-1 text-[0.82rem] text-muted-foreground leading-[1.4]">
+                    {n.message}
+                  </p>
                 </div>
-                {!n.read && <span className={styles.unreadDot} />}
+                {!n.read && (
+                  <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-gold" />
+                )}
               </div>
             );
           })}
