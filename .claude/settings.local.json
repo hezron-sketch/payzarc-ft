@@ -48,7 +48,21 @@
       "Bash(curl -s -m 3 http://localhost:8080/api/profile-details -o /dev/null -w \"HTTP %{http_code}\\\\n\")",
       "Bash(curl *)",
       "mcp__plugin_21st_21st__generate",
-      "mcp__plugin_21st_21st__get_generation"
+      "mcp__plugin_21st_21st__get_generation",
+      "Read(//home/mtuhalf/Documents/react/frontend/**)",
+      "Bash(echo \"---exit $?\")",
+      "Bash(xargs -I{} cat {})",
+      "Bash(xargs -I{} sh -c 'echo \"=== {} ===\"; wc -l \"{}\"')",
+      "Bash(echo \"exit:$?\")",
+      "Bash(fuser 8080/tcp)",
+      "Bash(pkill -f \"node server.js\")",
+      "Bash(kill -9 15956)",
+      "Bash(echo \"port free: $?\")",
+      "Bash(kill -9 17085)",
+      "Bash(echo \"cleared: $?\")",
+      "Bash(kill -9 21299)",
+      "Bash(echo \"cleared?: $?\")",
+      "Bash(kill -9 24551)"
     ]
   },
   "skillOverrides": {}

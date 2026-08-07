@@ -1,8 +1,7 @@
 // src/components/member/SetNewPassword.jsx
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHome } from '@fortawesome/free-solid-svg-icons';
+import { Home } from 'lucide-react';
 import axiosInstance from '../../utility/axiosInstance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,7 +68,7 @@ function SetNewPassword() {
 
         <div className="bg-card rounded-lg w-full flex flex-col items-center p-6">
           <button onClick={() => navigate('/reset-password')} className={homeButtonClass}>
-            <FontAwesomeIcon icon={faHome} />
+            <Home size={22} />
           </button>
 
           <h2 className="text-[1.6rem] font-bold text-gold text-center mt-2 mb-4">Set New Password</h2>

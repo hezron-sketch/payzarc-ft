@@ -16,7 +16,7 @@
   --primary-immediate-component-bgcolor: #1e2a47;
   --primary-immediate-immediate-component-bgcolor: #2e4066;
   --primary-dashboard-bgcolor: #465575;
-  --primary-page-font-color-orange: #ecc94b;
+  --primary-page-font-color-orange: var(--gold);
   --primary-page-font-color-white: white;
   --primary-unique-font-color: #2196f3;
   --primary-unique-bgcolor: #e3f2fd;
@@ -29,7 +29,7 @@
 
   /* Yellow Palette */
   --primary-yellow: #976d19;
-  --primary-yellow-hover: #ecc94b;
+  --primary-yellow-hover: var(--gold);
   --primary-solid-border-line: #ecc94b;
 
   /* Input Fields */
@@ -70,6 +70,10 @@
   --gold-dark: #d6b02e;
   --gold-pale: rgba(236, 201, 75, 0.12);
   --gold-border: rgba(236, 201, 75, 0.3);
+  /* RGB components of --gold/--gold-dark, for rgba(var(--gold-rgb), x)
+     opacity variants that can't reference a hex var directly. */
+  --gold-rgb: 236, 201, 75;
+  --gold-dark-rgb: 214, 176, 46;
   --card: #314566;
   --card2: #1c2a46;
   --border-subtle: rgba(255, 255, 255, 0.07);

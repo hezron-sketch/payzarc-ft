@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import axiosInstance, { contactsApi, transactionsApi } from "../../utility/axiosInstance";
+import axiosInstance, {
+  contactsApi,
+  transactionsApi,
+} from "../../utility/axiosInstance";
 import { API_URL } from "../../utility/constants";
 import Home from "./Home";
 import Groups from "./Groups";
@@ -13,11 +16,29 @@ import Notifications from "./Notifications";
 import {
   Search,
   Bell,
-  MessageCircle,
   ArrowDownCircle,
   ShieldAlert,
   CheckCircle2,
+  LayoutDashboard,
+  UsersRound,
+  History as HistoryIcon,
+  UserRound,
+  Send,
 } from "lucide-react";
+
+// Bottom tab bar — mobile-only nav so switching between top-level sections
+// doesn't depend on the topbar's cramped icon row or on stumbling onto the
+// "View all" / "Groups" links buried inside Home's content. "send" is
+// rendered as a raised center FAB instead of a regular tab (see the "fab"
+// flag below) — same visual idea as the reference design's floating
+// transfer button.
+const MOBILE_NAV_TABS = [
+  { key: "home", label: "Home", icon: LayoutDashboard },
+  { key: "groups", label: "Groups", icon: UsersRound },
+  { key: "send", label: "Send", icon: Send, fab: true },
+  { key: "history", label: "History", icon: HistoryIcon },
+  { key: "account", label: "Account", icon: UserRound },
+];
 
 // Same type -> icon mapping as the full Notifications.js page, reused here
 // for the topbar's notification preview dropdown so both stay in sync.
@@ -44,8 +65,11 @@ const searchResultItemClass =
 function Footer() {
   return (
     <footer className="border-t-[0.5px] border-t-border">
-      <div className="flex items-center justify-between max-w-[1280px] mx-auto py-5 px-6 flex-wrap gap-4 max-[768px]:flex-col max-[768px]:items-start max-[768px]:p-5">
-        <div className="flex items-center gap-2.5">
+      {/* Extra bottom padding on mobile clears the fixed bottom nav bar
+      (70px + safe-area-inset), which would otherwise sit on top of and
+      hide the last bit of footer content when scrolled to the end. */}
+      <div className="flex items-center justify-between max-w-[1280px] mx-auto py-5 px-6 flex-wrap gap-4 max-[768px]:flex-col max-[768px]:items-center max-[768px]:text-center max-[768px]:gap-5 max-[768px]:pt-6 max-[768px]:px-5 max-[768px]:pb-24">
+        <div className="flex items-center gap-2.5 max-[768px]:flex-col max-[768px]:gap-2">
           <img
             src="/images/payzarc.png"
             className="h-[2.2rem] w-auto block"
@@ -55,14 +79,16 @@ function Footer() {
             Your trusted cross-border financial partner.
           </p>
         </div>
-        <div className="flex flex-col gap-[3px] text-center max-[768px]:text-left">
+        <div className="flex flex-col gap-[3px] text-center">
           <a
             href="mailto:info.e@payzarc.com"
             className="text-xs font-semibold text-gold no-underline"
           >
             info.e@payzarc.com
           </a>
-          <span className="text-[11px] text-[var(--muted)]">+1 (713) 822-8593</span>
+          <span className="text-[11px] text-[var(--muted)]">
+            +1 (713) 822-8593
+          </span>
           <span className="text-[11px] text-[var(--muted)]">
             Kew Gardens Dr Houston Tx, USA
           </span>
@@ -91,6 +117,8 @@ export default function Dashboard() {
   const searchRef = useRef(null);
   const notifRef = useRef(null);
   const lastScrollY = useRef(0);
+  const balanceCardElRef = useRef(null);
+  const snapInFlightRef = useRef(false);
 
   // Only the search results and the notification preview need manual
   // outside-click handling — the user dropdown is a Radix DropdownMenu,
@@ -114,9 +142,55 @@ export default function Dashboard() {
   // Hides the topbar while scrolling down (past its own height, so it
   // doesn't flicker right at the top) and brings it back the moment the
   // user scrolls up at all — the standard "proper" hide-on-scroll pattern.
+  //
+  // Also owns the "snap the hero away" behavior: the first (non-trivial)
+  // scroll on the home page jumps straight to the balance card's resting
+  // position instead of stopping mid-hero, landing its top right under the
+  // still-visible sticky header. Both live in one listener (rather than a
+  // second one inside Home) so they can't race — while a snap is in
+  // flight the hide-on-scroll check is skipped entirely, otherwise it'd
+  // hide the header the instant scrollY crosses 96 mid-animation, which
+  // is exactly where we're trying to land it looking untouched.
   useEffect(() => {
+    // ponytail: matches the header's own h-[68px] below — not pulled into
+    // a shared constant for one number used in two files.
+    const HEADER_HEIGHT = 68;
+    const SLIGHT_SCROLL_PX = 12;
+
     const handleScroll = () => {
       const currentY = window.scrollY;
+
+      if (snapInFlightRef.current) {
+        lastScrollY.current = currentY;
+        return;
+      }
+
+      const card = balanceCardElRef.current;
+      if (card) {
+        const target = Math.round(
+          card.getBoundingClientRect().top + currentY - HEADER_HEIGHT,
+        );
+        if (currentY > SLIGHT_SCROLL_PX && currentY < target) {
+          snapInFlightRef.current = true;
+          setHideTopBar(false);
+          window.scrollTo({ top: target, behavior: "smooth" });
+          const finishSnap = () => {
+            snapInFlightRef.current = false;
+            window.removeEventListener("scroll", checkArrived);
+          };
+          const checkArrived = () => {
+            if (Math.abs(window.scrollY - target) < 2) finishSnap();
+          };
+          window.addEventListener("scroll", checkArrived, { passive: true });
+          // Safety net in case the smooth scroll gets interrupted (e.g. the
+          // user grabs the scrollbar mid-animation) and never fires close
+          // enough to `target` for checkArrived to release the guard.
+          setTimeout(finishSnap, 700);
+          lastScrollY.current = currentY;
+          return;
+        }
+      }
+
       const scrolledPastBar = currentY > 96;
       const scrollingDown = currentY > lastScrollY.current;
       setHideTopBar(scrolledPastBar && scrollingDown);
@@ -128,7 +202,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     contactsApi
-      .get("/api/favorites/all/")
+      .get("/api/favorites/")
       .then((res) => {
         const raw = res.data;
         const list = Array.isArray(raw)
@@ -145,6 +219,16 @@ export default function Dashboard() {
       .then((res) => setNotifications(Array.isArray(res.data) ? res.data : []))
       .catch(() => setNotifications([]));
   }, []);
+
+  const markNotificationRead = (n) => {
+    if (n.read) return;
+    setNotifications((prev) =>
+      prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)),
+    );
+    transactionsApi
+      .post("/api/notifications/read", { id: n.id })
+      .catch(() => {});
+  };
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -193,7 +277,9 @@ export default function Dashboard() {
 
   const searchTermLower = searchTerm.trim().toLowerCase();
   const matchedServices = searchTermLower
-    ? SEARCH_SERVICES.filter((s) => s.label.toLowerCase().includes(searchTermLower))
+    ? SEARCH_SERVICES.filter((s) =>
+        s.label.toLowerCase().includes(searchTermLower),
+      )
     : [];
   const matchedFriends = searchTermLower
     ? friends
@@ -247,14 +333,15 @@ export default function Dashboard() {
             onPageChange={handleNavClick}
             user={user}
             navigateRequest={navigateRequest}
+            balanceCardRef={balanceCardElRef}
           />
         );
       case "groups":
         return (
-          <>
-            <Friends />
+          <div className="flex flex-col gap-8">
+            <Friends onSelectFriend={goToFriend} />
             <Groups />
-          </>
+          </div>
         );
       case "history":
         return (
@@ -283,7 +370,9 @@ export default function Dashboard() {
             <h2 className="text-gold mb-4">
               {activePage.replace("-", " ").toUpperCase()}
             </h2>
-            <p className="text-[var(--muted)] mb-8">This feature is coming soon.</p>
+            <p className="text-[var(--muted)] mb-8">
+              This feature is coming soon.
+            </p>
             <button
               onClick={() => setActivePage("home")}
               className="py-[0.8rem] px-8 bg-gold border-none rounded-[3rem] font-bold cursor-pointer transition-all duration-[250ms] ease-in-out hover:bg-gold-dark hover:-translate-y-0.5"
@@ -298,6 +387,7 @@ export default function Dashboard() {
             onPageChange={handleNavClick}
             user={user}
             navigateRequest={navigateRequest}
+            balanceCardRef={balanceCardElRef}
           />
         );
     }
@@ -323,8 +413,8 @@ export default function Dashboard() {
               hideTopBar && "-translate-y-full",
             )}
           >
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-8 w-full max-w-[1280px] px-6 max-[768px]:px-4">
-              <div className="flex items-center justify-self-start">
+            <div className="relative flex items-center justify-between gap-4 w-full max-w-[1280px] px-6 max-[768px]:px-4">
+              <div className="flex items-center">
                 <div
                   className="cursor-pointer shrink-0"
                   onClick={() => handleNavClick("home")}
@@ -338,8 +428,13 @@ export default function Dashboard() {
                 </div>
               </div>
 
+              {/* Absolutely positioned instead of a flex/grid sibling, so it
+              never competes with the logo/icons for space — on desktop it
+              sits centered over the bar; on mobile it's just hidden, and the
+              logo and icon cluster land at the two ends via justify-between
+              with no middle track that has to collapse just right. */}
               <div
-                className="relative flex items-center w-[280px] justify-self-center max-[768px]:hidden"
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center w-[280px] max-[768px]:hidden"
                 ref={searchRef}
               >
                 <Search
@@ -357,7 +452,7 @@ export default function Dashboard() {
 
                 {searchTermLower && (
                   <div
-                    className="absolute top-[calc(100%+8px)] left-0 w-full min-w-[260px] bg-[var(--card2)] border border-white/[0.06] rounded-xl shadow-2xl shadow-black/40 p-[0.6rem] z-[200] flex flex-col gap-[0.4rem] animate-popup-in"
+                    className="absolute top-[calc(100%+8px)] left-0 w-full min-w-[260px] bg-[var(--card2)] rounded-xl shadow-2xl shadow-black/40 p-[0.6rem] z-[200] flex flex-col gap-[0.4rem] animate-popup-in"
                     role="listbox"
                   >
                     {matchedServices.length === 0 &&
@@ -410,8 +505,8 @@ export default function Dashboard() {
                 )}
               </div>
 
-              <div className="flex items-center justify-self-end">
-                <div className="flex items-center gap-5">
+              <div className="flex items-center">
+                <div className="flex items-center gap-5 max-[768px]:gap-2">
                   <div className="relative" ref={notifRef}>
                     <div
                       className="relative cursor-pointer text-[var(--muted)] w-10 h-10 rounded-xl flex items-center justify-center transition-colors duration-200 hover:bg-white/[0.05] hover:text-foreground"
@@ -430,7 +525,7 @@ export default function Dashboard() {
                     </div>
 
                     {isNotifOpen && (
-                      <div className="absolute top-[calc(100%+8px)] right-0 w-72 bg-[var(--card2)] border border-white/[0.06] rounded-xl shadow-2xl shadow-black/40 p-2 z-[200] animate-popup-in">
+                      <div className="absolute top-[calc(100%+8px)] right-0 w-72 bg-[var(--card2)] rounded-xl shadow-2xl shadow-black/40 p-2 z-[200] animate-popup-in">
                         <p className="text-xs font-semibold text-[var(--muted)] px-3 pt-2 pb-1 uppercase tracking-wide">
                           Notifications
                         </p>
@@ -448,13 +543,14 @@ export default function Dashboard() {
                                   type="button"
                                   className="flex gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 text-left transition-colors"
                                   onClick={() => {
+                                    markNotificationRead(n);
                                     setIsNotifOpen(false);
                                     handleNavClick("notifications");
                                   }}
                                 >
                                   <div
                                     className={cn(
-                                      "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                                      "w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors duration-300",
                                       n.read
                                         ? "bg-white/5 text-[var(--muted)]"
                                         : "bg-[var(--gold-pale)] text-gold",
@@ -489,21 +585,6 @@ export default function Dashboard() {
                     )}
                   </div>
 
-                  {/* No separate messaging feature exists in this app —
-                      routes to the same real Notifications page as the
-                      bell rather than a fabricated inbox. */}
-                  <button
-                    type="button"
-                    onClick={() => handleNavClick("notifications")}
-                    className="relative w-10 h-10 rounded-xl flex items-center justify-center text-[var(--muted)] transition-colors duration-200 hover:bg-white/[0.05] hover:text-foreground"
-                    aria-label="Messages"
-                  >
-                    <MessageCircle size={18} />
-                    {unreadNotificationCount > 0 && (
-                      <span className="absolute top-2 right-2.5 w-[7px] h-[7px] rounded-full bg-gold border-[1.5px] border-[var(--bg)]" />
-                    )}
-                  </button>
-
                   <button
                     type="button"
                     onClick={() => handleNavClick("account")}
@@ -531,33 +612,8 @@ export default function Dashboard() {
           </header>
 
           {/* Content Area */}
-          <main className="flex-1 pt-12 pb-8 max-[768px]:py-4">
+          <main className="flex-1 pt-12 pb-8 max-[768px]:pt-4 max-[768px]:pb-24">
             <div className="max-w-[1400px] mx-auto px-[4%]">
-              {/* In-dashboard nav — replaces the old floating dock. Friends
-                  and Groups are combined under one "Groups" tab. */}
-              {/* <nav className={styles.dashboardNav}>
-                <button
-                  className={`${styles.navTab} ${activePage === "home" ? styles.navTabActive : ""}`}
-                  onClick={() => handleNavClick("home")}
-                >
-                  <LayoutDashboard size={18} />
-                  Overview
-                </button>
-                <button
-                  className={`${styles.navTab} ${activePage === "groups" ? styles.navTabActive : ""}`}
-                  onClick={() => handleNavClick("groups")}
-                >
-                  <UsersRound size={18} />
-                  Groups
-                </button>
-                <button
-                  className={`${styles.navTab} ${activePage === "history" ? styles.navTabActive : ""}`}
-                  onClick={() => handleNavClick("history")}
-                >
-                  <HistoryIcon size={18} />
-                  History
-                </button>
-              </nav> */}
               <div key={activePage} className="animate-flow-fade-in">
                 {renderContent()}
               </div>
@@ -566,6 +622,61 @@ export default function Dashboard() {
 
           <Footer />
         </div>
+      </div>
+
+      {/* Mobile bottom tab bar — the only way to reach Groups/History/Account
+          on a phone was previously buried inside Home's own content (its
+          money-flow tabs, or the Recent Activity "View all" link). Desktop
+          keeps relying on the topbar + in-page links, so this only shows
+          under 768px. Floats as a rounded "dock" inset from the screen
+          edges (same radial-gradient/shadow recipe as the balance card)
+          instead of a flat full-width bar, with a gold pill behind the
+          active tab instead of just a color change. */}
+      <div className="hidden max-[768px]:block fixed bottom-0 inset-x-0 z-[100] px-4 [padding-bottom:calc(0.85rem+env(safe-area-inset-bottom))]">
+        <nav className="flex items-center justify-around gap-1 h-[64px] px-2 rounded-[24px] bg-card/80 shadow-[0_20px_50px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.05)_inset] [backdrop-filter:blur(24px)_saturate(1.2)] [-webkit-backdrop-filter:blur(24px)_saturate(1.2)]">
+          {MOBILE_NAV_TABS.map(({ key, label, icon: Icon, fab }) => {
+            // "Send" doesn't have its own activePage — it opens Home's
+            // internal send flow via the same goToSection helper the topbar
+            // search's "Send Money" result uses, so it has no "active" state
+            // of its own; it's drawn as a raised circle instead of a tab.
+            if (fab) {
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => goToSection("send")}
+                  aria-label={label}
+                  className="flex-1 h-full flex items-center justify-center"
+                >
+                  <span className="w-12 h-12 rounded-full bg-gradient-to-b from-gold to-gold-dark text-black flex items-center justify-center shadow-[0_10px_24px_rgba(0,0,0,0.4),0_1px_0_rgba(255,255,255,0.5)_inset,0_-2px_3px_rgba(0,0,0,0.15)_inset] transition-transform duration-200 active:scale-90">
+                    <Icon size={22} />
+                  </span>
+                </button>
+              );
+            }
+            const active = activePage === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => handleNavClick(key)}
+                className="flex-1 h-full flex items-center justify-center"
+              >
+                <span
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-0.5 w-16 py-1.5 rounded-2xl text-[11px] font-medium transition-all duration-200 active:scale-95",
+                    active
+                      ? "text-gold bg-gold/10"
+                      : "text-[var(--muted)]",
+                  )}
+                >
+                  <Icon size={20} />
+                  {label}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
       </div>
     </div>
   );

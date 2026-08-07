@@ -340,7 +340,7 @@ select.input {
 
 .submitButton:hover:not(:disabled) {
   background: var(--gold-dark);
-  box-shadow: 0 2px 8px rgba(236, 201, 75, 0.25);
+  box-shadow: 0 2px 8px rgba(var(--gold-rgb), 0.25);
 }
 
 .submitButton:active:not(:disabled) {

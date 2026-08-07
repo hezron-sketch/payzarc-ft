@@ -49,7 +49,7 @@ const submitBtnClass = (compact) =>
   );
 const otpBoxClass = (compact) =>
   cn(
-    "bg-white/5 text-[#f9fafb] border-[0.5px] border-white/[0.12] font-bold text-center outline-none transition-colors caret-gold focus:border-gold focus:bg-[rgba(236,201,75,0.06)]",
+    "bg-white/5 text-[#f9fafb] border-[0.5px] border-white/[0.12] font-bold text-center outline-none transition-colors caret-gold focus:border-gold focus:bg-[rgba(var(--gold-rgb),0.06)]",
     compact
       ? "w-10 h-12 text-[17px] rounded-sm"
       : "w-12 h-[54px] text-xl rounded-[10px] max-[768px]:w-[42px] max-[768px]:h-12 max-[768px]:text-[18px] max-[480px]:w-[38px] max-[480px]:h-11 max-[480px]:text-base max-[480px]:rounded-sm",
@@ -164,7 +164,7 @@ function ErrorPopup({ title, message, onClose, compact }) {
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         className={cn(
-          "max-w-[360px] bg-[#1f2937] border border-white/10 rounded-[20px] flex flex-col items-center gap-3.5 text-center animate-popup-in",
+          "max-w-[360px] bg-[#1f2937] rounded-[20px] flex flex-col items-center gap-3.5 text-center animate-popup-in",
           compact ? "p-6" : "p-8",
         )}
       >
@@ -411,8 +411,8 @@ function Login({ onBack, embedded = false, compact = false }) {
         <div
           className={cn(
             "relative overflow-hidden items-center justify-center p-12 px-10 border-r-[0.5px] border-white/[0.07] bg-[#111827]",
-            "before:content-[''] before:absolute before:rounded-full before:border-[0.5px] before:border-[rgba(236,201,75,0.07)] before:pointer-events-none before:w-[480px] before:h-[480px] before:-top-[100px] before:-left-[100px]",
-            "after:content-[''] after:absolute after:rounded-full after:border-[0.5px] after:border-[rgba(236,201,75,0.07)] after:pointer-events-none after:w-[320px] after:h-[320px] after:-bottom-20 after:-right-20",
+            "before:content-[''] before:absolute before:rounded-full before:border-[0.5px] before:border-[rgba(var(--gold-rgb),0.07)] before:pointer-events-none before:w-[480px] before:h-[480px] before:-top-[100px] before:-left-[100px]",
+            "after:content-[''] after:absolute after:rounded-full after:border-[0.5px] after:border-[rgba(var(--gold-rgb),0.07)] after:pointer-events-none after:w-[320px] after:h-[320px] after:-bottom-20 after:-right-20",
             embedded ? "hidden" : "hidden md:flex",
           )}
         >
@@ -592,8 +592,8 @@ function Login({ onBack, embedded = false, compact = false }) {
               /* ── Step 2: OTP ── */
               <>
                 <div className={formHeaderClass(compact)}>
-                  <div className="w-[52px] h-[52px] bg-[rgba(236,201,75,0.1)] border-[0.5px] border-[rgba(236,201,75,0.25)] rounded-[14px] flex items-center justify-center mb-1">
-                    <KeyRound size={28} color="#ecc94b" strokeWidth={1.8} />
+                  <div className="w-[52px] h-[52px] bg-[rgba(var(--gold-rgb),0.1)] border-[0.5px] border-[rgba(var(--gold-rgb),0.25)] rounded-[14px] flex items-center justify-center mb-1">
+                    <KeyRound size={28} color="var(--gold)" strokeWidth={1.8} />
                   </div>
                   <h1 className={formTitleClass(compact)}>Check your email</h1>
                   <p className={formSubClass(compact)}>
@@ -648,7 +648,7 @@ function Login({ onBack, embedded = false, compact = false }) {
                       </p>
                       <button
                         onClick={resendOtp}
-                        className="bg-[rgba(236,201,75,0.1)] text-gold border-[0.5px] border-[rgba(236,201,75,0.3)] rounded-sm py-[7px] px-5 text-[13px] font-semibold cursor-pointer transition-colors hover:bg-[rgba(236,201,75,0.18)]"
+                        className="bg-[rgba(var(--gold-rgb),0.1)] text-gold border-[0.5px] border-[rgba(var(--gold-rgb),0.3)] rounded-sm py-[7px] px-5 text-[13px] font-semibold cursor-pointer transition-colors hover:bg-[rgba(var(--gold-rgb),0.18)]"
                         disabled={isLoading}
                       >
                         {isLoading ? "Sending…" : "Resend code"}

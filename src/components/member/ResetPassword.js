@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHome, faRedo } from '@fortawesome/free-solid-svg-icons';
+import { Home, RefreshCw } from 'lucide-react';
 import axiosInstance from '../../utility/axiosInstance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -145,7 +144,7 @@ function ResetPassword({ onBack }) {
               Too many reset attempts. Please try again later or contact support.
             </p>
             <button onClick={onBack} className={homeButtonClass}>
-              <FontAwesomeIcon icon={faHome} /> Return Home
+              <Home size={18} /> Return Home
             </button>
           </div>
         </div>
@@ -160,7 +159,7 @@ function ResetPassword({ onBack }) {
 
         <div className="bg-card rounded-lg w-full flex flex-col items-center p-6">
           <button onClick={onBack} className={homeButtonClass}>
-            <FontAwesomeIcon icon={faHome} />
+            <Home size={22} />
           </button>
 
           {step === 'email' ? (
@@ -216,7 +215,7 @@ function ResetPassword({ onBack }) {
                   disabled={loading}
                   className="bg-transparent border-none text-gold text-[0.95rem] cursor-pointer flex items-center gap-2 mt-4 hover:text-gold-dark disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <FontAwesomeIcon icon={faRedo} /> Resend Code
+                  <RefreshCw size={16} /> Resend Code
                 </button>
               )}
             </>

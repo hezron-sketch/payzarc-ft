@@ -29,6 +29,16 @@ function Notifications({ onBack }) {
       .catch(() => {});
   }, []);
 
+  const markRead = (n) => {
+    if (n.read) return;
+    setNotifications((prev) =>
+      prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)),
+    );
+    transactionsApi
+      .post("/api/notifications/read", { id: n.id })
+      .catch(() => {});
+  };
+
   return (
     <section className={flowCardClass}>
       <div className={flowHeaderClass}>
@@ -47,12 +57,14 @@ function Notifications({ onBack }) {
           {notifications.map((n) => {
             const Icon = ICONS[n.type] || Bell;
             return (
-              <div
+              <button
                 key={n.id}
+                type="button"
+                onClick={() => markRead(n)}
                 className={
                   n.read
-                    ? "relative flex gap-3 bg-secondary border border-input rounded-xl px-4 py-[0.85rem]"
-                    : "relative flex gap-3 bg-[var(--gold-pale)] border border-[var(--gold-border)] rounded-xl px-4 py-[0.85rem]"
+                    ? "relative flex gap-3 bg-secondary border border-input rounded-xl px-4 py-[0.85rem] text-left w-full transition-colors duration-300"
+                    : "relative flex gap-3 bg-[var(--gold-pale)] border border-[var(--gold-border)] rounded-xl px-4 py-[0.85rem] text-left w-full cursor-pointer transition-colors duration-300"
                 }
               >
                 <div className="w-9 h-9 rounded-full bg-white/[0.06] text-gold flex items-center justify-center shrink-0">
@@ -72,7 +84,7 @@ function Notifications({ onBack }) {
                 {!n.read && (
                   <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-gold" />
                 )}
-              </div>
+              </button>
             );
           })}
         </div>

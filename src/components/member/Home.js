@@ -1,3 +1,4 @@
+import axios from "axios";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   PlusCircle,
@@ -19,9 +20,10 @@ import {
   ArrowDownIcon,
   Check,
   RefreshCw,
+  ChevronLeft,
+  X,
 } from "lucide-react";
-import { transactionsApi, contactsApi } from "../../utility/axiosInstance";
-import axios from "axios";
+import axiosInstance, { transactionsApi, contactsApi } from "../../utility/axiosInstance";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,21 +50,38 @@ const isoToFlagEmoji = (iso) =>
     ? String.fromCodePoint(...[...iso].map((c) => 127397 + c.charCodeAt(0)))
     : iso;
 
+// ponytail: flat 1.5% with a $1 minimum — placeholder pricing shared by
+// single Send and Send to Many until a real fees/pricing API replaces it.
+const calcTransferFee = (amount) =>
+  amount > 0 ? Math.max(1, amount * 0.015) : 0;
+
 // Left-to-right order the action buttons appear in (Add Money, Withdraw,
 // Send, Groups) — used to pick which side a flow panel slides in from.
 const SECTION_ORDER = { "add-money": 0, withdraw: 1, send: 2, groups: 3 };
 
 // The four balance-card action buttons — one config-driven list instead of
-// four near-identical JSX blocks. Rendered as a single segmented tab strip
-// (icon + label side by side, active one filled gold) — same visual
-// language as the Friends/Groups TabsList further down this file — rather
-// than four separate icon-over-label tiles.
+// four near-identical JSX blocks. Send/Withdraw render as gold pill buttons
+// inside the balance card itself (the two most common wallet actions);
+// Add Money/Groups render as a pill row just below it. Same underlying
+// switchSection/activeSection wiring either way — only where each button is
+// drawn changed.
 const ACTION_TILES = [
   { key: "add-money", label: "Add Money", icon: PlusCircle },
   { key: "withdraw", label: "Withdraw", icon: ArrowDownCircle },
   { key: "send", label: "Send", icon: Send },
   { key: "groups", label: "Groups", icon: UsersRound },
 ];
+const BALANCE_CARD_ACTIONS = ["send", "withdraw"].map((key) =>
+  ACTION_TILES.find((t) => t.key === key),
+);
+const ICON_ROW_ACTIONS = ACTION_TILES.filter(
+  (t) => t.key === "add-money" || t.key === "groups",
+);
+
+// Send to Many is capped for free-tier accounts; Payzarc Pro (see the
+// Membership section on the Account page) removes the cap by flipping
+// `user.plan`.
+const FREE_SEND_MANY_LIMIT = 5;
 
 // Send Money's in-transit stepper — each leg of the journey, top to bottom.
 const SEND_STEPS = [
@@ -93,6 +112,30 @@ const formInputClass =
   "w-full h-auto bg-white/[0.03] border-white/[0.06] rounded-xl px-4 py-3.5 text-foreground text-base md:text-base placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-gold/[0.08] focus-visible:border-gold/30 focus-visible:bg-white/[0.07] shadow-none transition-colors duration-200";
 const primaryBtnClass =
   "w-full h-auto rounded-xl px-5 py-3.5 text-base font-bold text-black transition-all duration-200 hover:bg-primary active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 mt-1 shadow-lg shadow-gold/10 hover:shadow-gold/20";
+// Modal "phone screen" 3D look — same recipe as balanceCardClass (gradient
+// surface, gold border, deep shadow + inset highlight) plus a
+// perspective/rotateX pop-in (animate-modal-3d-in, defined in
+// tailwind.config.js) instead of the flat popup-in slide, so opening a modal
+// reads as the card tipping up into place rather than just fading/sliding.
+const modal3dClass =
+  "bg-[radial-gradient(circle_at_30%_0%,var(--card),var(--card2)_65%)] shadow-[0_35px_80px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.04)_inset] animate-modal-3d-in";
+// The balance card's "phone modal" 3D look — same recipe App.js's
+// PhoneMockup/PhoneAuthStage use for their raised panel: a radial gradient
+// surface (--card -> --card2), translucent gold border, and a deep drop
+// shadow plus a 1px inset highlight so it reads as an embossed screen
+// instead of a flat bg-card block.
+const balanceCardClass =
+  "relative bg-[radial-gradient(circle_at_30%_0%,var(--card),var(--card2)_65%)] rounded-[26px] overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.04)_inset]";
+// Embossed gold pill — a top inner highlight + bottom inner shadow (the
+// bevel) under a neutral drop shadow (not a colored gold glow) that lifts
+// on hover and flattens on press, so the button reads as floating above the
+// card rather than glowing against it.
+const goldPillBtnClass =
+  "flex-1 flex items-center justify-center gap-2 rounded-full py-3 px-4 text-[0.85rem] font-semibold cursor-pointer text-black bg-gradient-to-b from-gold to-gold-dark transition-all duration-200 shadow-[0_8px_18px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.5)_inset,0_-2px_3px_rgba(0,0,0,0.15)_inset] hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,0,0,0.35),0_1px_0_rgba(255,255,255,0.5)_inset,0_-2px_3px_rgba(0,0,0,0.15)_inset] active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.2),0_-1px_2px_rgba(0,0,0,0.2)_inset]";
+// Same bevel treatment for the inactive/flat pill state (Add Money/Groups
+// row below the balance card) so both rows share one raised-button language.
+const flatPillBtnClass =
+  "flex-1 flex items-center justify-center gap-2 rounded-full py-3 px-4 text-[0.85rem] font-semibold cursor-pointer text-foreground bg-white/[0.06] border border-white/[0.1] transition-all duration-200 shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.06)_inset] hover:-translate-y-0.5 hover:bg-white/[0.1] active:translate-y-0";
 const addFavouriteBtnClass =
   "self-start bg-transparent border-none text-gold text-[0.8rem] font-semibold cursor-pointer p-0 -mt-[0.6rem] transition-opacity hover:opacity-75";
 // Add Money modal's own "+ Save/Add/Use a saved..." links — a real
@@ -107,6 +150,14 @@ const methodBtnClass = (active) =>
     active &&
       "bg-gold/10 border-gold/30 text-gold hover:border-gold/40 hover:bg-gold/10 hover:text-gold",
   );
+// Withdrawal receipt dialog's rows — same label/value layout TransactionDetails.js
+// uses for its details rows.
+const receiptRowClass =
+  "flex justify-between items-center gap-3 py-2.5 border-b border-white/[0.06] last:border-b-0";
+const receiptLabelClass =
+  "text-[11px] font-semibold text-muted-foreground uppercase tracking-wider shrink-0";
+const receiptValueClass =
+  "text-sm font-medium text-foreground text-right break-words min-w-0";
 const favouriteChipClass = (active) =>
   cn(
     "bg-white/[0.03] border border-white/[0.08] text-foreground px-3.5 py-2 rounded-full text-[0.85rem] font-medium transition-colors hover:border-gold/40 hover:text-gold",
@@ -143,7 +194,7 @@ const txStatusDotClass = (status) => {
   );
 };
 
-function Home({ onPageChange, user, navigateRequest }) {
+function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
   const [activeSection, setActiveSection] = useState("dashboard");
   // Which way the incoming flow panel slides in from, based on the action
   // buttons' left-to-right order (Add Money, Withdraw, Send, Groups).
@@ -152,6 +203,10 @@ function Home({ onPageChange, user, navigateRequest }) {
   const [balanceData, setBalanceData] = useState(null);
   const [loadingBalance, setLoadingBalance] = useState(true);
   const [balanceError, setBalanceError] = useState(null);
+  // Group funds are their own pool, separate from the wallet balance above
+  // — summed here just to show a distinguishing total on the balance card;
+  // the Groups tab (onPageChange("groups")) is the source of truth.
+  const [groupFundsTotal, setGroupFundsTotal] = useState(0);
 
   const [sendAmount, setSendAmount] = useState("");
   // Step-by-step "money in transit" visual shown while a send is in
@@ -188,10 +243,15 @@ function Home({ onPageChange, user, navigateRequest }) {
     expiry: "",
   });
   const [showWithdrawPopup, setShowWithdrawPopup] = useState(false);
+  // Populated from the withdrawal endpoint's response on success; drives the
+  // receipt dialog below (mirrors TransactionDetails.js's row layout).
+  const [withdrawalReceipt, setWithdrawalReceipt] = useState(null);
 
   const [recipientSearchTerm, setRecipientSearchTerm] = useState("");
   const [selectedRecipient, setSelectedRecipient] = useState(null);
   const [favourites, setFavourites] = useState([]);
+  // Own phone number, used to block adding yourself as a favourite.
+  const [myPhone, setMyPhone] = useState("");
 
   // Sender's own location (for the "sending from" flag in Send Money)
   const [myCountry, setMyCountry] = useState(null);
@@ -205,6 +265,18 @@ function Home({ onPageChange, user, navigateRequest }) {
   // over auto-detection once the user touches it, so the converted-amount
   // field always has a currency to show even when nothing is detected.
   const [recipientCurrencyChoice, setRecipientCurrencyChoice] = useState("");
+
+  // "Send to Many" — a second flow layered under the Send panel: step
+  // "pick" (multi-select up to 5 recipients) then "amount" (one shared
+  // amount, or per-recipient overrides). Recipients reuse the favourite
+  // object shape Send already uses; numbers typed in get wrapped the same
+  // way an ad-hoc Send recipient is.
+  const [sendManyStep, setSendManyStep] = useState("pick"); // "pick" | "amount"
+  const [sendManyPhoneInput, setSendManyPhoneInput] = useState("");
+  const [sendManyRecipients, setSendManyRecipients] = useState([]);
+  const [sendManySameAmount, setSendManySameAmount] = useState("");
+  const [sendManyAmounts, setSendManyAmounts] = useState({}); // key -> amount string
+  const [sendManySending, setSendManySending] = useState(false);
 
   // Full transaction history modal (opened from "View All")
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -242,6 +314,22 @@ function Home({ onPageChange, user, navigateRequest }) {
     fetchRecentTransactions();
     fetchPaymentMethods();
     getCurrentCountry(countries).then(setMyCountry);
+    axiosInstance
+      .get("/api/groups")
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        setGroupFundsTotal(list.reduce((sum, g) => sum + g.balance, 0));
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    contactsApi
+      .get("/api/my-contact/")
+      .then((res) => {
+        if (res.data.success) setMyPhone(res.data.phone);
+      })
+      .catch(() => {});
   }, []);
 
   // Live FX rates, refetched whenever the sender's account currency changes.
@@ -278,16 +366,48 @@ function Home({ onPageChange, user, navigateRequest }) {
     };
   }, []);
 
+  // const fetchBalance = async () => {
+  //   setLoadingBalance(true);
+  //   try {
+  //     const token = localStorage.getItem("accessToken");
+  //     const res = await transactionsApi.get("/api/balance/", {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
+  //     setBalanceData(res.data);
+  //   } catch (err) {
+  //     setBalanceError("Failed to load balance");
+  //   } finally {
+  //     setLoadingBalance(false);
+  //   }
+  // };
+
+  // Old fetchBalance
   const fetchBalance = async () => {
-    setLoadingBalance(true);
+    if (!user?.email) {
+      setLoadingBalance(false);
+      return;
+    }
     try {
-      const token = localStorage.getItem("accessToken");
-      const res = await transactionsApi.get("/api/balance/", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setBalanceData(res.data);
+      console.log("Sending request to /api/balance/");
+      console.log(
+        "Token from localStorage:",
+        localStorage.getItem("accessToken"),
+      );
+      console.log("Full headers:", transactionsApi.defaults.headers);
+      const response = await transactionsApi.get("/api/balance/");
+      const data = response.data;
+      if (data.success !== undefined) {
+        setBalanceData(data);
+      } else {
+        setBalanceError(data.error || "Failed to load balance");
+      }
     } catch (err) {
-      setBalanceError("Failed to load balance");
+      console.error("Balance fetch failed:", err);
+      if (err.response?.status === 404) {
+        setBalanceError("No wallet found for this account.");
+      } else {
+        setBalanceError("Could not load wallet balance");
+      }
     } finally {
       setLoadingBalance(false);
     }
@@ -295,7 +415,7 @@ function Home({ onPageChange, user, navigateRequest }) {
 
   const fetchFavourites = async () => {
     try {
-      const res = await contactsApi.get("/api/favorites/all/");
+      const res = await contactsApi.get("/api/favorites/");
       const raw = res.data;
       // The API can come back as a bare array or as a paginated/wrapped
       // object (e.g. { results: [...] } or { favourites: [...] }) — normalize
@@ -423,6 +543,11 @@ function Home({ onPageChange, user, navigateRequest }) {
     setSelectedRecipient(null);
     setRecipientCurrencyChoice("");
     setSendProgressStep(0);
+    setSendManyStep("pick");
+    setSendManyPhoneInput("");
+    setSendManyRecipients([]);
+    setSendManySameAmount("");
+    setSendManyAmounts({});
     const nextSection = activeSection === section ? "dashboard" : section;
     const fromOrder = SECTION_ORDER[activeSection];
     const toOrder = SECTION_ORDER[nextSection];
@@ -430,6 +555,20 @@ function Home({ onPageChange, user, navigateRequest }) {
       setSectionDirection(toOrder > fromOrder ? "right" : "left");
     }
     setActiveSection(nextSection);
+  };
+
+  // Jumps from the single-recipient Send panel into "Send to Many" without
+  // going through switchSection's same-section toggle (this isn't a nav
+  // button click, and Send's own in-progress input isn't relevant here).
+  const goToSendMany = () => {
+    setSendManyStep("pick");
+    setSendManyPhoneInput("");
+    setSendManyRecipients([]);
+    setSendManySameAmount("");
+    setSendManyAmounts({});
+    setInputPin("");
+    setSectionDirection("right");
+    setActiveSection("send-many");
   };
 
   // Shared layout for whichever flow (Add Money/Withdraw/Send/Groups) is
@@ -555,6 +694,24 @@ function Home({ onPageChange, user, navigateRequest }) {
       ? countries.find((c) => c.name.toLowerCase() === name.toLowerCase())
       : null;
 
+  // Country from a phone number's dial code alone (longest/most specific
+  // code wins, e.g. +1 US vs +1 area-coded territories).
+  const detectCountryFromPhone = (value) => {
+    const digits = (value || "").replace(/[^\d+]/g, "");
+    if (!digits) return null;
+    const matches = countries
+      .filter((c) => digits.startsWith(c.code))
+      .sort((a, b) => b.code.length - a.code.length);
+    return matches[0] || null;
+  };
+
+  // Same detection Send to Many uses per-recipient: a stored country name
+  // wins if present (favourites), otherwise fall back to their phone's dial
+  // code.
+  const detectRecipientCountry = (r) =>
+    findCountryByName(r?.country || r?.country_name) ||
+    detectCountryFromPhone(r?.phone || r?.value || r?.phone_number);
+
   const recipientCountry = (() => {
     if (selectedRecipient) {
       return findCountryByName(
@@ -574,12 +731,7 @@ function Home({ onPageChange, user, navigateRequest }) {
         : null;
     }
 
-    const digits = term.replace(/[^\d+]/g, "");
-    if (!digits) return null;
-    const matches = countries
-      .filter((c) => digits.startsWith(c.code))
-      .sort((a, b) => b.code.length - a.code.length);
-    return matches[0] || null;
+    return detectCountryFromPhone(term);
   })();
 
   // Converted value of the amount being sent, in the recipient's currency.
@@ -607,11 +759,11 @@ function Home({ onPageChange, user, navigateRequest }) {
     ? (parseFloat(sendAmount || 0) * conversionRate).toFixed(2)
     : null;
 
-  // ponytail: flat 1.5% with a $1 minimum — placeholder pricing until a real
-  // fees/pricing API exists to replace it.
   const sendAmountNum = parseFloat(sendAmount || 0);
-  const sendFee = sendAmountNum > 0 ? Math.max(1, sendAmountNum * 0.015) : 0;
+  const sendFee = calcTransferFee(sendAmountNum);
   const sendTotal = sendAmountNum + sendFee;
+  const availableBalance = Number(balanceData?.balance) || 0;
+  const insufficientBalance = sendAmountNum > 0 && sendTotal > availableBalance;
 
   // A fresh random country (never mine) picked on every ticker rotation —
   // re-rolled whenever tickerIndex changes, so each turn quotes a different
@@ -647,9 +799,26 @@ function Home({ onPageChange, user, navigateRequest }) {
   const handleAddRecipientToFavourites = async () => {
     const value = recipientSearchTerm.trim();
     if (!value) return;
+    const favouriteType = value.includes("@") ? "email" : "phone";
+    if (favouriteType === "phone" && myPhone && value === myPhone) {
+      showNotification(
+        "error",
+        "You cannot add your own phone number as a favorite.",
+      );
+      return;
+    }
     try {
+      // Step 1: Check — server-side validation the original flow ran before
+      // ever saving a favourite (blocks e.g. numbers that don't resolve to
+      // a real account).
+      await contactsApi.post("/api/check/", {
+        type: favouriteType,
+        value,
+      });
+
+      // Step 2: Save
       await contactsApi.post("/api/favorite/add/", {
-        favourite_type: value.includes("@") ? "email" : "phone",
+        favourite_type: favouriteType,
         favourite_detail: value,
         label: value,
       });
@@ -662,6 +831,154 @@ function Home({ onPageChange, user, navigateRequest }) {
         "Failed to add recipient to favourites";
       showNotification("error", errorMsg);
     }
+  };
+
+  // Stable identity for a Send-to-Many recipient — favourites have an id,
+  // ad-hoc typed numbers don't, so fall back to whatever value identifies
+  // them (same fallback chain used to display their name/number elsewhere).
+  const sendManyKey = (r) => r.id ?? r.phone ?? r.value ?? r.name;
+
+  const isProUser = user?.plan === "pro";
+  const sendManyLimit = isProUser ? Infinity : FREE_SEND_MANY_LIMIT;
+  const sendManyLimitMsg = `Free plan is limited to ${FREE_SEND_MANY_LIMIT} recipients per send. Upgrade to Payzarc Pro to send to more friends at once.`;
+
+  const toggleSendManyRecipient = (fav) => {
+    const key = sendManyKey(fav);
+    setSendManyRecipients((prev) => {
+      if (prev.some((r) => sendManyKey(r) === key)) {
+        return prev.filter((r) => sendManyKey(r) !== key);
+      }
+      if (prev.length >= sendManyLimit) {
+        showNotification("error", sendManyLimitMsg);
+        return prev;
+      }
+      return [...prev, fav];
+    });
+  };
+
+  const addSendManyPhone = () => {
+    const value = sendManyPhoneInput.trim();
+    if (!value) return;
+    if (sendManyRecipients.length >= sendManyLimit) {
+      showNotification("error", sendManyLimitMsg);
+      return;
+    }
+    toggleSendManyRecipient({ name: value, phone: value, value });
+    setSendManyPhoneInput("");
+  };
+
+  // Same amount fills every recipient's field, but only overwrites entries
+  // that still match the previous same-amount value — anyone the sender has
+  // since edited by hand keeps their custom amount.
+  const applySendManySameAmount = (value) => {
+    setSendManyAmounts((prev) => {
+      const next = { ...prev };
+      sendManyRecipients.forEach((r) => {
+        const key = sendManyKey(r);
+        if (next[key] === undefined || next[key] === sendManySameAmount) {
+          next[key] = value;
+        }
+      });
+      return next;
+    });
+    setSendManySameAmount(value);
+  };
+
+  // Per-recipient conversion, shown next to their amount field — same
+  // currency-detection + live/mocked-rate fallback chain the single Send
+  // screen uses, applied per row instead of once.
+  const getSendManyConversion = (r) => {
+    const amt = parseFloat(sendManyAmounts[sendManyKey(r)]) || 0;
+    const currency = detectRecipientCountry(r)?.currency;
+    if (!currency || amt <= 0) return null;
+    const rate =
+      currency === senderCurrency
+        ? 1
+        : (liveRates?.[currency] ??
+          EXCHANGE_RATES[senderCurrency]?.[currency] ??
+          null);
+    if (!rate) return null;
+    return { currency, amount: (amt * rate).toFixed(2) };
+  };
+
+  const sendManyAmountTotal = sendManyRecipients.reduce(
+    (sum, r) => sum + (parseFloat(sendManyAmounts[sendManyKey(r)]) || 0),
+    0,
+  );
+  const sendManyFeeTotal = sendManyRecipients.reduce(
+    (sum, r) =>
+      sum + calcTransferFee(parseFloat(sendManyAmounts[sendManyKey(r)]) || 0),
+    0,
+  );
+  const sendManyTotal = sendManyAmountTotal + sendManyFeeTotal;
+  const insufficientSendManyBalance =
+    sendManyAmountTotal > 0 && sendManyTotal > availableBalance;
+
+  const handleSendToMany = async () => {
+    const amounts = sendManyRecipients.map((r) =>
+      parseFloat(sendManyAmounts[sendManyKey(r)]),
+    );
+    if (
+      sendManyRecipients.length === 0 ||
+      amounts.some((a) => !a || a <= 0) ||
+      inputPin.length !== 4 ||
+      insufficientSendManyBalance
+    ) {
+      showNotification(
+        "error",
+        "Enter an amount for every recipient and your 4-digit PIN",
+      );
+      return;
+    }
+
+    openConfirmationDialog(
+      "Confirm Send to Many",
+      `Send ${senderCurrency} ${sendManyAmountTotal.toFixed(2)} to ${sendManyRecipients.length} people?\nFee: ${senderCurrency} ${sendManyFeeTotal.toFixed(2)} · Total: ${senderCurrency} ${sendManyTotal.toFixed(2)}\n\nType 1 and click Yes to confirm.`,
+      async (typedValue, buttonChoice) => {
+        if (typedValue !== "1" || buttonChoice !== "yes") {
+          showNotification("error", "Transaction cancelled");
+          return;
+        }
+        setSendManySending(true);
+        try {
+          const token = localStorage.getItem("accessToken");
+          // No batch endpoint exists yet — loop the same single-transfer
+          // endpoint Send uses. ponytail: sequential, not Promise.all, so a
+          // failure partway through stops cleanly instead of firing every
+          // remaining transfer at once; swap for a real batch endpoint if
+          // this list ever needs to be large or atomic.
+          for (const r of sendManyRecipients) {
+            const recipientValue = r.value || r.phone || r.phone_number;
+            const amount = parseFloat(sendManyAmounts[sendManyKey(r)]);
+            await transactionsApi.post(
+              "/api/send-money/",
+              {
+                recipient_number: recipientValue,
+                amount,
+                fee: calcTransferFee(amount),
+                transaction_pin: inputPin,
+              },
+              { headers: { Authorization: `Bearer ${token}` } },
+            );
+          }
+          showNotification(
+            "success",
+            `Sent to ${sendManyRecipients.length} people successfully!`,
+          );
+          fetchBalance();
+          fetchRecentTransactions();
+          goToDashboard();
+        } catch (error) {
+          const errorMsg =
+            error.response?.data?.message ||
+            error.response?.data?.error ||
+            "Some transfers failed";
+          showNotification("error", errorMsg);
+        } finally {
+          setSendManySending(false);
+        }
+      },
+    );
   };
 
   const handleSendMoney = async () => {
@@ -909,24 +1226,26 @@ function Home({ onPageChange, user, navigateRequest }) {
         }
         try {
           const token = localStorage.getItem("accessToken");
-          // NOTE: guessed endpoint — point this at your real withdrawal
-          // endpoint if the route name differs.
-          await transactionsApi.post(
+          // Agent path confirmed against MerchantWithdrawalService: it reads
+          // `merchant_code`, not `agent_number`. Mpesa path is still
+          // unconfirmed — ponytail: guessed field name, fix if the backend
+          // uses something else once that rail is implemented.
+          const { data } = await transactionsApi.post(
             "/api/withdraw/",
             {
               destination: withdrawDestination,
               ...(withdrawDestination === "mpesa"
                 ? { mpesa_number: withdrawDestinationValue }
-                : { agent_number: withdrawDestinationValue }),
+                : { merchant_code: withdrawDestinationValue }),
               amount: parseFloat(withdrawAmount),
               transaction_pin: inputPin,
             },
             { headers: { Authorization: `Bearer ${token}` } },
           );
           showNotification("success", "Withdrawal successful!");
+          setWithdrawalReceipt(data);
           fetchBalance();
           fetchRecentTransactions();
-          goToDashboard();
         } catch (error) {
           const errorMsg =
             error.response?.data?.message ||
@@ -941,21 +1260,21 @@ function Home({ onPageChange, user, navigateRequest }) {
   // --- Render ---
   return (
     <>
-      <section className="w-full max-w-[1320px] mx-auto flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-10 pb-8">
-        <h1 className="text-[clamp(2.25rem,5vw,3.5rem)] font-bold tracking-[2px] text-gold leading-[1.05] m-0 shrink-0">
-          PAYZARC
+      <section className="w-full max-w-[1320px] mx-auto flex flex-col items-start gap-3 pb-8">
+        <button
+          type="button"
+          onClick={() => onPageChange("home")}
+          className="text-[0.8rem] font-bold tracking-[3px] text-gold uppercase bg-transparent border-none p-0 cursor-pointer hover:opacity-75 transition-opacity"
+        >
+          Payzarc
+        </button>
+        <h1 className="text-[clamp(1.65rem,3vw,2.5rem)] font-bold leading-[1.15] tracking-[-1px] text-foreground m-0">
+          Send money at <span className="text-gold">Lower Rates</span>
         </h1>
-        <div className="flex flex-col items-start text-left">
-          <h2 className="text-[clamp(1.4rem,2.6vw,1.85rem)] font-bold leading-[1.15] tracking-[-1px] text-foreground m-0 mb-2">
-            Send money
-            <br />
-            at <span className="text-gold">Lower Rates</span>
-          </h2>
-          <p className="text-[0.95rem] text-muted-foreground max-w-[420px] leading-[1.6] m-0">
-            We offer industry-leading exchange rates with no hidden fees.
-            Save more for every transaction you make.
-          </p>
-        </div>
+        <p className="text-[0.95rem] text-muted-foreground max-w-[480px] leading-[1.6] m-0">
+          We offer industry-leading exchange rates with no hidden fees. Save
+          more for every transaction you make.
+        </p>
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 w-full max-w-[1320px] mx-auto">
@@ -965,8 +1284,8 @@ function Home({ onPageChange, user, navigateRequest }) {
           card being its own narrower centered block). */}
         <div className="lg:col-span-8 flex flex-col gap-8">
           <div className="flex flex-col gap-6">
-            <div className="bg-card rounded-lg overflow-hidden">
-              <div className="w-full flex flex-col items-center px-8 pt-9 pb-11">
+            <div ref={balanceCardRef} className={balanceCardClass}>
+              <div className="w-full flex flex-col items-center px-8 pt-9 pb-8 max-[640px]:px-6">
                 <div className="w-full flex items-start justify-between mb-7">
                   <div className="flex flex-col items-start">
                     <div className="flex items-center gap-2.5 mb-2">
@@ -991,31 +1310,64 @@ function Home({ onPageChange, user, navigateRequest }) {
                         {formattedBalance}
                       </span>
                     </h1>
+                    {groupFundsTotal > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => onPageChange("groups")}
+                        className="mt-2 inline-flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full px-3 py-1 text-[0.75rem] font-semibold text-muted-foreground cursor-pointer transition-colors hover:bg-white/[0.07] hover:border-gold/20 hover:text-foreground"
+                      >
+                        <UsersRound size={12} className="text-gold" />
+                        <span
+                          className={cn(
+                            "relative overflow-hidden rounded-md before:content-[''] before:absolute before:inset-0 before:[backdrop-filter:blur(0.6rem)] before:rounded-[inherit] before:pointer-events-none before:opacity-0 before:transition-opacity before:duration-[250ms]",
+                            !showBalance && "select-none before:opacity-100",
+                          )}
+                        >
+                          {displayCurrency} {groupFundsTotal.toLocaleString()}
+                        </span>{" "}
+                        in Group Funds
+                      </button>
+                    )}
                   </div>
                 </div>
+
+                {/* Send / Withdraw — the two most common wallet moves,
+                surfaced as pills right on the balance card. Same active/
+                inactive styling as the Add Money/Groups row below. */}
+                <div className="w-full flex items-center gap-3">
+                  {BALANCE_CARD_ACTIONS.map(({ key, label, icon: Icon }) => {
+                    const active = activeSection === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => switchSection(key)}
+                        className={active ? goldPillBtnClass : flatPillBtnClass}
+                      >
+                        <Icon size={16} className="shrink-0" />
+                        <span className="truncate">{label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="h-[2px] w-full bg-[linear-gradient(90deg,transparent_0%,rgba(236,201,75,0.15)_30%,rgba(236,201,75,0.3)_50%,rgba(236,201,75,0.15)_70%,transparent_100%)]" />
             </div>
 
-            {/* Tab strip — action buttons stay visible & highlighted across
-            every section; only the content card below swaps out. */}
-            <div className="flex items-center gap-1 bg-card rounded-2xl p-1.5">
-              {ACTION_TILES.map(({ key, label, icon: Icon }) => {
+            {/* Add Money / Groups — secondary actions, as pill buttons below
+            the balance card. Same switchSection wiring as the balance-card
+            pills above. */}
+            <div className="flex items-center gap-3">
+              {ICON_ROW_ACTIONS.map(({ key, label, icon: Icon }) => {
                 const active = activeSection === key;
                 return (
                   <button
                     key={key}
                     type="button"
                     onClick={() => switchSection(key)}
-                    className={cn(
-                      "flex-1 flex items-center justify-center gap-2 rounded-xl py-3 px-4 text-[0.82rem] font-semibold cursor-pointer transition-all duration-200 max-[640px]:flex-none max-[640px]:px-4",
-                      active
-                        ? "bg-gold text-black shadow-lg shadow-gold/[0.15]"
-                        : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
-                    )}
+                    className={active ? goldPillBtnClass : flatPillBtnClass}
                   >
-                    <Icon size={16} />
-                    <span>{label}</span>
+                    <Icon size={16} className="shrink-0" />
+                    <span className="truncate">{label}</span>
                   </button>
                 );
               })}
@@ -1039,8 +1391,7 @@ function Home({ onPageChange, user, navigateRequest }) {
                     className={primaryBtnClass}
                     onClick={handleAddMoneyClick}
                   >
-                    Add {displayCurrency}
-                    {addAmount || "0.00"}
+                    Add {displayCurrency} {addAmount || "0.00"}
                   </Button>
                 </div>
               </section>
@@ -1086,11 +1437,20 @@ function Home({ onPageChange, user, navigateRequest }) {
             {activeSection === "send" && (
               <section ref={flowSectionRef} className={flowSectionClass}>
                 <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
-                  {myCountry && (
-                    <span className="flex items-center gap-1.5 text-[0.85rem] font-semibold text-[var(--muted)]">
-                      Sending From {isoToFlagEmoji(myCountry.flag)}
-                    </span>
-                  )}
+                  <div className="flex items-center justify-between">
+                    {myCountry && (
+                      <span className="flex items-center gap-1.5 text-[0.85rem] font-semibold text-[var(--muted)]">
+                        Sending From {isoToFlagEmoji(myCountry.flag)}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      className="ml-auto text-gold text-[0.8rem] font-semibold hover:opacity-75 transition-opacity"
+                      onClick={goToSendMany}
+                    >
+                      Send to many →
+                    </button>
+                  </div>
                   <Label className={formLabelClass}>
                     Recipient
                     {recipientCountry && (
@@ -1214,9 +1574,312 @@ function Home({ onPageChange, user, navigateRequest }) {
                     }
                   />
 
-                  <Button className={primaryBtnClass} onClick={handleSendMoney}>
-                    Send
-                  </Button>
+                  {insufficientBalance ? (
+                    <div className="flex flex-col gap-2 bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3.5">
+                      <span className="text-sm font-semibold text-destructive">
+                        Insufficient balance for this transfer.
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        You need {senderCurrency} {sendTotal.toFixed(2)} but
+                        your balance is {senderCurrency} {formattedBalance}.
+                      </span>
+                      <Button
+                        type="button"
+                        className={primaryBtnClass}
+                        onClick={() => switchSection("add-money")}
+                      >
+                        Add Money
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      className={primaryBtnClass}
+                      onClick={handleSendMoney}
+                    >
+                      Send
+                    </Button>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {activeSection === "send-many" && (
+              <section ref={flowSectionRef} className={flowSectionClass}>
+                <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => switchSection("send")}
+                      className="w-9 h-9 shrink-0 rounded-full bg-white/[0.06] flex items-center justify-center text-foreground hover:bg-white/[0.1] transition-colors"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <span className="flex-1 text-center text-base font-bold pr-9">
+                      Send to Many
+                    </span>
+                  </div>
+
+                  {sendManyStep === "pick" && (
+                    <>
+                      <Label className={formLabelClass}>Recipient</Label>
+                      <Input
+                        className={formInputClass}
+                        placeholder="Enter phone number"
+                        value={sendManyPhoneInput}
+                        onChange={(e) => setSendManyPhoneInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addSendManyPhone();
+                          }
+                        }}
+                      />
+                      {sendManyPhoneInput.trim() && (
+                        <button
+                          type="button"
+                          className={addFavouriteBtnClass}
+                          onClick={addSendManyPhone}
+                        >
+                          + Add {sendManyPhoneInput.trim()}
+                        </button>
+                      )}
+
+                      <Label className={formLabelClass}>
+                        Send to {sendManyRecipients.length}
+                        {isProUser ? "" : `/${FREE_SEND_MANY_LIMIT}`}
+                      </Label>
+                      {!isProUser &&
+                        sendManyRecipients.length >= FREE_SEND_MANY_LIMIT && (
+                          <button
+                            type="button"
+                            onClick={() => onPageChange("account")}
+                            className="text-xs text-gold -mt-[0.6rem] text-left bg-transparent border-none p-0 cursor-pointer hover:opacity-75 transition-opacity"
+                          >
+                            Free plan limit reached — upgrade to Payzarc Pro
+                            to send to more friends at once.
+                          </button>
+                        )}
+                      {sendManyRecipients.length > 0 && (
+                        <div className="flex flex-wrap gap-3 -mt-[0.4rem]">
+                          {sendManyRecipients.map((r) => (
+                            <div
+                              key={sendManyKey(r)}
+                              className="relative flex flex-col items-center gap-1 w-16"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => toggleSendManyRecipient(r)}
+                                className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white/80 text-black flex items-center justify-center z-10"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm shadow-[0_1px_0_rgba(255,255,255,0.15)_inset]">
+                                {(
+                                  r.name ||
+                                  r.full_name ||
+                                  r.phone ||
+                                  r.value ||
+                                  "?"
+                                )
+                                  .slice(0, 1)
+                                  .toUpperCase()}
+                              </div>
+                              <span className="text-[0.7rem] text-center text-muted-foreground truncate w-full">
+                                {r.name || r.full_name || r.phone || r.value}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <Label className={formLabelClass}>Favourites</Label>
+                      <div className="flex flex-wrap gap-2 -mt-[0.6rem]">
+                        {(Array.isArray(favourites) ? favourites : []).map(
+                          (fav, idx) => {
+                            const active = sendManyRecipients.some(
+                              (r) => sendManyKey(r) === sendManyKey(fav),
+                            );
+                            return (
+                              <button
+                                key={fav.id || idx}
+                                type="button"
+                                className={favouriteChipClass(active)}
+                                onClick={() => toggleSendManyRecipient(fav)}
+                              >
+                                {fav.name ||
+                                  fav.full_name ||
+                                  fav.phone ||
+                                  fav.value}
+                              </button>
+                            );
+                          },
+                        )}
+                      </div>
+
+                      <Button
+                        className={primaryBtnClass}
+                        disabled={sendManyRecipients.length === 0}
+                        onClick={() => setSendManyStep("amount")}
+                      >
+                        Continue
+                      </Button>
+                    </>
+                  )}
+
+                  {sendManyStep === "amount" && (
+                    <>
+                      <div className="flex items-center gap-3 bg-[var(--gold-pale)] border border-dashed border-[var(--gold-border)] rounded-xl px-4 py-4">
+                        <UsersRound className="w-8 h-8 text-gold shrink-0" />
+                        <div>
+                          <div className="text-lg font-bold text-gold">
+                            {senderCurrency} {sendManyAmountTotal.toFixed(2)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Total amount to be sent
+                          </div>
+                        </div>
+                      </div>
+
+                      <Label className={formLabelClass}>Same amount</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className={formInputClass}
+                        placeholder="0.00"
+                        value={sendManySameAmount}
+                        onChange={(e) =>
+                          applySendManySameAmount(e.target.value)
+                        }
+                      />
+                      <span className="text-xs text-muted-foreground -mt-[0.6rem]">
+                        Balance: {senderCurrency} {formattedBalance}
+                      </span>
+
+                      <div className="flex flex-col gap-3">
+                        {sendManyRecipients.map((r) => {
+                          const conversion = getSendManyConversion(r);
+                          const country = detectRecipientCountry(r);
+                          return (
+                            <div
+                              key={sendManyKey(r)}
+                              className="flex items-center gap-3"
+                            >
+                              <div className="w-11 h-11 shrink-0 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm shadow-[0_1px_0_rgba(255,255,255,0.15)_inset]">
+                                {(
+                                  r.name ||
+                                  r.full_name ||
+                                  r.phone ||
+                                  r.value ||
+                                  "?"
+                                )
+                                  .slice(0, 1)
+                                  .toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-semibold truncate">
+                                  {r.name || r.full_name || r.value}
+                                </div>
+                                <div className="text-xs text-muted-foreground truncate">
+                                  {country ? isoToFlagEmoji(country.flag) : ""}{" "}
+                                  {r.phone || r.value}
+                                </div>
+                              </div>
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  className={cn(
+                                    formInputClass,
+                                    "w-24 px-3 py-2 text-right",
+                                  )}
+                                  value={sendManyAmounts[sendManyKey(r)] ?? ""}
+                                  onChange={(e) =>
+                                    setSendManyAmounts((prev) => ({
+                                      ...prev,
+                                      [sendManyKey(r)]: e.target.value,
+                                    }))
+                                  }
+                                />
+                                {conversion && (
+                                  <span className="text-[0.7rem] text-gold/80 whitespace-nowrap">
+                                    ≈{" "}
+                                    {Number(
+                                      conversion.amount,
+                                    ).toLocaleString()}{" "}
+                                    {conversion.currency}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {sendManyAmountTotal > 0 && (
+                        <div className="flex flex-col gap-1.5 bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-[0.85rem]">
+                          <div className="flex items-center justify-between text-[0.85rem] text-muted-foreground">
+                            <span>Transaction Fee</span>
+                            <span>
+                              {senderCurrency} {sendManyFeeTotal.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-[0.85rem] text-muted-foreground">
+                            <span>Total to pay</span>
+                            <span className="text-gold font-bold">
+                              {senderCurrency} {sendManyTotal.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      <Label className={formLabelClass}>
+                        Transaction PIN
+                      </Label>
+                      <Input
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={4}
+                        className={formInputClass}
+                        placeholder="****"
+                        value={inputPin}
+                        onChange={(e) =>
+                          setInputPin(
+                            e.target.value.replace(/\D/g, "").slice(0, 4),
+                          )
+                        }
+                      />
+
+                      {insufficientSendManyBalance ? (
+                        <div className="flex flex-col gap-2 bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3.5">
+                          <span className="text-sm font-semibold text-destructive">
+                            Insufficient balance for this transfer.
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            You need {senderCurrency}{" "}
+                            {sendManyTotal.toFixed(2)} but your balance is{" "}
+                            {senderCurrency} {formattedBalance}.
+                          </span>
+                          <Button
+                            type="button"
+                            className={primaryBtnClass}
+                            onClick={() => switchSection("add-money")}
+                          >
+                            Add Money
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          className={primaryBtnClass}
+                          disabled={sendManySending}
+                          onClick={handleSendToMany}
+                        >
+                          {sendManySending ? "Sending..." : "Send"}
+                        </Button>
+                      )}
+                    </>
+                  )}
                 </div>
               </section>
             )}
@@ -1246,24 +1909,34 @@ function Home({ onPageChange, user, navigateRequest }) {
                 {groupsTab === "friends" ? (
                   <div
                     key="friends"
-                    className={
+                    className={cn(
+                      "mt-3",
                       groupsTabDirection === "left"
                         ? "animate-slide-in-left"
-                        : "animate-slide-in-right"
-                    }
+                        : "animate-slide-in-right",
+                    )}
                   >
-                    <Friends />
+                    <Friends
+                      onSelectFriend={(fav) => {
+                        switchSection("send");
+                        handleSelectRecipient(fav);
+                      }}
+                    />
                   </div>
                 ) : (
                   <div
                     key="groups"
-                    className={
+                    className={cn(
+                      "mt-3",
                       groupsTabDirection === "left"
                         ? "animate-slide-in-left"
-                        : "animate-slide-in-right"
-                    }
+                        : "animate-slide-in-right",
+                    )}
                   >
-                    <Groups />
+                    <Groups
+                      onTotalChange={setGroupFundsTotal}
+                      onWalletChange={fetchBalance}
+                    />
                   </div>
                 )}
               </div>
@@ -1402,9 +2075,9 @@ function Home({ onPageChange, user, navigateRequest }) {
                             switchSection("send");
                             handleSelectRecipient(fav);
                           }}
-                          className="flex flex-col items-center gap-2 p-2.5 rounded-xl text-center bg-white/[0.02] transition-all duration-200 hover:bg-white/[0.05] hover:-translate-y-0.5"
+                          className="flex flex-col items-center gap-2 p-2.5 rounded-xl text-center bg-white/[0.03] border border-white/[0.06] shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.05)_inset] transition-all duration-200 hover:-translate-y-0.5 hover:border-gold/30 hover:shadow-[0_8px_18px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.05)_inset] active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.2)_inset]"
                         >
-                          <div className="w-12 h-12 rounded-full bg-gold/15 text-gold font-bold flex items-center justify-center text-sm ring-2 ring-transparent transition-all duration-200 hover:ring-gold/40">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm shadow-[0_1px_0_rgba(255,255,255,0.15)_inset]">
                             {name.slice(0, 1).toUpperCase()}
                           </div>
                           <span className="text-[11px] text-muted-foreground font-medium truncate w-full">
@@ -1416,9 +2089,9 @@ function Home({ onPageChange, user, navigateRequest }) {
                     <button
                       type="button"
                       onClick={() => switchSection("send")}
-                      className="flex flex-col items-center gap-2 p-2.5 rounded-xl text-center bg-white/[0.02] transition-all duration-200 hover:bg-white/[0.05] hover:-translate-y-0.5"
+                      className="flex flex-col items-center gap-2 p-2.5 rounded-xl text-center bg-white/[0.03] border border-white/[0.06] shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.05)_inset] transition-all duration-200 hover:-translate-y-0.5 hover:border-gold/30 hover:shadow-[0_8px_18px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.05)_inset] active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.2)_inset]"
                     >
-                      <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center transition-colors hover:bg-white/[0.07]">
+                      <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center shadow-[0_1px_0_rgba(255,255,255,0.1)_inset] transition-colors hover:bg-white/[0.07]">
                         <PlusCircle
                           size={18}
                           className="text-muted-foreground"
@@ -1448,9 +2121,9 @@ function Home({ onPageChange, user, navigateRequest }) {
                               switchSection("send");
                               handleSelectRecipient(fav);
                             }}
-                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] transition-colors hover:bg-white/[0.05] group"
+                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.05)_inset] transition-all duration-200 hover:-translate-y-0.5 hover:border-gold/30 hover:shadow-[0_8px_18px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.05)_inset] active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.2)_inset] group"
                           >
-                            <div className="w-9 h-9 rounded-full bg-gold/15 text-gold font-bold flex items-center justify-center text-xs shrink-0">
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-xs shrink-0 shadow-[0_1px_0_rgba(255,255,255,0.15)_inset]">
                               {name.slice(0, 1).toUpperCase()}
                             </div>
                             <div className="flex-1 text-left min-w-0">
@@ -1482,12 +2155,17 @@ function Home({ onPageChange, user, navigateRequest }) {
       </div>
 
       {/* Floating market ticker — sits to the right, follows scroll, and
-          stops just above the footer instead of covering it. */}
+          stops just above the footer instead of covering it. On mobile it
+          also has to clear the fixed bottom nav bar (70px + safe-area),
+          added as a CSS var so the JS scroll-tracking below only has to
+          know about the footer, not the nav. */}
       {activeSection === "dashboard" && tickerMessages.length > 0 && (
         <button
           type="button"
-          className="fixed right-8 z-50 max-w-[260px] bg-card border border-[var(--gold-border)] text-gold text-[0.8rem] font-semibold leading-[1.4] text-left px-[1.1rem] py-[0.7rem] rounded-md cursor-pointer transition-[transform,bottom] duration-150 hover:-translate-y-0.5 max-[768px]:right-4 max-[768px]:max-w-[190px] max-[768px]:text-[0.72rem] max-[768px]:px-[0.9rem] max-[768px]:py-[0.6rem]"
-          style={{ bottom: tickerBottom }}
+          className="fixed right-8 z-50 max-w-[260px] bg-card/90 [backdrop-filter:blur(14px)_saturate(1.3)] [-webkit-backdrop-filter:blur(14px)_saturate(1.3)] border border-[var(--gold-border)] text-gold text-[0.8rem] font-semibold leading-[1.4] text-left px-[1.1rem] py-[0.7rem] rounded-2xl shadow-lg shadow-black/20 cursor-pointer transition-[transform,bottom] duration-150 hover:-translate-y-0.5 max-[768px]:right-4 max-[768px]:max-w-[190px] max-[768px]:text-[0.72rem] max-[768px]:px-[0.9rem] max-[768px]:py-[0.6rem] max-[768px]:bg-card/75 max-[768px]:[backdrop-filter:blur(28px)_saturate(1.6)] max-[768px]:[-webkit-backdrop-filter:blur(28px)_saturate(1.6)] max-[768px]:[--mobile-nav-clearance:calc(70px+env(safe-area-inset-bottom)+12px)]"
+          style={{
+            bottom: `calc(${tickerBottom}px + var(--mobile-nav-clearance, 0px))`,
+          }}
           onClick={() => setTickerIndex((i) => i + 1)}
         >
           <span key={tickerIndex} className="block animate-ticker-fade">
@@ -1498,7 +2176,12 @@ function Home({ onPageChange, user, navigateRequest }) {
 
       {/* Add Money — service picker popup, shown once a valid amount is entered */}
       <Dialog open={showAddMoneyPopup} onOpenChange={setShowAddMoneyPopup}>
-        <DialogContent className="w-[min(400px,100%)] max-w-[400px] bg-[var(--card2)] border-white/[0.08] rounded-2xl p-7 flex flex-col gap-4 animate-popup-in shadow-2xl shadow-black/40">
+        <DialogContent
+          className={cn(
+            "w-[min(400px,100%)] max-w-[400px] rounded-2xl p-7 flex flex-col gap-4",
+            modal3dClass,
+          )}
+        >
           <DialogTitle className="text-center text-[1.1rem] font-bold text-foreground m-0">
             Add money from
           </DialogTitle>
@@ -1716,7 +2399,12 @@ function Home({ onPageChange, user, navigateRequest }) {
 
       {/* Withdraw — service picker popup, shown once amount + PIN are entered */}
       <Dialog open={showWithdrawPopup} onOpenChange={setShowWithdrawPopup}>
-        <DialogContent className="w-[min(400px,100%)] max-w-[400px] bg-[var(--card2)] border-white/[0.08] rounded-2xl p-7 flex flex-col gap-4 animate-popup-in shadow-2xl shadow-black/40">
+        <DialogContent
+          className={cn(
+            "w-[min(400px,100%)] max-w-[400px] rounded-2xl p-7 flex flex-col gap-4",
+            modal3dClass,
+          )}
+        >
           <DialogTitle className="text-center text-[1.1rem] font-bold text-foreground m-0">
             Withdraw via
           </DialogTitle>
@@ -1766,6 +2454,90 @@ function Home({ onPageChange, user, navigateRequest }) {
         </DialogContent>
       </Dialog>
 
+      {/* Withdrawal receipt — shown after a successful withdrawal using
+          whatever fields the backend's response included. Field names are
+          guessed with fallbacks (camelCase/snake_case) since the exact
+          response shape wasn't available; adjust the accessors below if
+          your API uses different keys. */}
+      <Dialog
+        open={!!withdrawalReceipt}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setWithdrawalReceipt(null);
+            goToDashboard();
+          }
+        }}
+      >
+        <DialogContent
+          className={cn(
+            "w-[min(420px,100%)] max-w-[420px] rounded-2xl p-7 flex flex-col gap-1",
+            modal3dClass,
+          )}
+        >
+          <DialogTitle className="text-center text-[1.1rem] font-bold text-foreground m-0 mb-2">
+            Withdrawal Successful
+          </DialogTitle>
+          <div className="flex flex-col">
+            <div className={receiptRowClass}>
+              <span className={receiptLabelClass}>Merchant Code</span>
+              <span className={receiptValueClass}>
+                {withdrawalReceipt?.merchantCode ??
+                  withdrawalReceipt?.merchant_code ??
+                  "N/A"}
+              </span>
+            </div>
+            <div className={receiptRowClass}>
+              <span className={receiptLabelClass}>Customer Phone</span>
+              <span className={receiptValueClass}>
+                {withdrawalReceipt?.customerPhone ??
+                  withdrawalReceipt?.customer_phone ??
+                  "N/A"}
+              </span>
+            </div>
+            <div className={receiptRowClass}>
+              <span className={receiptLabelClass}>Amount</span>
+              <span className={cn(receiptValueClass, "text-gold font-bold")}>
+                {displayCurrency}
+                {withdrawalReceipt?.amount ?? "N/A"}
+              </span>
+            </div>
+            <div className={receiptRowClass}>
+              <span className={receiptLabelClass}>Transaction Code</span>
+              <span className={receiptValueClass}>
+                {withdrawalReceipt?.transactionCode ??
+                  withdrawalReceipt?.transaction_code ??
+                  withdrawalReceipt?.reference ??
+                  "N/A"}
+              </span>
+            </div>
+            <div className={receiptRowClass}>
+              <span className={receiptLabelClass}>New Balance</span>
+              <span className={receiptValueClass}>
+                {withdrawalReceipt?.newBalance ??
+                  withdrawalReceipt?.new_balance ??
+                  withdrawalReceipt?.balance ??
+                  "N/A"}
+              </span>
+            </div>
+            <div className={receiptRowClass}>
+              <span className={receiptLabelClass}>Status</span>
+              <span className="inline-block px-3.5 py-1 rounded-full text-xs font-bold capitalize bg-success/15 text-success border border-success/30">
+                {withdrawalReceipt?.status ?? "Completed"}
+              </span>
+            </div>
+          </div>
+          <Button
+            className={cn(primaryBtnClass, "mt-4")}
+            onClick={() => {
+              setWithdrawalReceipt(null);
+              goToDashboard();
+            }}
+          >
+            Done
+          </Button>
+        </DialogContent>
+      </Dialog>
+
       {/* Send Money — step-by-step "money in transit" visual, shown while
           the transfer is in flight after confirming. Non-dismissible (no
           close button, no click-outside/Escape) — same as the original
@@ -1773,7 +2545,10 @@ function Home({ onPageChange, user, navigateRequest }) {
       {sendProgressStep > 0 && (
         <Dialog open onOpenChange={() => {}}>
           <DialogContent
-            className="w-[min(400px,100%)] max-w-[400px] bg-[var(--card2)] border-white/[0.08] rounded-2xl p-7 flex flex-col gap-4 animate-popup-in shadow-2xl shadow-black/40 [&>button:last-child]:hidden"
+            className={cn(
+              "w-[min(400px,100%)] max-w-[400px] rounded-2xl p-7 flex flex-col gap-4 [&>button:last-child]:hidden",
+              modal3dClass,
+            )}
             onEscapeKeyDown={(e) => e.preventDefault()}
             onPointerDownOutside={(e) => e.preventDefault()}
           >
@@ -1796,7 +2571,7 @@ function Home({ onPageChange, user, navigateRequest }) {
                         className={cn(
                           "w-[34px] h-[34px] rounded-full bg-white/[0.03] border border-white/[0.06] text-[var(--muted)] flex items-center justify-center flex-shrink-0 transition-all duration-300",
                           reached &&
-                            "bg-gold border-gold text-black shadow-[0_4px_14px_rgba(236,201,75,0.35)]",
+                            "bg-gold border-gold text-black shadow-[0_4px_14px_rgba(var(--gold-rgb),0.35)]",
                           isCurrent && !isLast && "animate-progress-pulse",
                         )}
                       >

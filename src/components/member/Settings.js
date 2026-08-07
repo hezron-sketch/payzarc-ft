@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faArrowLeft,
-  faRedo,
-  faLock,
-  faShieldAlt,
-  faCheckCircle,
-} from "@fortawesome/free-solid-svg-icons";
+import { ArrowLeft, RefreshCw, Lock, ShieldCheck, CheckCircle2 } from "lucide-react";
 import axiosInstance from "../../utility/axiosInstance";
 import styles from "./Settings.module.css";
 
@@ -155,10 +148,7 @@ function Settings({ user, onSuccess }) {
       <div className={styles.container}>
         <div className={styles.card}>
           <div className={styles.successContent}>
-            <FontAwesomeIcon
-              icon={faCheckCircle}
-              className={styles.successIcon}
-            />
+            <CheckCircle2 size={64} className={styles.successIcon} />
             <h2 className={styles.title}>Password Updated!</h2>
             <p className={styles.infoText}>
               Your password has been changed successfully. Redirecting you
@@ -179,7 +169,7 @@ function Settings({ user, onSuccess }) {
             className={styles.backButton}
             aria-label="Go back"
           >
-            <FontAwesomeIcon icon={faArrowLeft} />
+            <ArrowLeft size={18} />
           </button>
           <h2 className={styles.title}>
             {step === "init" ? "Security Settings" : "Verify Identity"}
@@ -190,7 +180,7 @@ function Settings({ user, onSuccess }) {
         {step === "init" ? (
           <div className={styles.content}>
             <div className={styles.iconWrapper}>
-              <FontAwesomeIcon icon={faLock} className={styles.mainIcon} />
+              <Lock size={29} className={styles.mainIcon} />
             </div>
             <p className={styles.description}>
               Update your account password to keep your account secure.
@@ -249,7 +239,7 @@ function Settings({ user, onSuccess }) {
         ) : (
           <div className={styles.content}>
             <div className={styles.iconWrapper}>
-              <FontAwesomeIcon icon={faShieldAlt} className={styles.mainIcon} />
+              <ShieldCheck size={29} className={styles.mainIcon} />
             </div>
             <h3 className={styles.subtitle}>Enter 6-Digit Code</h3>
             <p className={styles.infoText}>
@@ -286,7 +276,7 @@ function Settings({ user, onSuccess }) {
                     disabled={loading}
                     className={styles.resendBtn}
                   >
-                    <FontAwesomeIcon icon={faRedo} /> Resend Code
+                    <RefreshCw size={16} /> Resend Code
                   </button>
                 </div>
               )}

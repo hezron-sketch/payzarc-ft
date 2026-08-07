@@ -33,7 +33,7 @@ const stepDotClass = (state, compact) =>
     "rounded-full flex items-center justify-center font-bold border-[0.5px]",
     compact ? "w-6 h-6 text-[10px]" : "w-7 h-7 text-[11px]",
     state === "active" &&
-      "bg-[rgba(236,201,75,0.12)] border-[rgba(236,201,75,0.35)] text-gold",
+      "bg-[rgba(var(--gold-rgb),0.12)] border-[rgba(var(--gold-rgb),0.35)] text-gold",
     state === "completed" &&
       "bg-[rgba(74,222,128,0.1)] border-[rgba(74,222,128,0.3)] text-[#4ade80]",
     state === "default" && "bg-white/5 border-white/10 text-[var(--muted)]",
@@ -68,12 +68,12 @@ const buttonGroupClass = "flex gap-3 mt-2 [&>*]:flex-1";
 const otpIconWrapClass = "w-[52px] h-[52px] rounded-[14px] flex items-center justify-center";
 const otpBoxClass = (compact) =>
   cn(
-    "w-full max-w-[200px] px-0 bg-white/5 text-[#f9fafb] border-[0.5px] border-white/[0.12] rounded-[10px] font-bold text-center outline-none transition-colors caret-gold focus-visible:ring-0 focus-visible:border-gold focus-visible:bg-[rgba(236,201,75,0.06)] shadow-none",
+    "w-full max-w-[200px] px-0 bg-white/5 text-[#f9fafb] border-[0.5px] border-white/[0.12] rounded-[10px] font-bold text-center outline-none transition-colors caret-gold focus-visible:ring-0 focus-visible:border-gold focus-visible:bg-[rgba(var(--gold-rgb),0.06)] shadow-none",
     compact ? "h-12 text-[17px]" : "h-[54px] text-xl",
   );
 const timerRowClass = "text-center text-xs text-[var(--muted)]";
 const resendButtonClass =
-  "bg-[rgba(236,201,75,0.1)] text-gold border-[0.5px] border-[rgba(236,201,75,0.3)] rounded-sm py-2 px-4 text-[13px] font-semibold cursor-pointer transition-colors hover:bg-[rgba(236,201,75,0.18)]";
+  "bg-[rgba(var(--gold-rgb),0.1)] text-gold border-[0.5px] border-[rgba(var(--gold-rgb),0.3)] rounded-sm py-2 px-4 text-[13px] font-semibold cursor-pointer transition-colors hover:bg-[rgba(var(--gold-rgb),0.18)]";
 const successTableClass = (compact) =>
   cn(
     "w-full border-collapse bg-white/[0.03] border-[0.5px] border-white/[0.07] rounded-[14px] overflow-hidden mb-4",
@@ -419,8 +419,8 @@ function Register({ onBack, embedded = false, compact = false }) {
         <div
           className={cn(
             "relative overflow-hidden items-center justify-center p-12 px-10 border-r-[0.5px] border-white/[0.07] bg-[#111827]",
-            "before:content-[''] before:absolute before:rounded-full before:border-[0.5px] before:border-[rgba(236,201,75,0.07)] before:pointer-events-none before:w-[480px] before:h-[480px] before:-top-[100px] before:-left-[100px]",
-            "after:content-[''] after:absolute after:rounded-full after:border-[0.5px] after:border-[rgba(236,201,75,0.07)] after:pointer-events-none after:w-[320px] after:h-[320px] after:-bottom-20 after:-right-20",
+            "before:content-[''] before:absolute before:rounded-full before:border-[0.5px] before:border-[rgba(var(--gold-rgb),0.07)] before:pointer-events-none before:w-[480px] before:h-[480px] before:-top-[100px] before:-left-[100px]",
+            "after:content-[''] after:absolute after:rounded-full after:border-[0.5px] after:border-[rgba(var(--gold-rgb),0.07)] after:pointer-events-none after:w-[320px] after:h-[320px] after:-bottom-20 after:-right-20",
             embedded ? "hidden" : "hidden md:flex",
           )}
         >
@@ -829,10 +829,10 @@ function Register({ onBack, embedded = false, compact = false }) {
                   <div
                     className={cn(
                       otpIconWrapClass,
-                      "mx-auto mb-4 bg-[rgba(236,201,75,0.1)] border-[0.5px] border-[rgba(236,201,75,0.25)]",
+                      "mx-auto mb-4 bg-[rgba(var(--gold-rgb),0.1)] border-[0.5px] border-[rgba(var(--gold-rgb),0.25)]",
                     )}
                   >
-                    <Mail size={24} color="#ecc94b" strokeWidth={2} />
+                    <Mail size={24} color="var(--gold)" strokeWidth={2} />
                   </div>
                   <p className={formSubClass(compact)}>
                     Enter the code sent to {formData.email}
@@ -924,7 +924,7 @@ function Register({ onBack, embedded = false, compact = false }) {
         <Dialog open onOpenChange={(open) => !open && setErrorPopup("")}>
           <DialogContent
             className={cn(
-              "max-w-[360px] bg-[#1f2937] border border-white/10 rounded-[20px] flex flex-col items-center gap-4 text-center animate-popup-in",
+              "max-w-[360px] bg-[#1f2937] rounded-[20px] flex flex-col items-center gap-4 text-center animate-popup-in",
               compact ? "p-6" : "p-8",
             )}
           >

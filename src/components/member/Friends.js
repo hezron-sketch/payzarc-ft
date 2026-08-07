@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { ChevronRight, UsersRound } from "lucide-react";
 import { djangoApis } from "../../utility/axiosInstance";
 
-function Friends() {
+function Friends({ onSelectFriend }) {
   const [favourites, setFavourites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -38,65 +39,77 @@ function Friends() {
 
   if (loading)
     return (
-      <div className="flex flex-col gap-4 text-muted-foreground">
+      <div className="flex flex-col gap-4 text-muted-foreground text-sm py-6 text-center">
         Loading your recipients...
       </div>
     );
   if (error)
     return (
-      <div className="flex flex-col gap-4 text-muted-foreground">
+      <div className="flex flex-col gap-4 text-muted-foreground text-sm py-6 text-center">
         Error: {error}
       </div>
     );
 
   return (
-    <div className="flex flex-col gap-4">
-      <h2 className="text-center text-foreground m-0 text-xl font-bold">
-        My Recipients ({favourites.length})
-      </h2>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <span className="text-[0.7rem] font-bold text-muted-foreground uppercase tracking-[0.06em]">
+          Friends
+        </span>
+        <span className="text-[0.7rem] font-bold text-gold bg-gold/10 rounded-full px-2 py-0.5 min-w-[1.4rem] text-center">
+          {favourites.length}
+        </span>
+      </div>
 
       {favourites.length === 0 ? (
-        <p className="m-0 text-muted-foreground">
-          You have no saved recipients yet.
-        </p>
+        <div className="flex flex-col items-center gap-2 py-8 text-center">
+          <div className="w-11 h-11 rounded-full bg-white/[0.04] text-muted-foreground flex items-center justify-center">
+            <UsersRound size={20} />
+          </div>
+          <p className="m-0 text-muted-foreground text-sm">
+            You have no saved recipients yet.
+          </p>
+        </div>
       ) : (
-        <table className="w-full border-collapse table-fixed">
-          <thead>
-            <tr>
-              <th className="px-3.5 py-3 text-left border-b border-border font-bold text-muted-foreground uppercase text-xs tracking-[0.04em]">
-                Name
-              </th>
-              <th className="px-3.5 py-3 text-left border-b border-border font-bold text-muted-foreground uppercase text-xs tracking-[0.04em]">
-                Email
-              </th>
-              <th className="w-[140px] px-3.5 py-3 text-left border-b border-border font-bold text-muted-foreground uppercase text-xs tracking-[0.04em]">
-                Phone
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {favourites.map((fav, index) => (
-              <tr
+        // iOS-style contact rows — name is the only thing every recipient is
+        // guaranteed to have, so it's the sole primary line; the subtitle
+        // picks whichever single contact detail (phone, then email) is most
+        // useful for sending money, instead of cramming both into a table
+        // that has to squeeze three columns into a phone-width card.
+        // Tapping a row jumps straight to the send-money flow with that
+        // recipient preselected, same as the Quick Send tiles on Home.
+        <div className="flex flex-col gap-1">
+          {favourites.map((fav) => {
+            const name = fav.display_name || "—";
+            const subtitle = fav.phone || fav.email || "";
+            return (
+              <button
                 key={fav.id}
-                className={
-                  index % 2 === 0
-                    ? "bg-transparent transition-colors hover:bg-white/[0.05]"
-                    : "bg-white/[0.02] transition-colors hover:bg-white/[0.05]"
-                }
+                type="button"
+                onClick={() => onSelectFriend?.(fav)}
+                className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-left transition-all duration-200 shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.05)_inset] hover:-translate-y-0.5 hover:border-gold/30 hover:bg-white/[0.05] hover:shadow-[0_8px_18px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.05)_inset] active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.2)_inset]"
               >
-                <td className="px-3.5 py-3 text-left border-b border-border text-foreground text-sm">
-                  {fav.display_name || "—"}
-                </td>
-                <td className="px-3.5 py-3 text-left border-b border-border text-[var(--blue)] text-sm">
-                  {fav.email || "—"}
-                </td>
-                <td className="w-[140px] px-3.5 py-3 text-left border-b border-border text-[var(--soft)] text-sm">
-                  {fav.phone || "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm shrink-0 shadow-[0_1px_0_rgba(255,255,255,0.15)_inset]">
+                  {name.slice(0, 1).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate m-0">
+                    {name}
+                  </p>
+                  {subtitle && (
+                    <p className="text-xs text-muted-foreground truncate m-0 mt-0.5">
+                      {subtitle}
+                    </p>
+                  )}
+                </div>
+                <ChevronRight
+                  size={16}
+                  className="text-muted-foreground shrink-0"
+                />
+              </button>
+            );
+          })}
+        </div>
       )}
     </div>
   );

@@ -218,6 +218,21 @@ const server = http.createServer((req, res) => {
       return;
     }
 
+    if (
+      req.method === "POST" &&
+      (normalizedPath === "/api/notifications/read" ||
+        normalizedPath === "/notifications/read")
+    ) {
+      const note = (db.notifications || []).find(
+        (n) => n.id === parsedBody.id,
+      );
+      if (note) note.read = true;
+      saveDb(db);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ success: true }));
+      return;
+    }
+
     // Money Movement (Mock Success)
     if (
       req.method === "POST" &&
@@ -262,6 +277,128 @@ const server = http.createServer((req, res) => {
     ) {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ success: true, favourites: db.favorites }));
+      return;
+    }
+
+    // Groups Endpoints — a group has its own fund balance, separate from
+    // the owner's wallet balance (db.balance). Friends "contribute" the
+    // same way anyone sends money in this mock: no real cross-account
+    // transfer, just an amount posted against the group, same "Mock
+    // Success" pattern as the rest of Money Movement below. `members` is
+    // populated with full favorite records on the way out so the frontend
+    // never has to cross-reference ids itself.
+    const populateGroup = (g) => ({
+      ...g,
+      members: (g.members || [])
+        .map((id) => db.favorites.find((f) => f.id === id))
+        .filter(Boolean)
+        .map((f) => ({ ...f, contributed: (g.contributions || {})[f.id] || 0 })),
+    });
+
+    if (
+      req.method === "GET" &&
+      (normalizedPath === "/api/groups" || normalizedPath === "/groups")
+    ) {
+      const mine = (db.groups || []).filter(
+        (g) => g.owner_id === db.active_profile_id,
+      );
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(mine.map(populateGroup)));
+      return;
+    }
+
+    if (
+      req.method === "POST" &&
+      (normalizedPath === "/api/groups" || normalizedPath === "/groups")
+    ) {
+      const group = {
+        id: Date.now(),
+        owner_id: db.active_profile_id,
+        name: parsedBody.name,
+        type: parsedBody.type,
+        balance: 0,
+        currency: active(db, db.dashboard).currency,
+        members: Array.isArray(parsedBody.members) ? parsedBody.members : [],
+      };
+      db.groups = db.groups || [];
+      db.groups.push(group);
+      saveDb(db);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(populateGroup(group)));
+      return;
+    }
+
+    if (
+      req.method === "POST" &&
+      (normalizedPath === "/api/groups/add-member" ||
+        normalizedPath === "/groups/add-member")
+    ) {
+      const group = (db.groups || []).find((g) => g.id === parsedBody.groupId);
+      if (!group) {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Group not found" }));
+        return;
+      }
+      group.members = group.members || [];
+      if (!group.members.includes(parsedBody.memberId)) {
+        group.members.push(parsedBody.memberId);
+      }
+      saveDb(db);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(populateGroup(group)));
+      return;
+    }
+
+    if (
+      req.method === "POST" &&
+      (normalizedPath === "/api/groups/contribute" ||
+        normalizedPath === "/groups/contribute")
+    ) {
+      const group = (db.groups || []).find((g) => g.id === parsedBody.groupId);
+      const amount = Number(parsedBody.amount);
+      const memberId = parsedBody.memberId;
+      const isMember = group && (group.members || []).includes(memberId);
+      if (!group || !(amount > 0) || !isMember) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Invalid group, amount, or member" }));
+        return;
+      }
+      group.balance = Math.round((group.balance + amount) * 100) / 100;
+      group.contributions = group.contributions || {};
+      group.contributions[memberId] =
+        Math.round(((group.contributions[memberId] || 0) + amount) * 100) / 100;
+      saveDb(db);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(populateGroup(group)));
+      return;
+    }
+
+    // Move money out of a group fund and into the owner's personal wallet
+    // balance — a real transfer between the two pools (unlike the fully
+    // fake Send/Withdraw below), so it can actually be spent afterward.
+    if (
+      req.method === "POST" &&
+      (normalizedPath === "/api/groups/withdraw" ||
+        normalizedPath === "/groups/withdraw")
+    ) {
+      const group = (db.groups || []).find(
+        (g) =>
+          g.id === parsedBody.groupId && g.owner_id === db.active_profile_id,
+      );
+      const amount = Number(parsedBody.amount);
+      if (!group || !(amount > 0) || amount > group.balance) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Invalid group or amount" }));
+        return;
+      }
+      group.balance = Math.round((group.balance - amount) * 100) / 100;
+      const wallet = active(db, db.balance);
+      wallet.balance = Math.round((wallet.balance + amount) * 100) / 100;
+      saveDb(db);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({ group: populateGroup(group), balance: wallet }),
+      );
       return;
     }
 
@@ -381,6 +518,79 @@ const server = http.createServer((req, res) => {
       saveDb(db);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(db.payment_methods.mobileMoney));
+      return;
+    }
+
+    // Profile image upload — the body arrives as multipart/form-data, which
+    // this server doesn't parse (no real storage backend to save it to
+    // anyway), so this just acks receipt and keeps the existing avatar path.
+    if (
+      req.method === "POST" &&
+      (normalizedPath === "/api/upload-profile-image" ||
+        normalizedPath === "/upload-profile-image")
+    ) {
+      const account = active(db, db.dashboard);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: true,
+          profileImageUrl: account.profileImageUrl,
+        }),
+      );
+      return;
+    }
+
+    // KYC — like the profile-photo upload, the document/selfie body isn't
+    // parsed (no real verification provider here), so submitting just
+    // approves instantly and flips `idVerified`, same "Mock Success"
+    // pattern as withdraw/send-money.
+    if (
+      req.method === "POST" &&
+      (normalizedPath === "/api/kyc/verify" || normalizedPath === "/kyc/verify")
+    ) {
+      const profile = active(db, db.profile);
+      profile.idVerified = true;
+      saveDb(db);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(profile));
+      return;
+    }
+
+    // Subscription Endpoints — no real billing provider here, so this just
+    // flips `plan` on the active dashboard record once a linked payment
+    // method is confirmed to exist (upgrade) or unconditionally (cancel).
+    if (
+      req.method === "POST" &&
+      (normalizedPath === "/api/subscription/upgrade" ||
+        normalizedPath === "/subscription/upgrade")
+    ) {
+      const hasMethod =
+        (db.payment_methods.banks || []).length > 0 ||
+        (db.payment_methods.cards || []).length > 0 ||
+        (db.payment_methods.mobileMoney || []).length > 0;
+      if (!hasMethod) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Add a payment method first" }));
+        return;
+      }
+      const account = active(db, db.dashboard);
+      account.plan = "pro";
+      saveDb(db);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(account));
+      return;
+    }
+
+    if (
+      req.method === "POST" &&
+      (normalizedPath === "/api/subscription/cancel" ||
+        normalizedPath === "/subscription/cancel")
+    ) {
+      const account = active(db, db.dashboard);
+      account.plan = "basic";
+      saveDb(db);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(account));
       return;
     }
 

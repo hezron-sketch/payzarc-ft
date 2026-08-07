@@ -80,13 +80,29 @@ module.exports = {
           from: { opacity: 0, transform: "translateY(12px) scale(0.98)" },
           to: { opacity: 1, transform: "translateY(0) scale(1)" },
         },
+        // Dialogs open by tipping up out of the screen instead of just
+        // sliding/fading — perspective + rotateX baked into the transform
+        // itself (rather than relying on an ancestor's `perspective`
+        // property) so it works regardless of what wraps DialogContent.
+        "modal-3d-in": {
+          "0%": {
+            opacity: 0,
+            transform:
+              "perspective(1200px) rotateX(-65deg) translateY(-30px) scale(0.85)",
+          },
+          "60%": { opacity: 1 },
+          "100%": {
+            opacity: 1,
+            transform: "perspective(1200px) rotateX(0deg) translateY(0) scale(1)",
+          },
+        },
         "ticker-fade": {
           from: { opacity: 0, transform: "translateY(4px)" },
           to: { opacity: 1, transform: "translateY(0)" },
         },
         "progress-pulse": {
-          "0%, 100%": { boxShadow: "0 0 0 0 rgba(236, 201, 75, 0.45)" },
-          "50%": { boxShadow: "0 0 0 6px rgba(236, 201, 75, 0)" },
+          "0%, 100%": { boxShadow: "0 0 0 0 rgba(var(--gold-rgb), 0.45)" },
+          "50%": { boxShadow: "0 0 0 6px rgba(var(--gold-rgb), 0)" },
         },
       },
       animation: {
@@ -94,6 +110,7 @@ module.exports = {
         "slide-in-left": "slide-in-left 0.3s cubic-bezier(0.4,0,0.2,1)",
         "flow-fade-in": "flow-fade-in 0.35s cubic-bezier(0.4,0,0.2,1)",
         "popup-in": "popup-in 0.25s cubic-bezier(0.22,1,0.36,1)",
+        "modal-3d-in": "modal-3d-in 0.6s cubic-bezier(0.22,1.4,0.36,1)",
         "ticker-fade": "ticker-fade 0.35s ease",
         "progress-pulse": "progress-pulse 1.6s ease-in-out infinite",
       },

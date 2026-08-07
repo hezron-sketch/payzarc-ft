@@ -33,9 +33,7 @@ const YesNoPopup = ({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         className={cn(
-          "max-w-[400px] bg-card border border-border rounded-lg p-7 gap-4 animate-popup-in",
-          type === "warning" && "border-amber-400/35",
-          type === "error" && "border-red-400/35",
+          "max-w-[400px] rounded-lg p-7 gap-4 bg-[radial-gradient(circle_at_30%_0%,var(--card),var(--card2)_65%)] shadow-[0_35px_80px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.04)_inset] animate-modal-3d-in",
         )}
       >
         <DialogTitle

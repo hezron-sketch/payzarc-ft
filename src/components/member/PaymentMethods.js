@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, BadgeCheck, Camera, LogOut } from "lucide-react";
-import { transactionsApi } from "../../utility/axiosInstance";
-import { API_URL } from "../../utility/constants";
+import axiosInstance, { transactionsApi } from "../../utility/axiosInstance";
+import { API_URL, PRO_PLAN_PRICE } from "../../utility/constants";
 import { countries } from "../../utility/countries";
 import { getCurrentCountry } from "../../utility/getCurrentCountry";
 import { getRegionProviders } from "../../utility/regionProviders";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import ProfileImageCapture from "./ProfileImageCapture";
+import KycVerification from "./KycVerification";
 
 const emptyBank = { bankName: "", accountNumber: "", accountName: "" };
 const emptyCard = { cardholderName: "", cardNumber: "", expiry: "" };
@@ -74,6 +75,7 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
   // dropdown) — now it's just a toggled view within this page, since the
   // avatar click navigates straight here.
   const [showPhotoCapture, setShowPhotoCapture] = useState(false);
+  const [showKyc, setShowKyc] = useState(false);
   const [showAddBank, setShowAddBank] = useState(false);
   const [showAddCard, setShowAddCard] = useState(false);
   const [showAddMobile, setShowAddMobile] = useState(false);
@@ -92,11 +94,19 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
   const [pwError, setPwError] = useState("");
   const [pwLoading, setPwLoading] = useState(false);
 
+  // Membership (basic/pro) — upgrade charges one of the payment methods
+  // already on file below; there's no billing provider yet so this just
+  // flips `user.plan` server-side once a method is confirmed to exist.
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [chargeTo, setChargeTo] = useState("");
+  const [subError, setSubError] = useState("");
+  const [subLoading, setSubLoading] = useState(false);
+
   const region = getRegionProviders(myCountry);
 
   useEffect(() => {
-    transactionsApi
-      .get("/api/profile-details/")
+    axiosInstance
+      .get("/api/profile-details")
       .then((res) => setProfile(res.data))
       .catch(() => {});
     transactionsApi
@@ -139,6 +149,52 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
     setShowAddMobile(false);
   };
 
+  const chargeOptions = [
+    ...methods.cards.map((c) => ({
+      value: `card:${c.id}`,
+      label: `${c.brand} •••• ${c.last4}`,
+    })),
+    ...methods.banks.map((b) => ({
+      value: `bank:${b.id}`,
+      label: `${b.bankName} •••• ${String(b.accountNumber).slice(-4)}`,
+    })),
+    ...methods.mobileMoney.map((m) => ({
+      value: `mobileMoney:${m.id}`,
+      label: `${m.provider} •••• ${String(m.phoneNumber).slice(-4)}`,
+    })),
+  ];
+
+  const upgradeToPro = async () => {
+    setSubError("");
+    if (!chargeTo) {
+      setSubError("Choose a payment method to charge");
+      return;
+    }
+    setSubLoading(true);
+    try {
+      await axiosInstance.post("/api/subscription/upgrade", {
+        method: chargeTo,
+      });
+      onRefreshUser();
+      setShowUpgrade(false);
+      setChargeTo("");
+    } catch (error) {
+      setSubError(error.response?.data?.error || "Upgrade failed");
+    } finally {
+      setSubLoading(false);
+    }
+  };
+
+  const cancelPro = async () => {
+    setSubLoading(true);
+    try {
+      await axiosInstance.post("/api/subscription/cancel");
+      onRefreshUser();
+    } finally {
+      setSubLoading(false);
+    }
+  };
+
   const startEditProfile = () => {
     setProfileForm({
       phone: profile?.phone || "",
@@ -151,7 +207,7 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
   };
 
   const saveProfile = async () => {
-    const res = await transactionsApi.post("/api/profile-details/", profileForm);
+    const res = await axiosInstance.post("/api/profile-details", profileForm);
     setProfile(res.data);
     setEditingProfile(false);
   };
@@ -182,7 +238,7 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
     }
     setPwLoading(true);
     try {
-      await transactionsApi.post("/api/change-password/init/", {
+      await axiosInstance.post("/api/change-password/init", {
         currentPassword,
         newPassword,
         confirmPassword,
@@ -205,7 +261,7 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
     }
     setPwLoading(true);
     try {
-      await transactionsApi.post("/api/change-password/verify/", { code: pwOtp });
+      await axiosInstance.post("/api/change-password/verify", { code: pwOtp });
       setPwStep("success");
       setTimeout(resetPasswordFlow, 2200);
     } catch (error) {
@@ -221,6 +277,23 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
         user={user}
         onRefreshUser={onRefreshUser}
         onBack={() => setShowPhotoCapture(false)}
+      />
+    );
+  }
+
+  if (showKyc) {
+    return (
+      <KycVerification
+        onRefreshUser={onRefreshUser}
+        onBack={() => {
+          setShowKyc(false);
+          // idVerified lives on /api/profile-details, not /api/dashboard —
+          // onRefreshUser alone wouldn't update the Identification row here.
+          axiosInstance
+            .get("/api/profile-details")
+            .then((res) => setProfile(res.data))
+            .catch(() => {});
+        }}
       />
     );
   }
@@ -346,7 +419,90 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
               value={[profile.idType, profile.idNumber].filter(Boolean).join(" · ")}
               verified={profile.idVerified}
             />
+            {!profile.idVerified && (
+              <button
+                className={addFavouriteBtnClass}
+                onClick={() => setShowKyc(true)}
+              >
+                Verify identity
+              </button>
+            )}
           </div>
+        )}
+      </div>
+
+      <div className={groupClass}>
+        <div className={sectionHeaderClass}>
+          <h3 className={groupTitleClass}>Membership</h3>
+        </div>
+        <div className={methodCardClass}>
+          <span>{user?.plan === "pro" ? "Payzarc Pro" : "Basic (Free)"}</span>
+          {user?.plan === "pro" && (
+            <span className="text-success text-xs font-semibold">Active</span>
+          )}
+        </div>
+
+        {user?.plan === "pro" ? (
+          <button
+            className={addFavouriteBtnClass}
+            onClick={cancelPro}
+            disabled={subLoading}
+          >
+            {subLoading ? "Cancelling…" : "Cancel Pro"}
+          </button>
+        ) : showUpgrade ? (
+          <div className={flowFormClass}>
+            <p className={mutedClass}>
+              Unlimited Send to Many and more — ${PRO_PLAN_PRICE}/mo.
+            </p>
+            {chargeOptions.length === 0 ? (
+              <p className={mutedClass}>
+                Add a card, bank, or mobile money account below to upgrade.
+              </p>
+            ) : (
+              <>
+                <Label className={formLabelClass}>Charge to</Label>
+                <select
+                  className={formInputClass}
+                  value={chargeTo}
+                  onChange={(e) => setChargeTo(e.target.value)}
+                >
+                  <option value="">Select a payment method</option>
+                  {chargeOptions.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                {subError && (
+                  <p className="text-xs text-red-400 -mt-[0.4rem]">{subError}</p>
+                )}
+                <Button
+                  className={primaryBtnClass}
+                  onClick={upgradeToPro}
+                  disabled={subLoading}
+                >
+                  {subLoading ? "Upgrading…" : `Pay $${PRO_PLAN_PRICE} & upgrade`}
+                </Button>
+              </>
+            )}
+            <button
+              className={addFavouriteBtnClass}
+              onClick={() => {
+                setShowUpgrade(false);
+                setSubError("");
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            className={addFavouriteBtnClass}
+            onClick={() => setShowUpgrade(true)}
+          >
+            Upgrade to Pro
+          </button>
         )}
       </div>
 

@@ -47,7 +47,7 @@
 
 .dropdownMenu button:hover {
   background-color: var(--card, #1f2937); /* Match hover color from other components */
-  color: var(--gold, #ecc94b);
+  color: var(--gold);
 }
 
 .dropdownMenu button svg {

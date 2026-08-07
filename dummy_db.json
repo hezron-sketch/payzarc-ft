@@ -10,7 +10,8 @@
       "phone": "+254712345678",
       "profileImageUrl": "/images/default-user.png",
       "balance": 1250.75,
-      "currency": "KES"
+      "currency": "KES",
+      "plan": "basic"
     },
     {
       "id": 2,
@@ -21,7 +22,8 @@
       "phone": "+27821234567",
       "profileImageUrl": "/images/default-user.png",
       "balance": 8300,
-      "currency": "ZAR"
+      "currency": "ZAR",
+      "plan": "basic"
     },
     {
       "id": 3,
@@ -32,7 +34,8 @@
       "phone": "+2348012345678",
       "profileImageUrl": "/images/default-user.png",
       "balance": 420000,
-      "currency": "NGN"
+      "currency": "NGN",
+      "plan": "basic"
     },
     {
       "id": 4,
@@ -43,7 +46,8 @@
       "phone": "+34612345678",
       "profileImageUrl": "/images/default-user.png",
       "balance": 950,
-      "currency": "EUR"
+      "currency": "EUR",
+      "plan": "basic"
     }
   ],
   "profile": [
@@ -137,7 +141,7 @@
       "countryOfBirth": "Spain",
       "idType": "National ID",
       "idNumber": "78912345",
-      "idVerified": true,
+      "idVerified": false,
       "issuedCountry": "Spain",
       "issueDate": "2018-01-01",
       "expiryDate": "2028-01-01",
@@ -179,7 +183,7 @@
     {
       "id": 1,
       "success": true,
-      "balance": 1250.75,
+      "balance": 1850.75,
       "currency": "KES"
     },
     {
@@ -230,7 +234,7 @@
       "title": "Money received",
       "message": "You received $250.00 from Jane Smith.",
       "created_at": "2026-07-08 09:15:00",
-      "read": false
+      "read": true
     },
     {
       "id": 2,
@@ -238,7 +242,7 @@
       "title": "New login detected",
       "message": "Your account was accessed from a new device in Nairobi, Kenya.",
       "created_at": "2026-07-07 20:42:00",
-      "read": false
+      "read": true
     },
     {
       "id": 3,
@@ -307,6 +311,8 @@
       "name": "Jane Smith",
       "country": "Kenya",
       "amount": 50,
+      "currency": "KES",
+      "transaction_type": "DEBIT",
       "status": "Completed",
       "fee": 1.5,
       "recipient": "jane@example.com"
@@ -318,8 +324,88 @@
       "name": "Bob Agent",
       "country": "Kenya",
       "amount": 100,
+      "currency": "KES",
+      "transaction_type": "DEBIT",
       "status": "Completed",
       "fee": 2,
+      "recipient": "+254799999999"
+    },
+    {
+      "id": 3,
+      "created_at": "2026-06-18 09:05:00",
+      "transaction_code": "TX456123789",
+      "name": "Grace Wanjiru",
+      "country": "Kenya",
+      "amount": 250,
+      "currency": "KES",
+      "transaction_type": "CREDIT",
+      "status": "Completed",
+      "fee": 0,
+      "recipient": "grace.wanjiru@example.com"
+    },
+    {
+      "id": 4,
+      "created_at": "2026-06-20 13:22:00",
+      "transaction_code": "TX321654987",
+      "name": "Amara Okafor",
+      "country": "Nigeria",
+      "amount": 75,
+      "currency": "NGN",
+      "transaction_type": "DEBIT",
+      "status": "Pending",
+      "fee": 1.2,
+      "recipient": "amara.okafor@example.com"
+    },
+    {
+      "id": 5,
+      "created_at": "2026-06-22 18:40:00",
+      "transaction_code": "TX789456123",
+      "name": "Kwame Mensah",
+      "country": "Ghana",
+      "amount": 300,
+      "currency": "GHS",
+      "transaction_type": "CREDIT",
+      "status": "Completed",
+      "fee": 0,
+      "recipient": "kwame.mensah@example.com"
+    },
+    {
+      "id": 6,
+      "created_at": "2026-07-01 08:15:00",
+      "transaction_code": "TX159753468",
+      "name": "Priya Sharma",
+      "country": "India",
+      "amount": 120,
+      "currency": "USD",
+      "transaction_type": "DEBIT",
+      "status": "Completed",
+      "fee": 2.5,
+      "recipient": "priya.sharma@example.com"
+    },
+    {
+      "id": 7,
+      "created_at": "2026-07-10 11:50:00",
+      "transaction_code": "TX357951468",
+      "name": "Carlos Garcia",
+      "country": "Spain",
+      "amount": 500,
+      "currency": "EUR",
+      "transaction_type": "CREDIT",
+      "status": "Completed",
+      "fee": 0,
+      "recipient": "carlos.garcia@example.com"
+    },
+    {
+      "id": 8,
+      "created_at": "2026-07-20 16:05:00",
+      "transaction_code": "TX852963741",
+      "name": "Bob Agent",
+      "country": "Kenya",
+      "amount": 40,
+      "currency": "KES",
+      "transaction_type": "DEBIT",
+      "status": "Failed",
+      "fee": 0,
       "recipient": "+254799999999"
     }
   ],
@@ -374,15 +460,48 @@
   "groups": [
     {
       "id": 1,
+      "owner_id": 1,
       "name": "Emergency Fund",
-      "type": "Emergency",
-      "balance": 500
+      "type": "emergency",
+      "balance": 866,
+      "currency": "KES",
+      "members": [
+        1,
+        2
+      ],
+      "contributions": {
+        "1": 966
+      }
     },
     {
       "id": 2,
+      "owner_id": 1,
       "name": "Wedding Savings",
-      "type": "Wedding",
-      "balance": 2000
+      "type": "wedding",
+      "balance": 2000,
+      "currency": "KES",
+      "members": [
+        3,
+        6,
+        4
+      ]
+    },
+    {
+      "id": 1786048846531,
+      "owner_id": 1,
+      "name": "Visa",
+      "type": "emergency",
+      "balance": 1000,
+      "currency": "KES",
+      "members": [
+        1,
+        3,
+        5,
+        6
+      ],
+      "contributions": {
+        "1": 1000
+      }
     }
   ]
 }

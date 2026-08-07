@@ -1,34 +1,42 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Camera, RotateCcw, Check, CheckCircle2, Loader2 } from 'lucide-react';
 import axiosInstance from '../../utility/axiosInstance';
 import { cn } from '@/lib/utils';
 
-// Restyled to match the rest of the dashboard (rounded-xl, active:scale
-// press feedback, translucent white/[0.0X] surfaces, gold shadow accents)
-// instead of the older rounded-md/hover-lift look these predate.
-const uniformBtnClass =
-  "w-full max-w-[300px] p-3.5 rounded-xl font-bold text-[1.1rem] transition-all duration-200 cursor-pointer active:scale-[0.97]";
-const goldBtnClass = cn(
-  uniformBtnClass,
-  "bg-gold text-black enabled:hover:bg-gold-dark shadow-lg shadow-gold/10 enabled:hover:shadow-gold/20 disabled:bg-white/[0.06] disabled:text-muted-foreground disabled:cursor-not-allowed disabled:shadow-none disabled:active:scale-100",
-);
-const outlineLiftBtnClass = cn(
-  uniformBtnClass,
-  "bg-white/[0.03] text-foreground border border-white/[0.08] hover:bg-white/[0.06] hover:border-gold/20",
-);
-const outlineBtnClass = cn(
-  uniformBtnClass,
-  "bg-white/[0.03] text-foreground border border-white/[0.08] hover:bg-white/[0.06] hover:border-gold/20 mt-4",
-);
+// Same flow-card/back-button/button recipe as PaymentMethods.js and Home.js
+// (translucent white/[0.0X] surfaces, rounded-xl/2xl, gold-500 CTAs, the
+// tip-up modal-3d entrance) so this page reads as part of the same app
+// instead of the older standalone-modal look it predates.
+const flowCardClass =
+  "relative p-8 w-full max-w-[440px] mx-auto min-h-[560px] flex flex-col gap-6 bg-[radial-gradient(circle_at_30%_0%,var(--card),var(--card2)_65%)] rounded-2xl shadow-[0_30px_70px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.04)_inset] animate-modal-3d-in max-[480px]:p-6 max-[480px]:px-5 max-[480px]:min-h-[480px]";
+const flowHeaderClass =
+  "absolute left-0 w-full bottom-full mb-3 grid grid-cols-[1fr_auto_1fr] items-center text-white";
+const backBtnClass =
+  "col-start-1 justify-self-start inline-flex items-center gap-1 px-1 py-1.5 bg-transparent border-none text-white text-[0.9rem] font-semibold cursor-pointer transition-opacity duration-200 hover:opacity-75";
+const primaryBtnClass =
+  "w-full h-auto rounded-xl px-5 py-3.5 text-base font-bold text-black transition-all duration-200 hover:bg-gold-dark active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 shadow-lg shadow-gold/10 hover:shadow-gold/20 bg-gold flex items-center justify-center gap-2 cursor-pointer border-none disabled:cursor-not-allowed";
+const ghostBtnClass =
+  "w-full rounded-xl px-5 py-3.5 text-base font-semibold text-foreground bg-white/[0.03] border border-white/[0.08] transition-all duration-200 hover:bg-white/[0.06] hover:border-gold/20 active:scale-[0.97] flex items-center justify-center gap-2 cursor-pointer";
 
 function ProfileImageCapture({ user, onRefreshUser, onBack }) {
   const [cameraError, setCameraError] = useState('');
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [flash, setFlash] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+
+  const stopCamera = useCallback(() => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+  }, []);
 
   const startCamera = useCallback(async () => {
     stopCamera();
@@ -46,18 +54,12 @@ function ProfileImageCapture({ user, onRefreshUser, onBack }) {
       setCameraError('Camera access denied. Please allow permission and refresh.');
       setIsCameraActive(false);
     }
-  }, []);
-
-  const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      videoRef.current.srcObject.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-      setIsCameraActive(false);
-    }
-  };
+  }, [stopCamera]);
 
   const captureImage = () => {
     if (!videoRef.current || !canvasRef.current || !isCameraActive) return;
+    setFlash(true);
+    setTimeout(() => setFlash(false), 350);
     const canvas = canvasRef.current;
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
@@ -70,6 +72,7 @@ function ProfileImageCapture({ user, onRefreshUser, onBack }) {
 
   const uploadImage = async () => {
     if (!capturedImage) return;
+    setUploadError('');
     setUploading(true);
     try {
       const blob = await fetch(capturedImage).then(r => r.blob());
@@ -81,12 +84,13 @@ function ProfileImageCapture({ user, onRefreshUser, onBack }) {
       });
       if (response.data.success) {
         onRefreshUser();
-        alert('Profile image updated successfully!');
-        onBack();
+        setSuccess(true);
+        setTimeout(onBack, 1600);
+      } else {
+        setUploadError('Upload failed. Please try again.');
       }
     } catch (err) {
-      alert('Upload failed. Please try again.');
-      console.error(err);
+      setUploadError('Upload failed. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -95,7 +99,22 @@ function ProfileImageCapture({ user, onRefreshUser, onBack }) {
   useEffect(() => {
     startCamera();
     return () => stopCamera();
-  }, [startCamera]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (success) {
+    return (
+      <div className="flex justify-center items-center p-4 box-border">
+        <div className={cn(flowCardClass, "items-center justify-center text-center")}>
+          <CheckCircle2 size={64} className="text-success animate-flow-fade-in" />
+          <h2 className="text-[1.6rem] font-bold text-foreground m-0">Photo updated!</h2>
+          <p className="text-[var(--muted)] text-sm">
+            Your new profile photo is live. Taking you back…
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex justify-center items-center p-4 box-border">
@@ -109,75 +128,100 @@ function ProfileImageCapture({ user, onRefreshUser, onBack }) {
           100% { opacity: 0.7; transform: scale(1); }
         }
       `}</style>
-      <div className="bg-card rounded-2xl shadow-2xl shadow-black/20 w-full max-w-[420px] py-8 px-6 max-[480px]:px-4 max-[480px]:py-6 flex flex-col items-center gap-6">
-        <h2 className="text-[1.6rem] max-[480px]:text-[1.4rem] font-semibold text-gold text-center m-0">
-          Update Profile Image
+      <div className={flowCardClass}>
+        <div className={flowHeaderClass}>
+          <button onClick={onBack} className={backBtnClass}>
+            <ArrowLeft size={18} /> Back
+          </button>
+        </div>
+
+        <h2 className="text-[1.6rem] font-bold text-foreground text-center m-0">
+          Update Profile Photo
         </h2>
 
-        <div className="w-full flex flex-col items-center gap-[1.2rem]">
+        <div className="w-full flex-1 flex flex-col items-center justify-center gap-5">
           {!capturedImage ? (
             <>
               {cameraError ? (
-                <div className="text-destructive text-base text-center p-4 bg-destructive/10 border border-destructive/20 rounded-xl max-w-[300px]">
-                  <p>{cameraError}</p>
-                  <button onClick={startCamera} className={outlineLiftBtnClass}>
-                    Retry Camera
+                <div className="w-full text-center p-5 bg-destructive/10 border border-destructive/20 rounded-xl">
+                  <p className="text-destructive text-sm mb-3">{cameraError}</p>
+                  <button onClick={startCamera} className={ghostBtnClass}>
+                    Retry camera
                   </button>
                 </div>
               ) : (
-                <div className="relative w-full max-w-[380px] max-[480px]:max-w-[340px] rounded-xl overflow-hidden ring-1 ring-white/[0.06]">
-                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-auto block" />
-                  <div className="absolute inset-0 flex flex-col justify-center items-center pointer-events-none">
+                <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden ring-1 ring-white/[0.06] bg-black/40">
+                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover block" />
+                  <div className="absolute inset-0 flex flex-col justify-center items-center pointer-events-none p-6">
                     <svg
                       viewBox="0 0 350 460"
-                      className="w-[350px] h-[460px] max-[480px]:w-[300px] max-[480px]:h-[400px]"
+                      className="w-full max-w-[260px] h-auto"
                       style={{ animation: 'profileGuidePulse 3s infinite ease-in-out' }}
                     >
-                      {/* Soft outer glow */}
-                      <ellipse cx="175" cy="230" rx="175" ry="230" fill="none" stroke="#ecc94b" strokeWidth="25" strokeOpacity="0.2" />
-                      {/* Medium inner glow */}
-                      <ellipse cx="175" cy="230" rx="165" ry="215" fill="none" stroke="#ecc94b" strokeWidth="15" strokeOpacity="0.4" />
-                      {/* Crisp main dashed oval */}
-                      <ellipse cx="175" cy="230" rx="155" ry="205" fill="none" stroke="#ecc94b" strokeWidth="7" strokeDasharray="16,12" />
+                      <ellipse cx="175" cy="230" rx="175" ry="230" fill="none" stroke="var(--gold)" strokeWidth="25" strokeOpacity="0.2" />
+                      <ellipse cx="175" cy="230" rx="165" ry="215" fill="none" stroke="var(--gold)" strokeWidth="15" strokeOpacity="0.4" />
+                      <ellipse cx="175" cy="230" rx="155" ry="205" fill="none" stroke="var(--gold)" strokeWidth="7" strokeDasharray="16,12" />
                     </svg>
-                    <p className="text-gold text-[1.1rem] max-[480px]:text-base font-medium mt-[15px] text-center [text-shadow:0_2px_4px_rgba(0,0,0,0.8)]">
+                    <p className="text-gold text-sm font-semibold mt-3 text-center [text-shadow:0_2px_4px_rgba(0,0,0,0.8)]">
                       Position your face inside the oval
                     </p>
                   </div>
+                  {/* Camera-shutter flash on capture */}
+                  <div
+                    className={cn(
+                      "absolute inset-0 bg-white pointer-events-none transition-opacity duration-300",
+                      flash ? "opacity-80" : "opacity-0",
+                    )}
+                  />
                 </div>
               )}
 
               <button
                 onClick={captureImage}
                 disabled={!isCameraActive || !!cameraError}
-                className={goldBtnClass}
+                className={primaryBtnClass}
               >
-                Capture Photo
+                <Camera size={18} /> Capture photo
               </button>
             </>
           ) : (
             <>
-              <img
-                src={capturedImage}
-                alt="Captured"
-                className="w-full max-w-[380px] max-[480px]:max-w-[340px] h-auto rounded-xl ring-2 ring-gold/30"
-              />
-              <div className="flex flex-col gap-4 w-full max-w-[300px]">
-                <button
-                  onClick={() => {
-                    setCapturedImage(null);
-                    startCamera();
-                  }}
-                  className={outlineLiftBtnClass}
-                >
-                  Retake Photo
-                </button>
+              <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden ring-2 ring-gold/30 animate-flow-fade-in">
+                <img
+                  src={capturedImage}
+                  alt="Captured"
+                  className="w-full h-full object-cover block"
+                />
+              </div>
+              <div className="flex flex-col gap-3 w-full">
+                {uploadError && (
+                  <p className="text-xs text-red-400 text-center -mb-1">{uploadError}</p>
+                )}
                 <button
                   onClick={uploadImage}
                   disabled={uploading}
-                  className={goldBtnClass}
+                  className={primaryBtnClass}
                 >
-                  {uploading ? 'Uploading...' : 'Update Profile'}
+                  {uploading ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" /> Uploading…
+                    </>
+                  ) : (
+                    <>
+                      <Check size={18} /> Use this photo
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setCapturedImage(null);
+                    setUploadError('');
+                    startCamera();
+                  }}
+                  disabled={uploading}
+                  className={ghostBtnClass}
+                >
+                  <RotateCcw size={16} /> Retake photo
                 </button>
               </div>
             </>
@@ -185,13 +229,6 @@ function ProfileImageCapture({ user, onRefreshUser, onBack }) {
         </div>
 
         <canvas ref={canvasRef} style={{ display: 'none' }} />
-
-        <button
-          onClick={onBack}
-          className={cn(outlineBtnClass, "flex items-center justify-center gap-2")}
-        >
-          <ArrowLeft size={18} /> Back to Profile
-        </button>
       </div>
     </div>
   );

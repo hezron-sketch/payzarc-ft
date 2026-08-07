@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Download } from "lucide-react";
 import { countries } from "../../utility/countries";
 import { generateReceiptPDF } from "../../utility/generateReceipt";
@@ -27,6 +27,19 @@ const rowValueClass =
 
 function TransactionDetails({ transaction, closeDetailsPopup }) {
   const [isDownloading, setIsDownloading] = useState(false);
+  // Same hide-on-scroll-down/show-on-scroll-up pattern as Dashboard.js's
+  // topbar, but tracked against this dialog's own internal scroll (the
+  // dialog scrolls itself via overflow-y-auto, not the window).
+  const [hideHeader, setHideHeader] = useState(false);
+  const lastScrollTop = useRef(0);
+
+  const handleContentScroll = (e) => {
+    const scrollTop = e.currentTarget.scrollTop;
+    const scrolledPastHeader = scrollTop > 56;
+    const scrollingDown = scrollTop > lastScrollTop.current;
+    setHideHeader(scrolledPastHeader && scrollingDown);
+    lastScrollTop.current = scrollTop;
+  };
 
   const getFlagEmoji = (countryName) => {
     const country = countries.find(
@@ -89,8 +102,16 @@ function TransactionDetails({ transaction, closeDetailsPopup }) {
         if (!isOpen) closeDetailsPopup();
       }}
     >
-      <DialogContent className="w-full max-w-[520px] max-h-[85vh] overflow-y-auto overflow-x-hidden bg-card border-border rounded-lg p-0 gap-0">
-        <div className="sticky top-0 z-[1] px-7 py-6 bg-card border-b border-border">
+      <DialogContent
+        onScroll={handleContentScroll}
+        className="w-[calc(100vw-2rem)] max-w-[520px] max-h-[85vh] overflow-y-auto overflow-x-hidden bg-card rounded-lg p-0 gap-0"
+      >
+        <div
+          className={cn(
+            "sticky top-0 z-[1] px-7 py-6 max-[480px]:px-5 bg-card border-b border-border transition-transform duration-300 ease-in-out",
+            hideHeader && "-translate-y-full",
+          )}
+        >
           <DialogTitle className="text-lg font-bold text-foreground m-0 tracking-[-0.3px]">
             Transaction Details
           </DialogTitle>
@@ -161,7 +182,7 @@ function TransactionDetails({ transaction, closeDetailsPopup }) {
 
         <div className="flex gap-3 px-7 py-6 border-t border-border bg-white/[0.02] max-[640px]:flex-col">
           <Button
-            className="flex-1 h-auto rounded-md px-5 py-[0.85rem] text-[13px] font-semibold shadow-[0_4px_12px_rgba(236,201,75,0.25)] hover:-translate-y-0.5"
+            className="flex-1 h-auto rounded-md px-5 py-[0.85rem] text-[13px] font-semibold shadow-[0_4px_12px_rgba(var(--gold-rgb),0.25)] hover:-translate-y-0.5"
             onClick={handleDownloadReceipt}
             disabled={isDownloading}
             title="Download transaction receipt as PDF"

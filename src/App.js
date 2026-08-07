@@ -15,8 +15,23 @@ import SetNewPassword from "./components/member/SetNewPassword";
 import Dashboard from "./components/member/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { cn } from "@/lib/utils";
-import { ArrowRightIcon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  Send,
+  Globe,
+  ShieldCheck,
+  UsersRound,
+  Zap,
+  Percent,
+  HelpCircle,
+  Mail,
+  Phone,
+  MapPin,
+  CheckCircle2,
+  ChevronDown,
+} from "lucide-react";
 import { EXCHANGE_RATES } from "./utility/exchangeRates";
+import { PRO_PLAN_PRICE } from "./utility/constants";
 
 const COUNTRIES = {
   "United States": "USD",
@@ -75,19 +90,46 @@ const psBalAmountClass = "text-[15px] font-bold text-foreground mt-px";
    shrink-back animation finishes — writing it as one exact string removes
    any risk of the utility classes and the JS timer drifting apart. */
 const phoneStageBackdropClass =
-  "fixed inset-0 z-[1000] flex items-center justify-center px-4 py-8 bg-[rgba(6,8,14,0)] [backdrop-filter:blur(0px)] [-webkit-backdrop-filter:blur(0px)] transition-[background,backdrop-filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]";
+  // perspective here is what makes the panel's translateZ (below) actually
+  // read as depth instead of doing nothing — 3D transforms only render with
+  // foreshortening relative to a perspective set on an ancestor.
+  "fixed inset-0 z-[1000] flex items-center justify-center px-4 py-8 [perspective:1200px] bg-[rgba(6,8,14,0)] [backdrop-filter:blur(0px)] [-webkit-backdrop-filter:blur(0px)] transition-[background,backdrop-filter] duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)]";
 const phoneStageBackdropOpenClass =
   "bg-[rgba(6,8,14,0.62)] [backdrop-filter:blur(7px)] [-webkit-backdrop-filter:blur(7px)]";
+// Shadow while pinned to the mockup's spot (flat against the page, matching
+// the resting PhoneMockup's own shadow) vs once expanded (bigger + more
+// diffuse, selling the "lifted toward the viewer" 3D effect below).
+const phoneStagePanelShadowClosedClass =
+  "shadow-[0_30px_80px_rgba(0,0,0,0.55)]";
+const phoneStagePanelShadowOpenClass =
+  "shadow-[0_55px_100px_rgba(0,0,0,0.5),0_100px_180px_-40px_rgba(0,0,0,0.6)]";
 const phoneStagePanelClass =
-  "fixed flex flex-col bg-[#1c2333] border-[1.5px] border-white/10 shadow-[0_30px_80px_rgba(0,0,0,0.55)] overflow-hidden rounded-[26px] z-[1001] [transition:top_0.32s_cubic-bezier(0.16,1,0.3,1),left_0.32s_cubic-bezier(0.16,1,0.3,1),width_0.32s_cubic-bezier(0.16,1,0.3,1),height_0.32s_cubic-bezier(0.16,1,0.3,1),border-radius_0.32s_cubic-bezier(0.16,1,0.3,1),transform_0.32s_cubic-bezier(0.16,1,0.3,1),background_0.32s_ease,border-color_0.32s_ease]";
+  "fixed flex flex-col bg-[#1c2333] border-[1.5px] border-white/10 overflow-hidden rounded-[26px] z-[1001] [transition:top_0.32s_cubic-bezier(0.16,1,0.3,1),left_0.32s_cubic-bezier(0.16,1,0.3,1),width_0.32s_cubic-bezier(0.16,1,0.3,1),height_0.32s_cubic-bezier(0.16,1,0.3,1),border-radius_0.32s_cubic-bezier(0.16,1,0.3,1),border-width_0.32s_cubic-bezier(0.16,1,0.3,1),transform_0.32s_cubic-bezier(0.16,1,0.3,1),box-shadow_0.32s_ease,background_0.32s_ease,border-color_0.32s_ease]";
 const phoneStagePanelOpenClass =
-  "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(420px,92vw)] h-[min(760px,88vh)] rounded-[36px] bg-[radial-gradient(circle_at_30%_0%,#263252,#1c2333_60%)] border-[rgba(236,201,75,0.16)] max-[480px]:w-[94vw] max-[480px]:h-[90vh] max-[480px]:rounded-[28px]";
+  // translateZ(48px) (with the backdrop's perspective above) is the "above
+  // the screen" 3D lift — it grows in alongside width/height/etc since
+  // transform is already in the transition list, so the panel rises toward
+  // the viewer as it expands, and sinks back down as it shrinks on close.
+  "top-1/2 left-1/2 [transform:translate(-50%,-50%)_translateZ(48px)] w-[min(420px,92vw)] h-[min(760px,88vh)] rounded-[36px] bg-[radial-gradient(circle_at_30%_0%,#263252,#1c2333_60%)] border-[0.5px] border-[rgba(var(--gold-rgb),0.16)] max-[480px]:w-[94vw] max-[480px]:h-[90vh] max-[480px]:rounded-[28px]";
+// Same "phone" shell/morph as phoneStagePanelOpenClass, just sized to
+// actually contain a full page's worth of content (Features/Rates/Help/
+// Contact) instead of a login form — a fixed-but-generous target size
+// rather than true CSS height:auto, since the FLIP grow/shrink transition
+// above can only animate between two known sizes (auto isn't animatable).
+// overflow-y-auto on phoneStageScreenClass is still the safety net for
+// whatever doesn't fit even at this size.
+const phoneStagePanelOpenWideClass =
+  "top-1/2 left-1/2 [transform:translate(-50%,-50%)_translateZ(48px)] w-[min(760px,94vw)] h-[min(900px,90vh)] rounded-[28px] bg-[radial-gradient(circle_at_30%_0%,#263252,#1c2333_60%)] border-[0.5px] border-[rgba(var(--gold-rgb),0.16)] max-[480px]:w-[96vw] max-[480px]:h-[92vh] max-[480px]:rounded-[22px]";
 const phoneStageNotchClass =
   "w-[42px] h-2 bg-[#0d1117] rounded mx-auto mt-[14px] flex-shrink-0 transition-opacity duration-200 ease-in-out";
 const phoneStageScreenClass =
   "relative flex-1 mt-[10px] mx-[9px] mb-3 bg-card rounded-[20px] overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.12)_transparent] [&::-webkit-scrollbar]:w-[5px] [&::-webkit-scrollbar-thumb]:bg-white/[0.12] [&::-webkit-scrollbar-thumb]:rounded";
 const phoneStagePreviewClass =
-  "absolute inset-0 py-[10px] px-2 flex flex-col gap-[7px] opacity-100 transition-opacity duration-[220ms] ease-in-out pointer-events-none";
+  // Matches the panel's own 320ms so the preview finishes fading exactly
+  // when the panel finishes growing/shrinking, instead of settling ~100ms
+  // early and leaving a moment where the shape is still moving but nothing
+  // else on screen is.
+  "absolute inset-0 py-[10px] px-2 flex flex-col gap-[7px] opacity-100 transition-opacity duration-[320ms] ease-in-out pointer-events-none";
 const phoneStagePreviewHideClass = "opacity-0";
 const phoneStageContentClass =
   "px-[1.35rem] pt-[1.6rem] pb-[1.85rem] opacity-0 translate-y-[10px] transition-[opacity,transform] duration-[220ms] ease-in-out";
@@ -98,8 +140,8 @@ function Navbar() {
   const navigate = useNavigate();
   return (
     <nav className="border-b-[0.5px] border-border sticky top-0 bg-[rgba(13,17,23,0.85)] backdrop-blur-[12px] z-[100]">
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center max-w-[1120px] mx-auto px-8 py-4 max-[768px]:px-5">
-        <div className="flex items-center gap-9 justify-self-start">
+      <div className="relative flex items-center justify-between max-w-[1120px] mx-auto px-8 py-4 max-[768px]:px-5">
+        <div className="flex items-center gap-9">
           <div className="flex items-center gap-2">
             <div className="w-[60px] h-[30px] rounded-sm flex items-center justify-center flex-shrink-0">
               <img
@@ -111,40 +153,48 @@ function Navbar() {
             {/* <span className="text-[17px] font-bold text-foreground tracking-[-0.3px]">Payzarc</span> */}
           </div>
         </div>
-        <div className="flex gap-6 justify-self-center max-[768px]:hidden">
+        {/* Absolutely positioned instead of a grid/flex sibling — same fix
+        as Dashboard.js's topbar — so it never fights the logo/login button
+        for space; it's just hidden below md anyway. */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-6 max-[768px]:hidden">
           <button
             type="button"
+            onClick={() => navigate("/")}
             className="bg-transparent border-0 p-0 text-[13px] text-[var(--muted)] no-underline transition-colors duration-200 hover:text-foreground cursor-pointer"
           >
             Home
           </button>
           <button
             type="button"
+            onClick={() => navigate("/features")}
             className="bg-transparent border-0 p-0 text-[13px] text-[var(--muted)] no-underline transition-colors duration-200 hover:text-foreground cursor-pointer"
           >
             Features
           </button>
           <button
             type="button"
+            onClick={() => navigate("/rates")}
             className="bg-transparent border-0 p-0 text-[13px] text-[var(--muted)] no-underline transition-colors duration-200 hover:text-foreground cursor-pointer"
           >
             Rates
           </button>
           <button
             type="button"
+            onClick={() => navigate("/help")}
             className="bg-transparent border-0 p-0 text-[13px] text-[var(--muted)] no-underline transition-colors duration-200 hover:text-foreground cursor-pointer"
           >
             Help
           </button>
           <button
             type="button"
+            onClick={() => navigate("/contact")}
             className="bg-transparent border-0 p-0 text-[13px] text-[var(--muted)] no-underline transition-colors duration-200 hover:text-foreground cursor-pointer"
           >
             Contact
           </button>
         </div>
         <button
-          className="group inline-flex items-center gap-1.5 bg-gold text-[#111] border-none rounded-[20px] px-[1.3rem] py-[0.55rem] text-[13px] font-bold cursor-pointer justify-self-end shadow-[0_4px_14px_rgba(236,201,75,0.25)] transition-[background,transform,box-shadow] duration-200 hover:bg-gold-dark hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(236,201,75,0.4)]"
+          className="group inline-flex items-center gap-1.5 bg-gold text-[#111] border-none rounded-[20px] px-[1.3rem] py-[0.55rem] text-[13px] font-bold cursor-pointer shadow-[0_4px_14px_rgba(var(--gold-rgb),0.25)] transition-[background,transform,box-shadow] duration-200 hover:bg-gold-dark hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(var(--gold-rgb),0.4)]"
           onClick={() => navigate("/components/member/login")}
         >
           Login{" "}
@@ -165,7 +215,12 @@ const PhoneMockup = React.forwardRef(function PhoneMockup({ hidden }, ref) {
   return (
     <div
       ref={ref}
-      className="absolute left-1/2 top-0 -translate-x-1/2 scale-[1.55] origin-top w-[250px] bg-[#1c2333] rounded-[26px] border-[1.5px] border-[rgba(236,201,75,0.18)] pt-[10px] px-2 pb-[14px] shadow-[0_30px_70px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.04)_inset] z-[2] max-[768px]:w-[230px]"
+      // translateZ (no rotation) is the 3D lift — kept rotation-free
+      // deliberately, since PhoneAuthStage measures this element's
+      // axis-aligned getBoundingClientRect() to start its grow animation;
+      // any rotateX/Y here would make that box no longer match what's
+      // visually rendered and break the seamless start of that morph.
+      className="absolute left-1/2 top-0 origin-top [transform:translate(-50%,0)_scale(1.55)_translateZ(60px)] w-[250px] bg-[#1c2333] rounded-[26px] border-[1.5px] border-[rgba(var(--gold-rgb),0.18)] pt-[10px] px-2 pb-[14px] shadow-[0_45px_90px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.04)_inset] z-[2] max-[768px]:w-[230px] max-[768px]:[transform:translate(-50%,0)_scale(1.35)_translateZ(60px)] max-[400px]:[transform:translate(-50%,0)_scale(1.15)_translateZ(60px)]"
       style={hidden ? { visibility: "hidden" } : undefined}
     >
       <div className="w-[42px] h-2 bg-[#0d1117] rounded mx-auto mb-[9px]" />
@@ -293,6 +348,7 @@ function PhoneAuthStage({ overlay, onClose }) {
   }, [phase]);
   const isActive = phase !== "closed";
   const isExpanded = phase === "open";
+  const isPage = ["features", "rates", "help", "contact"].includes(overlay);
 
   useEffect(() => {
     if (!isActive) return undefined;
@@ -346,7 +402,14 @@ function PhoneAuthStage({ overlay, onClose }) {
             <div
               className={cn(
                 phoneStagePanelClass,
-                isExpanded && phoneStagePanelOpenClass,
+                isExpanded
+                  ? cn(
+                      isPage
+                        ? phoneStagePanelOpenWideClass
+                        : phoneStagePanelOpenClass,
+                      phoneStagePanelShadowOpenClass,
+                    )
+                  : phoneStagePanelShadowClosedClass,
               )}
               style={panelStyle}
             >
@@ -354,7 +417,13 @@ function PhoneAuthStage({ overlay, onClose }) {
                 type="button"
                 className={cn(
                   "absolute top-[14px] right-[14px] z-[2] w-[30px] h-[30px] flex items-center justify-center bg-white/[0.06] border-[0.5px] border-white/[0.12] rounded-full text-[#9ca3af] cursor-pointer transition-[opacity,background,color,transform] duration-200 hover:bg-white/[0.12] hover:text-[#f9fafb] hover:rotate-90",
-                  isExpanded ? "opacity-100" : "opacity-0",
+                  // Delay only on the way in, so it appears once the panel
+                  // has mostly finished growing instead of popping in ~120ms
+                  // early; no delay on the way out, so it disappears
+                  // immediately when closing starts.
+                  isExpanded
+                    ? "opacity-100 delay-150"
+                    : "opacity-0 pointer-events-none",
                 )}
                 onClick={onClose}
                 aria-label="Close"
@@ -405,12 +474,26 @@ function PhoneAuthStage({ overlay, onClose }) {
                     isExpanded && phoneStageContentShowClass,
                   )}
                 >
-                  {overlay === "login" && (
-                    <Login onBack={onClose} embedded compact />
-                  )}
-                  {overlay === "register" && (
-                    <Register onBack={onClose} embedded compact />
-                  )}
+                  {/* key={overlay} forces a fresh element (and thus the
+                  fade-in below) whenever overlay flips between "login" and
+                  "register" — including the two-truthy-values case where
+                  the panel itself is already open and never re-runs its own
+                  grow/shrink effects (see the Link inside each form to the
+                  other). Rendering straight off `overlay` (not a separately
+                  tracked copy) means this can never end up stuck showing
+                  neither form. */}
+                  <div key={overlay} className="animate-flow-fade-in">
+                    {overlay === "login" && (
+                      <Login onBack={onClose} embedded compact />
+                    )}
+                    {overlay === "register" && (
+                      <Register onBack={onClose} embedded compact />
+                    )}
+                    {overlay === "features" && <FeaturesContent />}
+                    {overlay === "rates" && <RatesContent />}
+                    {overlay === "help" && <HelpContent />}
+                    {overlay === "contact" && <ContactContent />}
+                  </div>
                 </div>
               </div>
             </div>
@@ -454,9 +537,9 @@ function Hero({ overlay, onCloseAuth }) {
   const navigate = useNavigate();
   return (
     <section className="relative flex flex-col items-center text-center min-h-screen pt-16 px-8 pb-12">
-      <div className="fixed rounded-full border border-[rgba(236,201,75,0.07)] pointer-events-none w-[600px] h-[600px] -top-[160px] left-1/2 -translate-x-1/2" />
-      <div className="fixed rounded-full border border-[rgba(236,201,75,0.07)] pointer-events-none w-[380px] h-[380px] -top-[60px] left-1/2 -translate-x-1/2" />
-      <div className="absolute rounded-full border border-[rgba(236,201,75,0.07)] pointer-events-none" />
+      <div className="fixed rounded-full border border-[rgba(var(--gold-rgb),0.07)] pointer-events-none w-[600px] h-[600px] -top-[160px] left-1/2 -translate-x-1/2" />
+      <div className="fixed rounded-full border border-[rgba(var(--gold-rgb),0.07)] pointer-events-none w-[380px] h-[380px] -top-[60px] left-1/2 -translate-x-1/2" />
+      <div className="absolute rounded-full border border-[rgba(var(--gold-rgb),0.07)] pointer-events-none" />
 
       {/* <div className="inline-flex items-center gap-2 bg-white/5 border-[0.5px] border-input rounded-[20px] py-1.5 px-4 text-xs text-[var(--soft)] mb-6">
         <div className="flex">
@@ -470,7 +553,7 @@ function Hero({ overlay, onCloseAuth }) {
         PAYZARC
       </h1>
 
-      <h1 className="text-[2rem] font-bold leading-[1.1] tracking-[-1.5px] text-foreground max-w-[520px] m-12 max-[768px]:text-lg">
+      <h1 className="text-[2rem] font-bold leading-[1.1] tracking-[-1.5px] text-foreground max-w-[520px] m-12 max-[768px]:text-lg max-[768px]:mx-4 max-[768px]:my-6">
         Send money
         <br />
         at <span className="text-gold">Lower Rates</span>
@@ -483,7 +566,7 @@ function Hero({ overlay, onCloseAuth }) {
 
       <div className="flex gap-3 mb-14 max-[480px]:flex-col max-[480px]:items-stretch">
         <button
-          className="bg-gold text-[#111] border-none rounded-[2rem] py-3 px-7 text-2xl font-semibold cursor-pointer transition-[background,transform] duration-200 hover:bg-gold-dark hover:-translate-y-px max-[480px]:text-center"
+          className="inline-flex items-center justify-center gap-2 bg-gold text-[#111] border-none rounded-[2rem] py-3 px-7 text-2xl font-semibold cursor-pointer transition-[background,transform] duration-200 hover:bg-gold-dark hover:-translate-y-px max-[768px]:text-lg"
           onClick={() => navigate("/components/member/register")}
         >
           Get started <ArrowRightIcon />
@@ -491,7 +574,7 @@ function Hero({ overlay, onCloseAuth }) {
         {/* <button className="bg-white/5 text-[#d1d5db] border-[0.5px] border-input rounded-[24px] py-3 px-7 text-sm font-medium cursor-pointer transition-colors duration-200 hover:bg-white/[0.09] max-[480px]:text-center">See how it works</button> */}
       </div>
 
-      <div className="relative w-full max-w-[680px] h-[min(75vh,540px)] flex items-start justify-center max-[768px]:h-[300px]">
+      <div className="relative w-full max-w-[680px] h-[min(75vh,540px)] flex items-start justify-center [perspective:1400px] max-[768px]:h-[220px]">
         <FloatCard
           side="left"
           iconBg="rgba(59,130,246,0.15)"
@@ -545,8 +628,8 @@ function Hero({ overlay, onCloseAuth }) {
 /* ─── Features Strip ─── */
 const FEATURES = [
   {
-    iconBg: "rgba(236,201,75,0.12)",
-    iconStroke: "#ecc94b",
+    iconBg: "rgba(var(--gold-rgb),0.12)",
+    iconStroke: "var(--gold)",
     iconPath: (
       <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
     ),
@@ -739,7 +822,7 @@ function Converter() {
             <div className="text-[28px] font-bold text-gold tracking-[-0.5px]">
               {Number(toValue).toLocaleString()} {COUNTRIES[toCountry]}
             </div>
-            <div className="text-[11px] text-[rgba(236,201,75,0.5)] mt-[3px] tracking-[0.2px]">
+            <div className="text-[11px] text-[rgba(var(--gold-rgb),0.5)] mt-[3px] tracking-[0.2px]">
               1 {COUNTRIES[fromCountry]} ={" "}
               {EXCHANGE_RATES[COUNTRIES[fromCountry]]?.[COUNTRIES[toCountry]]}{" "}
               {COUNTRIES[toCountry]} · indicative rate
@@ -778,26 +861,32 @@ function Converter() {
   );
 }
 
-/* ─── Footer ─── */
+/* ─── Footer — kept visually consistent with Dashboard.js's Footer: same
+   stacked/centered mobile layout, logo+tagline as a plain row that stacks
+   vertically on mobile, contact block centered underneath. Also `relative
+   z-10` with a solid background: on mobile the hero's phone mockup is
+   deliberately allowed to overflow down past the hero section (see Hero's
+   preview box height below) so it's "buried" halfway under the footer —
+   that only reads correctly if the footer paints on top of it and isn't
+   see-through. */
 function Footer() {
   return (
-    <footer className="border-t-[0.5px] border-border">
-      <div className="flex items-center justify-between max-w-[1120px] mx-auto px-8 py-5 flex-wrap gap-4 max-[768px]:flex-col max-[768px]:items-start max-[768px]:p-5">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <div className="w-[60px] h-[30px] rounded-sm flex items-center justify-center flex-shrink-0">
-              <img src="/images/payzarc.png" className="h-8 w-20" alt="" />
-            </div>
-            {/* <span className="text-[17px] font-bold text-foreground tracking-[-0.3px]">Payzarc</span> */}
-            <p className="text-[12px] text-[var(--muted)] pl-[38px] max-[768px]:pl-0 max-[768px]:mt-1">
-              Your trusted cross-border financial partner.
-            </p>
-          </div>
+    <footer className="relative z-10 bg-background border-t-[0.5px] border-border">
+      <div className="flex items-center justify-between max-w-[1120px] mx-auto px-8 py-5 flex-wrap gap-4 max-[768px]:flex-col max-[768px]:items-center max-[768px]:text-center max-[768px]:gap-5 max-[768px]:p-5">
+        <div className="flex items-center gap-2.5 max-[768px]:flex-col max-[768px]:gap-2">
+          <img
+            src="/images/payzarc.png"
+            className="h-[2.2rem] w-auto block"
+            alt="Payzarc"
+          />
+          <p className="text-xs text-[var(--muted)]">
+            Your trusted cross-border financial partner.
+          </p>
         </div>
-        <div className="flex flex-col gap-[3px] text-center max-[768px]:text-left">
+        <div className="flex flex-col gap-[3px] text-center">
           <a
             href="mailto:info.e@payzarc.com"
-            className="text-[12px] font-semibold text-gold no-underline"
+            className="text-xs font-semibold text-gold no-underline"
           >
             info.e@payzarc.com
           </a>
@@ -808,12 +897,385 @@ function Footer() {
             Kew Gardens Dr Houston Tx, USA
           </span>
         </div>
-        {/* <div className="flex items-center gap-1.5 bg-white/[0.04] border-[0.5px] border-border rounded-[20px] py-1.5 px-3.5 text-xs text-[var(--soft)]">
-          <div className="w-[7px] h-[7px] rounded-full bg-success flex-shrink-0" />
-          Secure &amp; live
-        </div> */}
       </div>
     </footer>
+  );
+}
+
+/* ─── Marketing pages (Features/Rates/Help/Contact) ───
+   Rendered inside PhoneAuthStage's phone-mockup morph (see
+   phoneStagePanelOpenWideClass) — same treatment as the Login/Register
+   forms — instead of full standalone routes, so every Navbar link (which
+   previously had no onClick at all) grows out of the hero mockup the same
+   way logging in does. */
+function PageHeader({ eyebrow, title, subtitle, titleClassName }) {
+  return (
+    <div className="max-w-[640px] mb-10">
+      <span className="text-[11px] font-bold tracking-[3px] text-gold uppercase">
+        {eyebrow}
+      </span>
+      <h1
+        className={cn(
+          "text-[clamp(1.8rem,4vw,2.6rem)] font-bold tracking-[-1px] text-foreground mt-2 mb-3",
+          titleClassName,
+        )}
+      >
+        {title}
+      </h1>
+      <p className="text-[15px] text-[var(--muted)] leading-[1.6]">
+        {subtitle}
+      </p>
+    </div>
+  );
+}
+
+const FEATURES_LIST = [
+  {
+    icon: Send,
+    title: "Instant transfers",
+    description:
+      "Send money to friends and family in seconds, with live status tracking from sent to delivered.",
+    details:
+      "Every send moves through a real in-transit stepper — Sent, Processing, Delivered — so you always know where a transfer is. Pick a saved recipient or enter a phone number, and send to several friends at once with Send to Many.",
+  },
+  {
+    icon: Globe,
+    title: "Live exchange rates",
+    description:
+      "Transparent, industry-leading FX rates refreshed throughout the day — no hidden markups.",
+    details:
+      "Use the calculator on the Rates page to get an indicative quote before you send — the rate you see is the rate you get, with the sending fee shown separately instead of folded into the exchange rate.",
+  },
+  {
+    icon: Zap,
+    title: "Multi-currency wallet",
+    description:
+      "Hold and send in KES, NGN, ZAR, EUR, and more, all from one account.",
+    details:
+      "Your balance is always shown in your account's home currency, with a one-tap toggle to hide it in public. Add money from a linked bank, card, or mobile money account whenever you need to top up.",
+  },
+  {
+    icon: UsersRound,
+    title: "Group funds",
+    description:
+      "Pool money for shared goals — emergencies, weddings, funerals — with friends contributing directly into a fund you control.",
+    details:
+      "Create a group for a reason, add friends, and each contribution is tracked per member so you can see exactly who put in what. The group total is kept separate from your personal balance and shown right on your dashboard.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Verified & secure",
+    description:
+      "Camera-based identity verification and bank/card-linked payment methods keep every account verified.",
+    details:
+      "Verifying your identity is a quick two-step scan — your ID, then a selfie — right from the Account page. Payment methods on file are used to confirm real actions like upgrading to Pro, never stored as a raw card number.",
+  },
+  {
+    icon: Percent,
+    title: "Payzarc Pro",
+    description: `Unlock unlimited Send to Many and more for just $${PRO_PLAN_PRICE}/mo.`,
+    details:
+      "The free plan caps Send to Many at a handful of recipients per send. Pro removes that cap for a flat monthly fee, charged to a linked payment method — upgrade or cancel anytime from the Account page.",
+  },
+];
+
+function FeaturesContent() {
+  const [openTitle, setOpenTitle] = useState(null);
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Features"
+        title="Built for how money actually moves"
+        titleClassName="whitespace-nowrap text-[clamp(1.3rem,3.6vw,2.6rem)]"
+        subtitle="Everything in Payzarc is designed around real transfers, real rates, and real people — not just a wallet balance on a screen."
+      />
+      <div className="max-w-[720px]">
+        {FEATURES_LIST.map(({ icon: Icon, title, description, details }, i) => {
+          const isOpen = openTitle === title;
+          return (
+            <div
+              key={title}
+              className={cn(
+                "border-white/[0.06]",
+                i < FEATURES_LIST.length - 1 && "border-b",
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => setOpenTitle(isOpen ? null : title)}
+                className="w-full flex items-center gap-4 py-5 bg-transparent border-none text-left cursor-pointer"
+              >
+                <div className="w-11 h-11 rounded-xl bg-[var(--gold-pale)] text-gold flex items-center justify-center shrink-0">
+                  <Icon size={20} fill="currentColor" fillOpacity={0.25} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-[15px] font-bold text-foreground m-0">
+                    {title}
+                  </h3>
+                  <p className="text-[13px] text-[var(--muted)] leading-[1.5] m-0 mt-0.5">
+                    {description}
+                  </p>
+                </div>
+                <ChevronDown
+                  size={18}
+                  className={cn(
+                    "text-[var(--muted)] shrink-0 transition-transform duration-200",
+                    isOpen && "rotate-180",
+                  )}
+                />
+              </button>
+              {/* grid-template-rows 0fr->1fr instead of conditional
+                  mount/unmount — animates smoothly both ways (open AND
+                  close) without measuring scrollHeight in JS. */}
+              <div
+                className="grid transition-[grid-template-rows] duration-300 ease-in-out"
+                style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}
+              >
+                <div className="overflow-hidden">
+                  <div
+                    className={cn(
+                      "pb-5 pl-[3.75rem] pr-8 -mt-1 transition-[opacity,transform] duration-300 ease-in-out",
+                      isOpen
+                        ? "opacity-100 translate-y-0 delay-100"
+                        : "opacity-0 -translate-y-1",
+                    )}
+                  >
+                    <p className="text-[13.5px] text-[var(--muted)] leading-[1.65] m-0">
+                      {details}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+function RatesContent() {
+  return (
+    <>
+      <PageHeader
+        eyebrow="Rates & fees"
+        title="Simple, transparent pricing"
+        subtitle="One flat sending fee, live market rates, and no surprise charges buried in the exchange rate."
+      />
+      <div className="grid grid-cols-3 gap-5 mb-4 max-[768px]:grid-cols-1">
+        <div className="bg-white/[0.03] border-[0.5px] border-border rounded-[20px] p-6">
+          <Percent size={20} className="text-gold mb-3" />
+          <h3 className="text-[15px] font-bold text-foreground m-0 mb-1.5">
+            Flat sending fee
+          </h3>
+          <p className="text-[13.5px] text-[var(--muted)] leading-[1.6] m-0">
+            1.5% per transfer, with a $1 minimum — shown up front before you
+            send, never subtracted from the exchange rate.
+          </p>
+        </div>
+        <div className="bg-white/[0.03] border-[0.5px] border-border rounded-[20px] p-6">
+          <Globe size={20} className="text-gold mb-3" />
+          <h3 className="text-[15px] font-bold text-foreground m-0 mb-1.5">
+            Live market rates
+          </h3>
+          <p className="text-[13.5px] text-[var(--muted)] leading-[1.6] m-0">
+            Rates refresh throughout the day to track the market — use the
+            calculator below for an indicative quote.
+          </p>
+        </div>
+        <div className="bg-white/[0.03] border-[0.5px] border-border rounded-[20px] p-6">
+          <UsersRound size={20} className="text-gold mb-3" />
+          <h3 className="text-[15px] font-bold text-foreground m-0 mb-1.5">
+            Payzarc Pro
+          </h3>
+          <p className="text-[13.5px] text-[var(--muted)] leading-[1.6] m-0">
+            ${PRO_PLAN_PRICE}/mo removes the free-tier cap on Send to Many —
+            manage it anytime from your Account page.
+          </p>
+        </div>
+      </div>
+      <Converter />
+    </>
+  );
+}
+
+const FAQS = [
+  {
+    q: "How do I send money?",
+    a: "Open the Send tab on your dashboard, pick a saved friend or enter a phone number, and confirm the amount — funds are tracked from sent to delivered in real time.",
+  },
+  {
+    q: "What are the fees?",
+    a: "A flat 1.5% fee with a $1 minimum applies to sends, shown before you confirm. See the Rates page for the full breakdown.",
+  },
+  {
+    q: "How do I verify my identity?",
+    a: "From the Account page, tap Verify identity to scan your ID and take a quick selfie. Verification is required to lift certain account limits.",
+  },
+  {
+    q: "What is Payzarc Pro?",
+    a: "A paid upgrade that removes the free-tier cap on Send to Many. Upgrade or cancel anytime from the Account page using a linked payment method.",
+  },
+  {
+    q: "How do group funds work?",
+    a: "Create a group for a reason — emergency, wedding, funeral — add friends, and let them contribute directly into that fund. The total is tracked separately from your personal balance.",
+  },
+  {
+    q: "Is my money safe?",
+    a: "Every account is protected by identity verification and linked payment methods on file, and every transfer is tracked end to end so you always know where it is.",
+  },
+];
+
+function HelpContent() {
+  const navigate = useNavigate();
+  return (
+    <>
+      <PageHeader
+        eyebrow="Help center"
+        title="Answers to the common stuff"
+        subtitle="Can't find what you need? The team is one message away."
+      />
+      <div className="flex flex-col gap-3 max-w-[720px]">
+        {FAQS.map(({ q, a }) => (
+          <div
+            key={q}
+            className="bg-white/[0.03] border-[0.5px] border-border rounded-[16px] p-5"
+          >
+            <div className="flex items-center gap-2.5 mb-2">
+              <HelpCircle size={16} className="text-gold shrink-0" />
+              <h3 className="text-[14.5px] font-bold text-foreground m-0">
+                {q}
+              </h3>
+            </div>
+            <p className="text-[13.5px] text-[var(--muted)] leading-[1.6] m-0">
+              {a}
+            </p>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => navigate("/contact")}
+        className="inline-flex items-center gap-1.5 mt-8 bg-gold text-[#111] border-none rounded-[20px] px-[1.3rem] py-[0.7rem] text-[13px] font-bold cursor-pointer transition-all duration-200 hover:bg-gold-dark hover:-translate-y-0.5"
+      >
+        Contact support <ArrowRightIcon size={14} />
+      </button>
+    </>
+  );
+}
+
+function ContactContent() {
+  const [form, setForm] = useState({ name: "", email: "", message: "" });
+  const [sent, setSent] = useState(false);
+
+  const canSubmit = form.name && form.email && form.message;
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+    // No support-ticketing backend exists for the marketing site — this is
+    // an honest client-side "mock success", same pattern the rest of the
+    // app uses for flows without a real endpoint behind them yet.
+    setSent(true);
+  };
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Contact"
+        title="Get in touch"
+        subtitle="Questions about your account, a transfer, or anything else — reach out and we'll get back to you."
+      />
+      <div className="grid grid-cols-[280px_1fr] gap-8 max-[768px]:grid-cols-1">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start gap-3">
+            <Mail size={18} className="text-gold shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[13px] font-semibold text-foreground m-0">
+                Email
+              </p>
+              <a
+                href="mailto:info.e@payzarc.com"
+                className="text-[13px] text-[var(--muted)] no-underline hover:text-gold"
+              >
+                info.e@payzarc.com
+              </a>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Phone size={18} className="text-gold shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[13px] font-semibold text-foreground m-0">
+                Phone
+              </p>
+              <p className="text-[13px] text-[var(--muted)] m-0">
+                +1 (713) 822-8593
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <MapPin size={18} className="text-gold shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[13px] font-semibold text-foreground m-0">
+                Office
+              </p>
+              <p className="text-[13px] text-[var(--muted)] m-0">
+                Kew Gardens Dr Houston Tx, USA
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white/[0.03] border-[0.5px] border-border rounded-[20px] p-6">
+          {sent ? (
+            <div className="flex flex-col items-center text-center gap-3 py-8">
+              <CheckCircle2 size={40} className="text-success" />
+              <h3 className="text-[16px] font-bold text-foreground m-0">
+                Message sent
+              </h3>
+              <p className="text-[13.5px] text-[var(--muted)] m-0">
+                Thanks, {form.name.split(" ")[0]} — we'll get back to you at{" "}
+                {form.email} soon.
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={submit} className="flex flex-col gap-4">
+              <input
+                type="text"
+                placeholder="Your name"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="w-full p-3.5 bg-white/[0.06] text-foreground border-[0.5px] border-white/10 rounded-[10px] text-[14px] outline-none transition-colors duration-200 focus:border-gold placeholder:text-[var(--muted)]"
+              />
+              <input
+                type="email"
+                placeholder="Your email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                className="w-full p-3.5 bg-white/[0.06] text-foreground border-[0.5px] border-white/10 rounded-[10px] text-[14px] outline-none transition-colors duration-200 focus:border-gold placeholder:text-[var(--muted)]"
+              />
+              <textarea
+                placeholder="How can we help?"
+                rows={5}
+                value={form.message}
+                onChange={(e) =>
+                  setForm({ ...form, message: e.target.value })
+                }
+                className="w-full p-3.5 bg-white/[0.06] text-foreground border-[0.5px] border-white/10 rounded-[10px] text-[14px] outline-none transition-colors duration-200 focus:border-gold placeholder:text-[var(--muted)] resize-none"
+              />
+              <button
+                type="submit"
+                disabled={!canSubmit}
+                className="w-full py-[0.9rem] bg-gold text-[#111] border-none rounded-md text-[15px] font-bold cursor-pointer transition-[background,transform] duration-200 hover:bg-gold-dark hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+              >
+                Send message
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -829,8 +1291,8 @@ function Home({ overlay }) {
   const closeOverlay = () => navigate("/");
 
   return (
-    <div className="bg-[#0602145f] bg-fixed">
-      <div className="bg-[radial-gradient(ellipse_120%_60%_at_50%_-10%,rgba(38,50,82,0.6),var(--bg)_60%)] bg-fixed text-foreground font-sans min-h-screen leading-[1.6]">
+    <div className="bg-[#0602145f] bg-fixed overflow-x-hidden">
+      <div className="bg-[radial-gradient(ellipse_120%_60%_at_50%_-10%,rgba(38,50,82,0.6),var(--bg)_60%)] bg-fixed text-foreground font-sans min-h-screen leading-[1.6] overflow-x-hidden">
         <Navbar />
 
         <Hero overlay={overlay} onCloseAuth={closeOverlay} />
@@ -889,12 +1351,19 @@ function AppContent() {
     );
   }
 
-  const overlay =
-    path === "/components/member/login"
-      ? "login"
-      : path === "/components/member/register"
-        ? "register"
-        : null;
+  // Features/Rates/Help/Contact grow out of the hero's phone mockup the
+  // same way Login/Register do (see PhoneAuthStage) — Home stays mounted
+  // underneath and only the overlay value changes, rather than unmounting
+  // into a separate standalone page.
+  const OVERLAY_PATHS = {
+    "/components/member/login": "login",
+    "/components/member/register": "register",
+    "/features": "features",
+    "/rates": "rates",
+    "/help": "help",
+    "/contact": "contact",
+  };
+  const overlay = OVERLAY_PATHS[path] || null;
 
   return <Home overlay={overlay} />;
 }
