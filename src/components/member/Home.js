@@ -28,7 +28,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import History from "./History";
@@ -54,10 +53,6 @@ const isoToFlagEmoji = (iso) =>
 // single Send and Send to Many until a real fees/pricing API replaces it.
 const calcTransferFee = (amount) =>
   amount > 0 ? Math.max(1, amount * 0.015) : 0;
-
-// Left-to-right order the action buttons appear in (Add Money, Withdraw,
-// Send, Groups) — used to pick which side a flow panel slides in from.
-const SECTION_ORDER = { "add-money": 0, withdraw: 1, send: 2, groups: 3 };
 
 // The four balance-card action buttons — one config-driven list instead of
 // four near-identical JSX blocks. Send/Withdraw render as gold pill buttons
@@ -111,31 +106,35 @@ const formLabelClass =
 const formInputClass =
   "w-full h-auto bg-white/[0.03] border-white/[0.06] rounded-xl px-4 py-3.5 text-foreground text-base md:text-base placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-gold/[0.08] focus-visible:border-gold/30 focus-visible:bg-white/[0.07] shadow-none transition-colors duration-200";
 const primaryBtnClass =
-  "w-full h-auto rounded-xl px-5 py-3.5 text-base font-bold text-black transition-all duration-200 hover:bg-primary active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 mt-1 shadow-lg shadow-gold/10 hover:shadow-gold/20";
-// Modal "phone screen" 3D look — same recipe as balanceCardClass (gradient
-// surface, gold border, deep shadow + inset highlight) plus a
-// perspective/rotateX pop-in (animate-modal-3d-in, defined in
-// tailwind.config.js) instead of the flat popup-in slide, so opening a modal
-// reads as the card tipping up into place rather than just fading/sliding.
-const modal3dClass =
-  "bg-[radial-gradient(circle_at_30%_0%,var(--card),var(--card2)_65%)] shadow-[0_35px_80px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.04)_inset] animate-modal-3d-in";
-// The balance card's "phone modal" 3D look — same recipe App.js's
-// PhoneMockup/PhoneAuthStage use for their raised panel: a radial gradient
-// surface (--card -> --card2), translucent gold border, and a deep drop
-// shadow plus a 1px inset highlight so it reads as an embossed screen
-// instead of a flat bg-card block.
-const balanceCardClass =
-  "relative bg-[radial-gradient(circle_at_30%_0%,var(--card),var(--card2)_65%)] rounded-[26px] overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.04)_inset]";
-// Embossed gold pill — a top inner highlight + bottom inner shadow (the
-// bevel) under a neutral drop shadow (not a colored gold glow) that lifts
-// on hover and flattens on press, so the button reads as floating above the
-// card rather than glowing against it.
+  "w-full h-auto rounded-xl px-5 py-3.5 text-base font-bold text-black transition-colors duration-200 hover:bg-primary active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 mt-1";
+// Modal surface — flat bg-card + border, no elevation shadow or 3D tilt;
+// reuses the same popup-in fade/scale every other popover on the dashboard
+// uses instead of its own perspective/rotateX entrance.
+const modal3dClass = "bg-card border border-white/[0.06] animate-popup-in";
+// The balance card's screen — flat bg-card block, no gradient/shadow.
+// Radius = bezel's own rounded-[34px] minus its p-[5px] padding, so the
+// inner screen's corners trace concentrically with the outer bezel's
+// instead of leaving an uneven-looking bezel width around the curve.
+const balanceCardClass = "relative bg-card rounded-[29px] overflow-hidden";
+// Phone bezel wrapping the real balance card above — flat trim, no
+// elevation shadow. Capped width (thinner, more phone-shaped) instead of
+// filling the whole column. origin-top + the scale transition here is the
+// "phone zooms in" cue — a flow's fields replace Quick Send in place (see
+// phoneContentRef) and this scales up a touch at the same time, reversing
+// automatically when activeSection goes back to "dashboard" since it's
+// just a conditional class, not a one-way animation.
+const phoneBezelClass =
+  "relative w-full max-w-[400px] mx-auto origin-top transition-transform duration-300 ease-in-out bg-[#1c2333] rounded-[34px] border border-[rgba(var(--gold-rgb),0.18)] p-[5px]";
+const phoneNotchClass =
+  "w-[56px] h-[7px] bg-[#0d1117] rounded-full mx-auto mb-[10px]";
+
+// Flat gold pill — solid gradient fill, no bevel/drop shadow or hover lift.
 const goldPillBtnClass =
-  "flex-1 flex items-center justify-center gap-2 rounded-full py-3 px-4 text-[0.85rem] font-semibold cursor-pointer text-black bg-gradient-to-b from-gold to-gold-dark transition-all duration-200 shadow-[0_8px_18px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.5)_inset,0_-2px_3px_rgba(0,0,0,0.15)_inset] hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,0,0,0.35),0_1px_0_rgba(255,255,255,0.5)_inset,0_-2px_3px_rgba(0,0,0,0.15)_inset] active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.2),0_-1px_2px_rgba(0,0,0,0.2)_inset]";
-// Same bevel treatment for the inactive/flat pill state (Add Money/Groups
-// row below the balance card) so both rows share one raised-button language.
+  "flex-1 flex items-center justify-center gap-2 rounded-full py-3 px-4 text-[0.85rem] font-semibold cursor-pointer text-black bg-gradient-to-b from-gold to-gold-dark transition-colors duration-200 hover:brightness-110";
+// Same flat treatment for the inactive pill state (Add Money/Groups row
+// below the balance card) so both rows share one flat-button language.
 const flatPillBtnClass =
-  "flex-1 flex items-center justify-center gap-2 rounded-full py-3 px-4 text-[0.85rem] font-semibold cursor-pointer text-foreground bg-white/[0.06] border border-white/[0.1] transition-all duration-200 shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.06)_inset] hover:-translate-y-0.5 hover:bg-white/[0.1] active:translate-y-0";
+  "flex-1 flex items-center justify-center gap-2 rounded-full py-3 px-4 text-[0.85rem] font-semibold cursor-pointer text-foreground bg-white/[0.06] border border-white/[0.1] transition-colors duration-200 hover:bg-white/[0.1]";
 const addFavouriteBtnClass =
   "self-start bg-transparent border-none text-gold text-[0.8rem] font-semibold cursor-pointer p-0 -mt-[0.6rem] transition-opacity hover:opacity-75";
 // Add Money modal's own "+ Save/Add/Use a saved..." links — a real
@@ -177,11 +176,10 @@ const txStatusTone = (status) => {
 const txStatusBadgeClass = (status) => {
   const tone = txStatusTone(status);
   return cn(
-    "hidden sm:inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-semibold uppercase tracking-wide shrink-0",
-    tone === "destructive" &&
-      "bg-destructive/10 text-destructive border-destructive/10",
-    tone === "gold" && "bg-gold/10 text-gold border-gold/10",
-    tone === "success" && "bg-success/10 text-success border-success/10",
+    "hidden sm:inline-flex items-center px-2 py-0.5 rounded-md border border-gold/30 text-[10px] font-semibold uppercase tracking-wide shrink-0",
+    tone === "destructive" && "bg-destructive/10 text-destructive",
+    tone === "gold" && "bg-gold/10 text-gold",
+    tone === "success" && "bg-success/10 text-success",
   );
 };
 const txStatusDotClass = (status) => {
@@ -196,9 +194,6 @@ const txStatusDotClass = (status) => {
 
 function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
   const [activeSection, setActiveSection] = useState("dashboard");
-  // Which way the incoming flow panel slides in from, based on the action
-  // buttons' left-to-right order (Add Money, Withdraw, Send, Groups).
-  const [sectionDirection, setSectionDirection] = useState("right");
   const [showBalance, setShowBalance] = useState(false);
   const [balanceData, setBalanceData] = useState(null);
   const [loadingBalance, setLoadingBalance] = useState(true);
@@ -518,6 +513,75 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
   // stale values into the next flow.
   const goToDashboard = () => switchSection("dashboard");
 
+  // True for any flow (Add Money/Withdraw/Send/Send-to-Many/Groups) — the
+  // phone bezel below scales up slightly and the swappable content area
+  // (Quick Send at rest, the active flow's fields otherwise) grows/shrinks
+  // to fit, all in place instead of opening a separate popup.
+  const phoneZoomActive = activeSection !== "dashboard";
+
+  // Whichever content is showing inside the phone screen swaps in place
+  // (Quick Send <-> the active flow), and this ref animates the swappable
+  // area's height smoothly between the two — same natural-height-measure +
+  // ResizeObserver-ease technique this file used to run per flow section,
+  // now applied once to whichever content is currently mounted. Reversible
+  // either direction for free since it's just "measure current vs new",
+  // not a one-way FLIP.
+  const lastPhoneContentHeightRef = useRef(null);
+  const phoneContentResizeObserverRef = useRef(null);
+  const phoneContentResizeRafRef = useRef(null);
+
+  // scrollHeight isn't reliable while an explicit (possibly shorter) height
+  // is already pinned on the node — lifting the height constraint just long
+  // enough to measure sidesteps that (same fix as the old per-section ref).
+  const measurePhoneContentHeight = (node) => {
+    const prevHeight = node.style.height;
+    node.style.height = "auto";
+    const height = node.offsetHeight;
+    node.style.height = prevHeight;
+    return height;
+  };
+
+  const phoneContentRef = (node) => {
+    if (phoneContentResizeObserverRef.current) {
+      phoneContentResizeObserverRef.current.disconnect();
+      phoneContentResizeObserverRef.current = null;
+    }
+    if (phoneContentResizeRafRef.current) {
+      cancelAnimationFrame(phoneContentResizeRafRef.current);
+      phoneContentResizeRafRef.current = null;
+    }
+    if (!node) return;
+
+    const naturalHeight = measurePhoneContentHeight(node);
+    if (lastPhoneContentHeightRef.current != null) {
+      node.style.height = `${lastPhoneContentHeightRef.current}px`;
+      phoneContentResizeRafRef.current = requestAnimationFrame(() => {
+        node.style.height = `${naturalHeight}px`;
+        lastPhoneContentHeightRef.current = naturalHeight;
+      });
+    } else {
+      lastPhoneContentHeightRef.current = naturalHeight;
+    }
+
+    // Deferring the write to the next frame (instead of inside the observer
+    // callback directly) avoids the "ResizeObserver loop completed with
+    // undelivered notifications" warning that comes from resizing the very
+    // node being observed.
+    const observer = new ResizeObserver(() => {
+      if (phoneContentResizeRafRef.current)
+        cancelAnimationFrame(phoneContentResizeRafRef.current);
+      phoneContentResizeRafRef.current = requestAnimationFrame(() => {
+        const height = measurePhoneContentHeight(node);
+        if (lastPhoneContentHeightRef.current !== height) {
+          node.style.height = `${height}px`;
+          lastPhoneContentHeightRef.current = height;
+        }
+      });
+    });
+    observer.observe(node);
+    phoneContentResizeObserverRef.current = observer;
+  };
+
   // Central place for changing which panel is shown below the balance.
   // Clears every flow's transient input on every switch (not just when
   // going back to the dashboard) so hopping Add Money -> Send, say, never
@@ -549,11 +613,6 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
     setSendManySameAmount("");
     setSendManyAmounts({});
     const nextSection = activeSection === section ? "dashboard" : section;
-    const fromOrder = SECTION_ORDER[activeSection];
-    const toOrder = SECTION_ORDER[nextSection];
-    if (fromOrder !== undefined && toOrder !== undefined) {
-      setSectionDirection(toOrder > fromOrder ? "right" : "left");
-    }
     setActiveSection(nextSection);
   };
 
@@ -567,85 +626,7 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
     setSendManySameAmount("");
     setSendManyAmounts({});
     setInputPin("");
-    setSectionDirection("right");
     setActiveSection("send-many");
-  };
-
-  // Shared layout for whichever flow (Add Money/Withdraw/Send/Groups) is
-  // currently mounted — its own card now (balance card, tab strip and this
-  // are three separate cards, matching the redesign), not flush inside the
-  // balance card — just spacing + the directional slide-in, recomputed on
-  // every render since sectionDirection can change.
-  const flowSectionClass = cn(
-    "relative p-8 w-full min-h-[560px] flex flex-col gap-7 bg-card rounded-2xl transition-[height] duration-300 ease-in-out",
-    "max-[640px]:p-6 max-[640px]:px-5 max-[640px]:gap-6 max-[640px]:min-h-[480px]",
-    sectionDirection === "left"
-      ? "animate-slide-in-left"
-      : "animate-slide-in-right",
-  );
-
-  // Lets each flow's card keep its own natural, content-driven height while
-  // still animating smoothly between heights when switching — the newly
-  // mounted card starts pinned at the previous card's height (so there's no
-  // instant jump), then a ResizeObserver eases it to its real content
-  // height (and keeps tracking it if content inside changes size later,
-  // e.g. Send Money's favourites list or the Friends/Groups tab swap).
-  const lastFlowHeightRef = useRef(null);
-  const flowResizeObserverRef = useRef(null);
-  const flowResizeRafRef = useRef(null);
-
-  // scrollHeight isn't reliable while an explicit (possibly shorter) height
-  // is already pinned on the node — on an overflow:visible box that can
-  // read back close to the pinned value instead of the true content size,
-  // which compounded into a progressive shrink on every switch. Lifting the
-  // height constraint just long enough to measure sidesteps that.
-  const measureNaturalHeight = (node) => {
-    const prevHeight = node.style.height;
-    node.style.height = "auto";
-    const height = node.offsetHeight;
-    node.style.height = prevHeight;
-    return height;
-  };
-
-  const flowSectionRef = (node) => {
-    if (flowResizeObserverRef.current) {
-      flowResizeObserverRef.current.disconnect();
-      flowResizeObserverRef.current = null;
-    }
-    if (flowResizeRafRef.current) {
-      cancelAnimationFrame(flowResizeRafRef.current);
-      flowResizeRafRef.current = null;
-    }
-    if (!node) return;
-
-    const naturalHeight = measureNaturalHeight(node);
-    if (lastFlowHeightRef.current != null) {
-      node.style.height = `${lastFlowHeightRef.current}px`;
-      flowResizeRafRef.current = requestAnimationFrame(() => {
-        node.style.height = `${naturalHeight}px`;
-        lastFlowHeightRef.current = naturalHeight;
-      });
-    } else {
-      lastFlowHeightRef.current = naturalHeight;
-    }
-
-    // Writing node.style.height directly inside the observer callback
-    // resizes the very node it's observing, which trips the browser's
-    // "ResizeObserver loop completed with undelivered notifications"
-    // warning. Deferring the write to the next frame breaks that loop.
-    const observer = new ResizeObserver(() => {
-      if (flowResizeRafRef.current)
-        cancelAnimationFrame(flowResizeRafRef.current);
-      flowResizeRafRef.current = requestAnimationFrame(() => {
-        const height = measureNaturalHeight(node);
-        if (lastFlowHeightRef.current !== height) {
-          node.style.height = `${height}px`;
-          lastFlowHeightRef.current = height;
-        }
-      });
-    });
-    observer.observe(node);
-    flowResizeObserverRef.current = observer;
   };
 
   // Lets the dashboard's top-bar search jump straight into a section (and,
@@ -1260,7 +1241,7 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
   // --- Render ---
   return (
     <>
-      <section className="w-full max-w-[1320px] mx-auto flex flex-col items-start gap-3 pb-8">
+      <section className="w-full max-w-[960px] mx-auto flex flex-col items-start gap-3 pb-8">
         <button
           type="button"
           onClick={() => onPageChange("home")}
@@ -1277,167 +1258,329 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
         </p>
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 w-full max-w-[1320px] mx-auto">
-        {/* LEFT COLUMN — balance card, tab strip, whichever flow is active,
-          and Recent Activity, all sharing the same column width (matches
-          the sketch's lg:col-span-8 left column instead of the balance
-          card being its own narrower centered block). */}
-        <div className="lg:col-span-8 flex flex-col gap-8">
-          <div className="flex flex-col gap-6">
-            <div ref={balanceCardRef} className={balanceCardClass}>
-              <div className="w-full flex flex-col items-center px-8 pt-9 pb-8 max-[640px]:px-6">
-                <div className="w-full flex items-start justify-between mb-7">
-                  <div className="flex flex-col items-start">
-                    <div className="flex items-center gap-2.5 mb-2">
-                      <span className="text-muted-foreground text-[0.8rem] font-medium tracking-wide">
-                        Total Balance
-                      </span>
-                      <button
-                        className="bg-transparent border-none text-[var(--muted)] flex items-center transition-colors duration-200 hover:text-foreground"
-                        onClick={toggleBalance}
-                      >
-                        {showBalance ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                    <h1 className="text-[clamp(1.85rem,4vw,2.75rem)] font-extrabold text-gold tracking-[-1px] m-0 flex items-baseline gap-2 max-[640px]:text-[2.25rem]">
-                      <span className="opacity-75">{displayCurrency}</span>
-                      <span
-                        className={cn(
-                          "relative overflow-hidden rounded-2xl before:content-[''] before:absolute before:inset-0 before:[backdrop-filter:blur(2rem)] before:rounded-[inherit] before:pointer-events-none before:opacity-0 before:transition-opacity before:duration-[250ms]",
-                          !showBalance && "select-none before:opacity-100",
-                        )}
-                      >
-                        {formattedBalance}
-                      </span>
-                    </h1>
-                    {groupFundsTotal > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => onPageChange("groups")}
-                        className="mt-2 inline-flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full px-3 py-1 text-[0.75rem] font-semibold text-muted-foreground cursor-pointer transition-colors hover:bg-white/[0.07] hover:border-gold/20 hover:text-foreground"
-                      >
-                        <UsersRound size={12} className="text-gold" />
-                        <span
-                          className={cn(
-                            "relative overflow-hidden rounded-md before:content-[''] before:absolute before:inset-0 before:[backdrop-filter:blur(0.6rem)] before:rounded-[inherit] before:pointer-events-none before:opacity-0 before:transition-opacity before:duration-[250ms]",
-                            !showBalance && "select-none before:opacity-100",
-                          )}
-                        >
-                          {displayCurrency} {groupFundsTotal.toLocaleString()}
-                        </span>{" "}
-                        in Group Funds
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Send / Withdraw — the two most common wallet moves,
-                surfaced as pills right on the balance card. Same active/
-                inactive styling as the Add Money/Groups row below. */}
-                <div className="w-full flex items-center gap-3">
-                  {BALANCE_CARD_ACTIONS.map(({ key, label, icon: Icon }) => {
-                    const active = activeSection === key;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => switchSection(key)}
-                        className={active ? goldPillBtnClass : flatPillBtnClass}
-                      >
-                        <Icon size={16} className="shrink-0" />
-                        <span className="truncate">{label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Add Money / Groups — secondary actions, as pill buttons below
-            the balance card. Same switchSection wiring as the balance-card
-            pills above. */}
-            <div className="flex items-center gap-3">
-              {ICON_ROW_ACTIONS.map(({ key, label, icon: Icon }) => {
+      {/* Phone mockup (fixed-width, see phoneBezelClass) beside Recent
+        Activity (takes whatever's left) — Quick Send/the flow forms all
+        live inside the phone's own screen now, so this is just those two
+        top-level pieces side by side instead of one stacked column. */}
+      <div className="w-full max-w-[960px] mx-auto grid grid-cols-1 lg:grid-cols-[400px_420px] gap-8 lg:gap-x-32 items-start">
+        <div className="flex flex-col gap-6">
+            {/* Balance section, phone-bezeled — the dashboard's main
+            component. Same real content as before (live balance, group
+            funds, Send/Withdraw), just wrapped in an actual phone frame
+            (phoneBezelClass/phoneNotchClass, matching components/
+            PhoneMockup's PhoneFrame recipe) instead of a plain card, with
+            Send/Withdraw promoted to floating buttons flanking it — the
+            same "floating card either side of the phone" composition as
+            the landing hero's FloatCards, but wired to the real flows
+            instead of showing demo numbers. */}
+            <div className="relative w-full max-w-[400px] mx-auto">
+              {/* Same FloatCard shape/positioning as the landing hero's
+              floating "You send"/"They receive" cards in App.js (icon
+              square + a small text stack, absolute + staggered top offset
+              either side of the phone) — real and clickable here instead
+              of the hero's static demo numbers. Offset negative (instead of
+              flush at 0) so they hang partially outside the now-narrower
+              phone's edges, same idea as the landing hero's own mobile
+              FloatCard treatment. */}
+              {BALANCE_CARD_ACTIONS.map(({ key, label, icon: Icon }) => {
                 const active = activeSection === key;
+                const isSend = key === "send";
                 return (
                   <button
                     key={key}
                     type="button"
                     onClick={() => switchSection(key)}
-                    className={active ? goldPillBtnClass : flatPillBtnClass}
+                    aria-label={label}
+                    className={cn(
+                      "absolute z-10 flex items-center gap-2.5 rounded-2xl py-[10px] px-[14px] whitespace-nowrap cursor-pointer transition-all duration-200 hover:-translate-y-0.5 max-[768px]:px-[10px] max-[768px]:py-2",
+                      isSend
+                        ? "-left-28 top-[55px] max-[768px]:-left-10 max-[480px]:top-10"
+                        : "-right-28 top-[160px] max-[768px]:-right-10 max-[480px]:top-32",
+                      active
+                        ? "bg-gradient-to-b from-gold to-gold-dark border-[0.5px] border-transparent"
+                        : "bg-secondary border-[0.5px] border-input hover:border-gold/30",
+                    )}
                   >
-                    <Icon size={16} className="shrink-0" />
-                    <span className="truncate">{label}</span>
+                    <div
+                      className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center flex-shrink-0"
+                      style={{
+                        background: active
+                          ? "rgba(0,0,0,0.12)"
+                          : isSend
+                            ? "rgba(var(--gold-rgb),0.15)"
+                            : "rgba(96,165,250,0.15)",
+                      }}
+                    >
+                      <Icon
+                        size={18}
+                        className={cn(
+                          active
+                            ? "text-black"
+                            : isSend
+                              ? "text-gold"
+                              : "text-[#60a5fa]",
+                        )}
+                      />
+                    </div>
+                    <div>
+                      <div
+                        className={cn(
+                          "text-[10px]",
+                          active ? "text-black/70" : "text-[var(--muted)]",
+                        )}
+                      >
+                        Wallet action
+                      </div>
+                      <div
+                        className={cn(
+                          "text-[15px] font-bold max-[768px]:text-[13px]",
+                          active ? "text-black" : "text-foreground",
+                        )}
+                      >
+                        {label}
+                      </div>
+                    </div>
                   </button>
                 );
               })}
-            </div>
 
-            {activeSection === "add-money" && (
-              <section ref={flowSectionRef} className={flowSectionClass}>
-                <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
-                  <Label className={formLabelClass}>Amount</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    className={formInputClass}
-                    placeholder="0.00"
-                    value={addAmount}
-                    onChange={(e) => setAddAmount(e.target.value)}
-                  />
+              <div
+                ref={balanceCardRef}
+                className={cn(phoneBezelClass, phoneZoomActive && "scale-[1.02]")}
+              >
+                <div className={phoneNotchClass} />
+                <div className={balanceCardClass}>
+                  <div className="w-full flex flex-col items-center px-8 pt-9 pb-8 max-[640px]:px-6">
+                    <div className="w-full flex flex-col items-center mb-7">
+                      <div className="flex flex-col items-center">
+                        <div className="flex items-center gap-2.5 mb-2">
+                          <span className="text-muted-foreground text-[0.8rem] font-medium tracking-wide">
+                            Total Balance
+                          </span>
+                          <button
+                            className="bg-transparent border-none text-[var(--muted)] flex items-center transition-colors duration-200 hover:text-foreground"
+                            onClick={toggleBalance}
+                          >
+                            {showBalance ? (
+                              <EyeOff size={16} />
+                            ) : (
+                              <Eye size={16} />
+                            )}
+                          </button>
+                        </div>
+                        <h1 className="text-[clamp(1.4rem,3vw,1.9rem)] font-extrabold text-gold tracking-[-1px] m-0 flex items-baseline gap-2 max-[640px]:text-[1.6rem]">
+                          <span className="opacity-75">{displayCurrency}</span>
+                          <span
+                            className={cn(
+                              "relative overflow-hidden rounded-2xl before:content-[''] before:absolute before:inset-0 before:[backdrop-filter:blur(2rem)] before:rounded-[inherit] before:pointer-events-none before:opacity-0 before:transition-opacity before:duration-[250ms]",
+                              !showBalance && "select-none before:opacity-100",
+                            )}
+                          >
+                            {formattedBalance}
+                          </span>
+                        </h1>
+                        {groupFundsTotal > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => onPageChange("groups")}
+                            className="mt-2 inline-flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full px-3 py-1 text-[0.75rem] font-semibold text-muted-foreground cursor-pointer transition-colors hover:bg-white/[0.07] hover:border-gold/20 hover:text-foreground"
+                          >
+                            <UsersRound size={12} className="text-gold" />
+                            <span
+                              className={cn(
+                                "relative overflow-hidden rounded-md before:content-[''] before:absolute before:inset-0 before:[backdrop-filter:blur(0.6rem)] before:rounded-[inherit] before:pointer-events-none before:opacity-0 before:transition-opacity before:duration-[250ms]",
+                                !showBalance && "select-none before:opacity-100",
+                              )}
+                            >
+                              {displayCurrency}{" "}
+                              {groupFundsTotal.toLocaleString()}
+                            </span>{" "}
+                            in Group Funds
+                          </button>
+                        )}
+                      </div>
+                    </div>
 
-                  <Button
-                    className={primaryBtnClass}
-                    onClick={handleAddMoneyClick}
-                  >
-                    Add {displayCurrency} {addAmount || "0.00"}
-                  </Button>
-                </div>
-              </section>
+                    {/* Add Money / Groups — moved inside the phone screen,
+                    below the balance, per the same "carry dashboard
+                    components inside the phone" idea as Quick Send below.
+                    Same switchSection wiring as the balance-card pills. */}
+                    <div className="w-full flex items-center gap-3 mb-2">
+                      {ICON_ROW_ACTIONS.map(({ key, label, icon: Icon }) => {
+                        const active = activeSection === key;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => switchSection(key)}
+                            className={active ? goldPillBtnClass : flatPillBtnClass}
+                          >
+                            <Icon size={16} className="shrink-0" />
+                            <span className="truncate">{label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Whichever content is active swaps in place here —
+                    Quick Send at rest, or Add Money/Withdraw/Send/Groups'
+                    own fields — instead of any of them opening as a popup.
+                    phoneContentRef animates this wrapper's height to match
+                    whatever's currently inside (see its definition above),
+                    and the phone bezel itself scales up a touch at the same
+                    time (phoneZoomActive, on the bezel's own className) —
+                    together that's the "phone zooms in to fit" cue, and it
+                    reverses for free since both are just plain conditional
+                    state, not a one-way animation. */}
+                    <div
+                      ref={phoneContentRef}
+                      className="w-full mt-8 pt-6 border-t border-white/[0.06] overflow-hidden transition-[height] duration-300 ease-in-out"
+                    >
+                      <div
+                        key={activeSection}
+                        className="w-full flex flex-col gap-5 animate-flow-fade-in"
+                      >
+                        {phoneZoomActive && (
+                          <div className="flex items-center justify-between">
+                            <h2 className="text-base font-bold m-0">
+                              {ACTION_TILES.find((t) => t.key === activeSection)
+                                ?.label ||
+                                (activeSection === "send-many"
+                                  ? "Send to Many"
+                                  : "")}
+                            </h2>
+                            <button
+                              type="button"
+                              className="bg-transparent border-none text-[var(--muted)] hover:text-foreground flex items-center transition-colors duration-200"
+                              onClick={goToDashboard}
+                              aria-label="Close"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        )}
+
+                        {activeSection === "dashboard" && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <h2 className="text-base font-bold m-0">
+                                Quick Send
+                              </h2>
+                              <button
+                                className="bg-transparent border-none text-gold font-medium text-[11px] cursor-pointer transition-colors hover:text-gold-dark"
+                                onClick={() => switchSection("groups")}
+                              >
+                                See all
+                              </button>
+                            </div>
+
+                            {favourites.length === 0 ? (
+                              <p className="text-[0.85rem] text-muted-foreground">
+                                No saved recipients yet — add one from Send
+                                Money.
+                              </p>
+                            ) : (
+                              favourites.length > 0 && (
+                            <div className="pt-4 border-t border-white/[0.04] flex flex-col gap-1">
+                              {favourites.slice(0, 3).map((fav, idx) => {
+                                const name =
+                                  fav.name ||
+                                  fav.full_name ||
+                                  fav.phone ||
+                                  fav.value ||
+                                  "?";
+                                const sub = fav.phone || fav.email || "";
+                                return (
+                                  <button
+                                    key={fav.id || idx}
+                                    type="button"
+                                    onClick={() => {
+                                      switchSection("send");
+                                      handleSelectRecipient(fav);
+                                    }}
+                                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] transition-colors duration-200 hover:border-gold/30 hover:bg-white/[0.05] group"
+                                  >
+                                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-xs shrink-0">
+                                      {name.slice(0, 1).toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 text-left min-w-0">
+                                      <p className="text-xs font-semibold text-foreground truncate m-0">
+                                        {name}
+                                      </p>
+                                      {sub && (
+                                        <p className="text-[11px] text-muted-foreground truncate m-0">
+                                          {sub}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="w-7 h-7 rounded-lg bg-white/[0.04] flex items-center justify-center transition-colors group-hover:bg-gold/10 shrink-0">
+                                      <Send
+                                        size={14}
+                                        className="text-muted-foreground transition-colors group-hover:text-gold"
+                                      />
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )
+                        )}
+                          </>
+                        )}
+                        {activeSection === "add-money" && (
+                          <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
+                            <Label className={formLabelClass}>Amount</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className={formInputClass}
+                  placeholder="0.00"
+                  value={addAmount}
+                  onChange={(e) => setAddAmount(e.target.value)}
+                />
+
+                <Button className={primaryBtnClass} onClick={handleAddMoneyClick}>
+                  Add {displayCurrency} {addAmount || "0.00"}
+                </Button>
+              </div>
             )}
 
             {activeSection === "withdraw" && (
-              <section ref={flowSectionRef} className={flowSectionClass}>
-                <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
-                  <Label className={formLabelClass}>Amount</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    className={formInputClass}
-                    placeholder="0.00"
-                    value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value)}
-                  />
+              <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
+                <Label className={formLabelClass}>Amount</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className={formInputClass}
+                  placeholder="0.00"
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                />
 
-                  <Label className={formLabelClass}>Transaction PIN</Label>
-                  <Input
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={4}
-                    className={formInputClass}
-                    placeholder="****"
-                    value={inputPin}
-                    onChange={(e) =>
-                      setInputPin(e.target.value.replace(/\D/g, "").slice(0, 4))
-                    }
-                  />
+                <Label className={formLabelClass}>Transaction PIN</Label>
+                <Input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={4}
+                  className={formInputClass}
+                  placeholder="****"
+                  value={inputPin}
+                  onChange={(e) =>
+                    setInputPin(e.target.value.replace(/\D/g, "").slice(0, 4))
+                  }
+                />
 
-                  <Button
-                    className={primaryBtnClass}
-                    onClick={handleWithdrawClick}
-                  >
-                    Withdraw
-                  </Button>
-                </div>
-              </section>
+                <Button className={primaryBtnClass} onClick={handleWithdrawClick}>
+                  Withdraw
+                </Button>
+              </div>
             )}
 
             {activeSection === "send" && (
-              <section ref={flowSectionRef} className={flowSectionClass}>
-                <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
-                  <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
+                <div className="flex items-center justify-between">
                     {myCountry && (
                       <span className="flex items-center gap-1.5 text-[0.85rem] font-semibold text-[var(--muted)]">
                         Sending From {isoToFlagEmoji(myCountry.flag)}
@@ -1600,12 +1743,10 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
                     </Button>
                   )}
                 </div>
-              </section>
             )}
 
             {activeSection === "send-many" && (
-              <section ref={flowSectionRef} className={flowSectionClass}>
-                <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
+              <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
@@ -1673,7 +1814,7 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
                               >
                                 <X className="w-3 h-3" />
                               </button>
-                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm shadow-[0_1px_0_rgba(255,255,255,0.15)_inset]">
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm">
                                 {(
                                   r.name ||
                                   r.full_name ||
@@ -1765,7 +1906,7 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
                               key={sendManyKey(r)}
                               className="flex items-center gap-3"
                             >
-                              <div className="w-11 h-11 shrink-0 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm shadow-[0_1px_0_rgba(255,255,255,0.15)_inset]">
+                              <div className="w-11 h-11 shrink-0 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm">
                                 {(
                                   r.name ||
                                   r.full_name ||
@@ -1881,14 +2022,12 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
                     </>
                   )}
                 </div>
-              </section>
             )}
 
-            {/* Groups — shows Friends.js and Groups.js as tabs inside the same
-            flowSectionClass card the other flows use (Add Money/Withdraw/
-            Send), for a consistent look across all four tabs. */}
+            {/* Groups — shows Friends.js and Groups.js as tabs, sharing the
+            same zoomed phone panel the other three flows render into. */}
             {activeSection === "groups" && (
-              <div ref={flowSectionRef} className={flowSectionClass}>
+              <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
                 <Tabs value={groupsTab} onValueChange={selectGroupsTab}>
                   <TabsList className="grid grid-cols-2 w-full h-auto p-1 rounded-full bg-white/[0.04] gap-1">
                     <TabsTrigger
@@ -1941,6 +2080,14 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
                 )}
               </div>
             )}
+
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           {/* Recent Activity — always visible now (matches the sketch, where
@@ -1953,6 +2100,7 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
                   selectedTransaction={selectedTransaction}
                   openDetailsPopup={setSelectedTransaction}
                   closeDetailsPopup={() => setSelectedTransaction(null)}
+                  compact
                 />
               </div>
             ) : (
@@ -2035,123 +2183,6 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
               </div>
             )}
           </div>
-        </div>
-
-        {/* RIGHT SIDEBAR — Quick Send + Weekly Spending, always visible
-          alongside the left column regardless of which tab is active
-          (matches the sketch; Payzarc Plus banner excluded). */}
-        <div className="lg:col-span-4 flex flex-col gap-6">
-          <Card className="rounded-2xl bg-card border-none shadow-none animate-flow-fade-in">
-            <CardContent className="p-6 flex flex-col gap-5">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-bold m-0">Quick Send</h2>
-                <button
-                  className="bg-transparent border-none text-gold font-medium text-[11px] cursor-pointer transition-colors hover:text-gold-dark"
-                  onClick={() => switchSection("groups")}
-                >
-                  See all
-                </button>
-              </div>
-
-              {favourites.length === 0 ? (
-                <p className="text-[0.85rem] text-muted-foreground">
-                  No saved recipients yet — add one from Send Money.
-                </p>
-              ) : (
-                <>
-                  <div className="grid grid-cols-4 gap-3">
-                    {favourites.slice(0, 3).map((fav, idx) => {
-                      const name =
-                        fav.name ||
-                        fav.full_name ||
-                        fav.phone ||
-                        fav.value ||
-                        "?";
-                      return (
-                        <button
-                          key={fav.id || idx}
-                          type="button"
-                          onClick={() => {
-                            switchSection("send");
-                            handleSelectRecipient(fav);
-                          }}
-                          className="flex flex-col items-center gap-2 p-2.5 rounded-xl text-center bg-white/[0.03] border border-white/[0.06] shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.05)_inset] transition-all duration-200 hover:-translate-y-0.5 hover:border-gold/30 hover:shadow-[0_8px_18px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.05)_inset] active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.2)_inset]"
-                        >
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm shadow-[0_1px_0_rgba(255,255,255,0.15)_inset]">
-                            {name.slice(0, 1).toUpperCase()}
-                          </div>
-                          <span className="text-[11px] text-muted-foreground font-medium truncate w-full">
-                            {name.split(" ")[0]}
-                          </span>
-                        </button>
-                      );
-                    })}
-                    <button
-                      type="button"
-                      onClick={() => switchSection("send")}
-                      className="flex flex-col items-center gap-2 p-2.5 rounded-xl text-center bg-white/[0.03] border border-white/[0.06] shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.05)_inset] transition-all duration-200 hover:-translate-y-0.5 hover:border-gold/30 hover:shadow-[0_8px_18px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.05)_inset] active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.2)_inset]"
-                    >
-                      <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center shadow-[0_1px_0_rgba(255,255,255,0.1)_inset] transition-colors hover:bg-white/[0.07]">
-                        <PlusCircle
-                          size={18}
-                          className="text-muted-foreground"
-                        />
-                      </div>
-                      <span className="text-[11px] text-muted-foreground font-medium truncate w-full">
-                        Add
-                      </span>
-                    </button>
-                  </div>
-
-                  {favourites.length > 0 && (
-                    <div className="pt-4 border-t border-white/[0.04] flex flex-col gap-1">
-                      {favourites.slice(0, 3).map((fav, idx) => {
-                        const name =
-                          fav.name ||
-                          fav.full_name ||
-                          fav.phone ||
-                          fav.value ||
-                          "?";
-                        const sub = fav.phone || fav.email || "";
-                        return (
-                          <button
-                            key={fav.id || idx}
-                            type="button"
-                            onClick={() => {
-                              switchSection("send");
-                              handleSelectRecipient(fav);
-                            }}
-                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.05)_inset] transition-all duration-200 hover:-translate-y-0.5 hover:border-gold/30 hover:shadow-[0_8px_18px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.05)_inset] active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.2)_inset] group"
-                          >
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-xs shrink-0 shadow-[0_1px_0_rgba(255,255,255,0.15)_inset]">
-                              {name.slice(0, 1).toUpperCase()}
-                            </div>
-                            <div className="flex-1 text-left min-w-0">
-                              <p className="text-xs font-semibold text-foreground truncate m-0">
-                                {name}
-                              </p>
-                              {sub && (
-                                <p className="text-[11px] text-muted-foreground truncate m-0">
-                                  {sub}
-                                </p>
-                              )}
-                            </div>
-                            <div className="w-7 h-7 rounded-lg bg-white/[0.04] flex items-center justify-center transition-colors group-hover:bg-gold/10 shrink-0">
-                              <Send
-                                size={14}
-                                className="text-muted-foreground transition-colors group-hover:text-gold"
-                              />
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
       </div>
 
       {/* Floating market ticker — sits to the right, follows scroll, and
@@ -2162,7 +2193,7 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
       {activeSection === "dashboard" && tickerMessages.length > 0 && (
         <button
           type="button"
-          className="fixed right-8 z-50 max-w-[260px] bg-card/90 [backdrop-filter:blur(14px)_saturate(1.3)] [-webkit-backdrop-filter:blur(14px)_saturate(1.3)] border border-[var(--gold-border)] text-gold text-[0.8rem] font-semibold leading-[1.4] text-left px-[1.1rem] py-[0.7rem] rounded-2xl shadow-lg shadow-black/20 cursor-pointer transition-[transform,bottom] duration-150 hover:-translate-y-0.5 max-[768px]:right-4 max-[768px]:max-w-[190px] max-[768px]:text-[0.72rem] max-[768px]:px-[0.9rem] max-[768px]:py-[0.6rem] max-[768px]:bg-card/75 max-[768px]:[backdrop-filter:blur(28px)_saturate(1.6)] max-[768px]:[-webkit-backdrop-filter:blur(28px)_saturate(1.6)] max-[768px]:[--mobile-nav-clearance:calc(70px+env(safe-area-inset-bottom)+12px)]"
+          className="fixed right-8 z-50 max-w-[260px] bg-card/90 [backdrop-filter:blur(14px)_saturate(1.3)] [-webkit-backdrop-filter:blur(14px)_saturate(1.3)] border border-[var(--gold-border)] text-gold text-[0.8rem] font-semibold leading-[1.4] text-left px-[1.1rem] py-[0.7rem] rounded-2xl cursor-pointer transition-[transform,bottom] duration-150 hover:-translate-y-0.5 max-[768px]:right-4 max-[768px]:max-w-[190px] max-[768px]:text-[0.72rem] max-[768px]:px-[0.9rem] max-[768px]:py-[0.6rem] max-[768px]:bg-card/75 max-[768px]:[backdrop-filter:blur(28px)_saturate(1.6)] max-[768px]:[-webkit-backdrop-filter:blur(28px)_saturate(1.6)] max-[768px]:[--mobile-nav-clearance:calc(70px+env(safe-area-inset-bottom)+12px)]"
           style={{
             bottom: `calc(${tickerBottom}px + var(--mobile-nav-clearance, 0px))`,
           }}

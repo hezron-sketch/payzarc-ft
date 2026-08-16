@@ -42,69 +42,34 @@ const FUND_TYPES = [
 ];
 const fundTypeFor = (key) => FUND_TYPES.find((t) => t.key === key) || FUND_TYPES[0];
 
-// Same embossed-row/gold-CTA recipe this file already used for the static
-// fund-type buttons, reused now for the real group cards.
+// Flat row/gold-CTA recipe this file already used for the static fund-type
+// buttons, reused now for the real group cards.
 const cardClass =
-  "w-full flex flex-col gap-3 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06] shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.05)_inset]";
+  "w-full flex flex-col gap-3 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06]";
 const createGroupBtnClass =
-  "w-full flex items-center justify-center gap-2 rounded-full py-3 px-4 text-[0.9rem] font-bold cursor-pointer text-black bg-gradient-to-b from-gold to-gold-dark transition-all duration-200 shadow-[0_8px_18px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.5)_inset,0_-2px_3px_rgba(0,0,0,0.15)_inset] hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,0,0,0.35),0_1px_0_rgba(255,255,255,0.5)_inset,0_-2px_3px_rgba(0,0,0,0.15)_inset] active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.2),0_-1px_2px_rgba(0,0,0,0.2)_inset]";
+  "w-full flex items-center justify-center gap-2 rounded-full py-3 px-4 text-[0.9rem] font-bold cursor-pointer text-black bg-gradient-to-b from-gold to-gold-dark transition-colors duration-200 hover:brightness-110";
 const smallPillBtnClass =
-  "flex-1 flex items-center justify-center gap-1.5 rounded-full py-2 px-3 text-[0.78rem] font-semibold cursor-pointer transition-all duration-200 active:scale-[0.97]";
+  "flex-1 flex items-center justify-center gap-1.5 rounded-full py-2 px-3 text-[0.78rem] font-semibold cursor-pointer whitespace-nowrap transition-colors duration-200 active:scale-[0.97]";
 const contributeBtnClass = cn(
   smallPillBtnClass,
-  "text-black bg-gradient-to-b from-gold to-gold-dark shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.4)_inset]",
+  "text-black bg-gradient-to-b from-gold to-gold-dark",
 );
-const addFriendBtnClass = cn(
-  smallPillBtnClass,
-  "text-foreground bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.07] hover:border-gold/20",
-);
-const withdrawBtnClass = cn(
-  smallPillBtnClass,
-  "text-foreground bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.07] hover:border-gold/20",
-);
+// Add friend/Move to wallet are secondary actions next to Contribute — at
+// the card's actual width their labels wrapped to two lines as flex-1
+// pills (that's what read as "chunky"), so they're icon-only fixed-size
+// circles instead, same recipe as the mobile bottom nav's own icon
+// buttons. aria-label/title carry the label text screen readers/hover
+// still need.
+const iconOnlyBtnClass =
+  "shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-foreground bg-white/[0.04] border border-white/[0.08] cursor-pointer transition-colors duration-200 hover:bg-white/[0.07] hover:border-gold/20 active:scale-[0.97]";
 const formLabelClass =
   "flex items-center justify-between text-[11px] font-medium text-muted-foreground uppercase tracking-wider -mb-[0.4rem]";
 const formInputClass =
   "w-full h-auto bg-white/[0.03] border-white/[0.06] rounded-xl px-4 py-3.5 text-foreground text-base placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-gold/[0.08] focus-visible:border-gold/30 focus-visible:bg-white/[0.07] shadow-none transition-colors duration-200";
 const primaryBtnClass =
-  "w-full h-auto rounded-xl px-5 py-3.5 text-base font-bold text-black transition-all duration-200 hover:bg-primary active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 mt-1 shadow-lg shadow-gold/10 hover:shadow-gold/20";
+  "w-full h-auto rounded-xl px-5 py-3.5 text-base font-bold text-black transition-colors duration-200 hover:bg-primary active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 mt-1";
 const ghostLinkBtnClass =
   "self-start bg-transparent border-none text-gold text-[0.8rem] font-semibold cursor-pointer p-0 transition-opacity hover:opacity-75";
-
-function MemberAvatars({ members, expanded, onToggle }) {
-  if (!members.length) return null;
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="flex items-center gap-1.5 cursor-pointer group"
-    >
-      <div className="flex items-center -space-x-2">
-        {members.slice(0, 4).map((m) => (
-          <div
-            key={m.id}
-            title={m.display_name}
-            className="w-6 h-6 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border-2 border-[var(--card2)] text-[0.65rem]"
-          >
-            {(m.display_name || "?").slice(0, 1).toUpperCase()}
-          </div>
-        ))}
-        {members.length > 4 && (
-          <div className="w-6 h-6 rounded-full bg-white/[0.08] text-muted-foreground font-bold flex items-center justify-center border-2 border-[var(--card2)] text-[0.6rem]">
-            +{members.length - 4}
-          </div>
-        )}
-      </div>
-      <ChevronDown
-        size={14}
-        className={cn(
-          "text-muted-foreground transition-transform duration-200 group-hover:text-foreground",
-          expanded && "rotate-180",
-        )}
-      />
-    </button>
-  );
-}
 
 function GroupCard({ group, friends, onContribute, onAddMember, onWithdraw }) {
   const fundType = fundTypeFor(group.type);
@@ -166,62 +131,73 @@ function GroupCard({ group, friends, onContribute, onAddMember, onWithdraw }) {
 
   return (
     <div className={cardClass}>
-      <div className="flex items-center gap-3">
-        <div
-          className={cn(
-            "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-            fundType.iconBg,
-            fundType.iconColor,
-          )}
-        >
-          <Icon size={18} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground truncate m-0">
-            {group.name}
-          </p>
-          <p className="text-xs text-muted-foreground m-0">{fundType.label}</p>
-        </div>
-        <div className="text-right shrink-0">
-          <p className="text-base font-bold text-gold m-0">
+      {/* Collapsed row — just name, member count, and amount. Everything
+      else (icon/category, member list, contribute/add-friend/withdraw)
+      only shows once expanded, instead of always being on screen. */}
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center justify-between gap-3 text-left cursor-pointer"
+      >
+        <p className="flex-1 min-w-0 text-sm font-semibold text-foreground truncate m-0">
+          {group.name}
+        </p>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <span className="text-[0.7rem] text-muted-foreground whitespace-nowrap">
+            {group.members.length} member{group.members.length === 1 ? "" : "s"}
+          </span>
+          <span className="text-base font-bold text-gold whitespace-nowrap">
             {group.currency} {group.balance.toLocaleString()}
-          </p>
+          </span>
+          <ChevronDown
+            size={16}
+            className={cn(
+              "text-muted-foreground transition-transform duration-200 shrink-0",
+              expanded && "rotate-180",
+            )}
+          />
         </div>
-      </div>
-
-      <div className="flex items-center justify-between gap-3">
-        <MemberAvatars
-          members={group.members}
-          expanded={expanded}
-          onToggle={() => setExpanded((v) => !v)}
-        />
-        <span className="text-[0.7rem] text-muted-foreground">
-          {group.members.length} member{group.members.length === 1 ? "" : "s"}
-        </span>
-      </div>
+      </button>
 
       {expanded && (
-        <div className="flex flex-col gap-1.5 animate-flow-fade-in">
-          {group.members.map((m) => (
+        <div className="flex flex-col gap-3 animate-flow-fade-in">
+          <div className="flex items-center gap-2">
             <div
-              key={m.id}
-              className="flex items-center gap-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2 transition-colors hover:bg-white/[0.05] hover:border-gold/20"
+              className={cn(
+                "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                fundType.iconBg,
+                fundType.iconColor,
+              )}
             >
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center text-[0.65rem] shrink-0">
-                {(m.display_name || "?").slice(0, 1).toUpperCase()}
-              </div>
-              <span className="flex-1 min-w-0 text-sm text-foreground truncate">
-                {m.display_name}
-              </span>
-              <span className="text-sm font-semibold text-gold shrink-0">
-                {group.currency} {(m.contributed || 0).toLocaleString()}
-              </span>
+              <Icon size={16} />
             </div>
-          ))}
-        </div>
-      )}
+            <span className="text-xs text-muted-foreground">
+              {fundType.label}
+            </span>
+          </div>
 
-      {mode === "contribute" ? (
+          {group.members.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              {group.members.map((m) => (
+                <div
+                  key={m.id}
+                  className="flex items-center gap-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2 transition-colors hover:bg-white/[0.05] hover:border-gold/20"
+                >
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center text-[0.65rem] shrink-0">
+                    {(m.display_name || "?").slice(0, 1).toUpperCase()}
+                  </div>
+                  <span className="flex-1 min-w-0 text-sm text-foreground truncate">
+                    {m.display_name}
+                  </span>
+                  <span className="text-sm font-semibold text-gold shrink-0">
+                    {group.currency} {(m.contributed || 0).toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {mode === "contribute" ? (
         <div className="flex flex-col gap-2 animate-flow-fade-in">
           <select
             value={contributorId}
@@ -318,7 +294,7 @@ function GroupCard({ group, friends, onContribute, onAddMember, onWithdraw }) {
           )}
         </div>
       ) : (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex items-center gap-2">
           {group.members.length > 0 && (
             <button
               type="button"
@@ -333,20 +309,26 @@ function GroupCard({ group, friends, onContribute, onAddMember, onWithdraw }) {
           )}
           <button
             type="button"
-            className={addFriendBtnClass}
+            className={iconOnlyBtnClass}
             onClick={() => setMode("add-member")}
+            aria-label="Add friend"
+            title="Add friend"
           >
-            <UserPlus size={14} /> Add friend
+            <UserPlus size={16} />
           </button>
           {group.balance > 0 && (
             <button
               type="button"
-              className={withdrawBtnClass}
+              className={iconOnlyBtnClass}
               onClick={() => setMode("withdraw")}
+              aria-label="Move to wallet"
+              title="Move to wallet"
             >
-              <ArrowRightLeft size={14} /> Move to wallet
+              <ArrowRightLeft size={16} />
             </button>
           )}
+        </div>
+      )}
         </div>
       )}
     </div>

@@ -32,6 +32,18 @@ import {
 } from "lucide-react";
 import { EXCHANGE_RATES } from "./utility/exchangeRates";
 import { PRO_PLAN_PRICE } from "./utility/constants";
+import {
+  PhoneMockup,
+  psHeaderClass,
+  psLogoClass,
+  psDotsClass,
+  psDotClass,
+  psGreetingClass,
+  psNameClass,
+  psBalanceCardClass,
+  psBalLabelClass,
+  psBalAmountClass,
+} from "./components/PhoneMockup";
 
 const COUNTRIES = {
   "United States": "USD",
@@ -52,27 +64,18 @@ const COUNTRIES = {
 };
 
 const QUICK_DESTINATIONS = [
-  { flag: "🇰🇪", name: "Kenya", currency: "KES", country: "Kenya" },
-  { flag: "🇳🇬", name: "Nigeria", currency: "NGN", country: "Nigeria" },
-  { flag: "🇮🇳", name: "India", currency: "INR", country: "India" },
-  { flag: "🇬🇭", name: "Ghana", currency: "GHS", country: "Ghana" },
+  { flag: "🇰🇪", name: "Kenya", currency: "KES", country: "Kenya", symbol: "KSh " },
+  { flag: "🇳🇬", name: "Nigeria", currency: "NGN", country: "Nigeria", symbol: "₦" },
+  { flag: "🇮🇳", name: "India", currency: "INR", country: "India", symbol: "₹" },
+  { flag: "🇬🇭", name: "Ghana", currency: "GHS", country: "Ghana", symbol: "GH₵" },
 ];
 
-/* ─── Shared class strings for the "phone preview" snapshot markup, which
-   is duplicated verbatim between PhoneMockup and PhoneAuthStage's
-   phoneStagePreview clone (same as it was as duplicated CSS-Module classes
-   before this migration) — extracted here just so both copies pull from a
-   single source instead of two independently-drifting class strings. ─── */
-const psHeaderClass = "flex items-center justify-between mb-0.5";
-const psLogoClass = "w-[18px] h-[18px] bg-gold rounded-[5px]";
-const psDotsClass = "flex gap-[3px]";
-const psDotClass = "w-[5px] h-[5px] rounded-full bg-white/20";
-const psGreetingClass = "text-[9px] text-muted-foreground";
-const psNameClass = "text-[11px] font-bold text-foreground -mt-1";
-const psBalanceCardClass =
-  "bg-gradient-to-br from-[#234876] to-[#1a2f4d] rounded-sm py-[7px] px-2 border-[0.5px] border-[rgba(96,165,250,0.25)] shadow-[0_6px_16px_rgba(0,0,0,0.25)]";
-const psBalLabelClass = "text-[8px] text-info";
-const psBalAmountClass = "text-[15px] font-bold text-foreground mt-px";
+// Picks a random hero destination that isn't the one currently shown on the
+// other floating card, so the two never quote the same currency at once.
+function pickHeroDestination(excludeCurrency) {
+  const pool = QUICK_DESTINATIONS.filter((d) => d.currency !== excludeCurrency);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
 
 /* ─── Phone Auth Stage shell (backdrop/panel/notch/screen/preview/content) —
    formerly a small CSS-Modules leftover (App.module.css), now expressed as
@@ -111,15 +114,6 @@ const phoneStagePanelOpenClass =
   // transform is already in the transition list, so the panel rises toward
   // the viewer as it expands, and sinks back down as it shrinks on close.
   "top-1/2 left-1/2 [transform:translate(-50%,-50%)_translateZ(48px)] w-[min(420px,92vw)] h-[min(760px,88vh)] rounded-[36px] bg-[radial-gradient(circle_at_30%_0%,#263252,#1c2333_60%)] border-[0.5px] border-[rgba(var(--gold-rgb),0.16)] max-[480px]:w-[94vw] max-[480px]:h-[90vh] max-[480px]:rounded-[28px]";
-// Same "phone" shell/morph as phoneStagePanelOpenClass, just sized to
-// actually contain a full page's worth of content (Features/Rates/Help/
-// Contact) instead of a login form — a fixed-but-generous target size
-// rather than true CSS height:auto, since the FLIP grow/shrink transition
-// above can only animate between two known sizes (auto isn't animatable).
-// overflow-y-auto on phoneStageScreenClass is still the safety net for
-// whatever doesn't fit even at this size.
-const phoneStagePanelOpenWideClass =
-  "top-1/2 left-1/2 [transform:translate(-50%,-50%)_translateZ(48px)] w-[min(760px,94vw)] h-[min(900px,90vh)] rounded-[28px] bg-[radial-gradient(circle_at_30%_0%,#263252,#1c2333_60%)] border-[0.5px] border-[rgba(var(--gold-rgb),0.16)] max-[480px]:w-[96vw] max-[480px]:h-[92vh] max-[480px]:rounded-[22px]";
 const phoneStageNotchClass =
   "w-[42px] h-2 bg-[#0d1117] rounded mx-auto mt-[14px] flex-shrink-0 transition-opacity duration-200 ease-in-out";
 const phoneStageScreenClass =
@@ -136,10 +130,20 @@ const phoneStageContentClass =
 const phoneStageContentShowClass = "opacity-100 translate-y-0 delay-100";
 
 /* ─── Navbar ─── */
+const NAV_LINKS = [
+  { label: "Home", to: "/" },
+  { label: "Features", to: "/features" },
+  { label: "Rates", to: "/rates" },
+  { label: "Help", to: "/help" },
+  { label: "Contact", to: "/contact" },
+];
+
 function Navbar() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+
   return (
-    <nav className="border-b-[0.5px] border-border sticky top-0 bg-[rgba(13,17,23,0.85)] backdrop-blur-[12px] z-[100]">
+    <nav className="border-b-[0.5px] border-border sticky top-0 bg-[rgba(13,17,23,0.85)] z-[100]">
       <div className="relative flex items-center justify-between max-w-[1120px] mx-auto px-8 py-4 max-[768px]:px-5">
         <div className="flex items-center gap-9">
           <div className="flex items-center gap-2">
@@ -156,42 +160,25 @@ function Navbar() {
         {/* Absolutely positioned instead of a grid/flex sibling — same fix
         as Dashboard.js's topbar — so it never fights the logo/login button
         for space; it's just hidden below md anyway. */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-6 max-[768px]:hidden">
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="bg-transparent border-0 p-0 text-[13px] text-[var(--muted)] no-underline transition-colors duration-200 hover:text-foreground cursor-pointer"
-          >
-            Home
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/features")}
-            className="bg-transparent border-0 p-0 text-[13px] text-[var(--muted)] no-underline transition-colors duration-200 hover:text-foreground cursor-pointer"
-          >
-            Features
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/rates")}
-            className="bg-transparent border-0 p-0 text-[13px] text-[var(--muted)] no-underline transition-colors duration-200 hover:text-foreground cursor-pointer"
-          >
-            Rates
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/help")}
-            className="bg-transparent border-0 p-0 text-[13px] text-[var(--muted)] no-underline transition-colors duration-200 hover:text-foreground cursor-pointer"
-          >
-            Help
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/contact")}
-            className="bg-transparent border-0 p-0 text-[13px] text-[var(--muted)] no-underline transition-colors duration-200 hover:text-foreground cursor-pointer"
-          >
-            Contact
-          </button>
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-1 max-[768px]:hidden">
+          {NAV_LINKS.map((l) => {
+            const active = pathname === l.to;
+            return (
+              <button
+                key={l.label}
+                type="button"
+                onClick={() => navigate(l.to)}
+                className={cn(
+                  "bg-transparent border-0 rounded-full px-3.5 py-1.5 text-[13px] no-underline transition-colors duration-200 cursor-pointer",
+                  active
+                    ? "text-gold bg-gold/10 font-semibold"
+                    : "text-[var(--muted)] hover:text-foreground",
+                )}
+              >
+                {l.label}
+              </button>
+            );
+          })}
         </div>
         <button
           className="group inline-flex items-center gap-1.5 bg-gold text-[#111] border-none rounded-[20px] px-[1.3rem] py-[0.55rem] text-[13px] font-bold cursor-pointer shadow-[0_4px_14px_rgba(var(--gold-rgb),0.25)] transition-[background,transform,box-shadow] duration-200 hover:bg-gold-dark hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(var(--gold-rgb),0.4)]"
@@ -208,84 +195,6 @@ function Navbar() {
   );
 }
 
-/* ─── Phone Mockup ───
-   Rendered with a forwarded ref so PhoneAuthStage (below) can read its exact
-   on-screen position/size and morph a login/register panel out of it. */
-const PhoneMockup = React.forwardRef(function PhoneMockup({ hidden }, ref) {
-  return (
-    <div
-      ref={ref}
-      // translateZ (no rotation) is the 3D lift — kept rotation-free
-      // deliberately, since PhoneAuthStage measures this element's
-      // axis-aligned getBoundingClientRect() to start its grow animation;
-      // any rotateX/Y here would make that box no longer match what's
-      // visually rendered and break the seamless start of that morph.
-      className="absolute left-1/2 top-0 origin-top [transform:translate(-50%,0)_scale(1.55)_translateZ(60px)] w-[250px] bg-[#1c2333] rounded-[26px] border-[1.5px] border-[rgba(var(--gold-rgb),0.18)] pt-[10px] px-2 pb-[14px] shadow-[0_45px_90px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.04)_inset] z-[2] max-[768px]:w-[230px] max-[768px]:[transform:translate(-50%,0)_scale(1.35)_translateZ(60px)] max-[400px]:[transform:translate(-50%,0)_scale(1.15)_translateZ(60px)]"
-      style={hidden ? { visibility: "hidden" } : undefined}
-    >
-      <div className="w-[42px] h-2 bg-[#0d1117] rounded mx-auto mb-[9px]" />
-      <div className="bg-card rounded-2xl py-[10px] px-2 min-h-[240px] flex flex-col gap-[7px]">
-        <div className={psHeaderClass}>
-          <div className={psLogoClass} />
-          <div className={psDotsClass}>
-            <div className={psDotClass} />
-            <div className={psDotClass} />
-            <div className={psDotClass} />
-          </div>
-        </div>
-        <div className={psGreetingClass}>Hello,</div>
-        <div className={psNameClass}>Elaine W.</div>
-        <div className={psBalanceCardClass}>
-          <div className={psBalLabelClass}>Wallet balance</div>
-          <div className={psBalAmountClass}>$4,820.00</div>
-        </div>
-        <div className="text-[9px] text-[var(--muted)]">Send to</div>
-        <div className="flex gap-[7px]">
-          {[
-            { initials: "JM", bg: "#fde68a", color: "#78350f", name: "James" },
-            { initials: "SA", bg: "#bfdbfe", color: "#1e3a5f", name: "Sarah" },
-            { initials: "NK", bg: "#d9f99d", color: "#365314", name: "Nora" },
-            { initials: "+", bg: "#fecdd3", color: "#881337", name: "More" },
-          ].map((r) => (
-            <div key={r.name} className="flex flex-col items-center gap-[3px]">
-              <div
-                className="w-[23px] h-[23px] rounded-full flex items-center justify-center text-[8px] font-bold"
-                style={{ background: r.bg, color: r.color }}
-              >
-                {r.initials}
-              </div>
-              <div className="text-[7px] text-[var(--muted)]">{r.name}</div>
-            </div>
-          ))}
-        </div>
-        <div className="text-[9px] text-[var(--muted)] mt-0.5">
-          Recent activity
-        </div>
-        <div className="flex flex-col gap-1">
-          {[
-            { flag: "🇳🇬", name: "Nigeria", amt: "+NGN 90K" },
-            { flag: "🇮🇳", name: "India", amt: "+INR 41K" },
-            { flag: "🇰🇪", name: "Kenya", amt: "+KES 25K" },
-          ].map((t) => (
-            <div
-              key={t.name}
-              className="flex items-center gap-1 bg-white/[0.04] rounded-[5px] px-[5px] py-1"
-            >
-              <span className="text-[10px] flex-shrink-0">{t.flag}</span>
-              <span className="text-[8px] text-[#d1d5db] flex-1">
-                {t.name}
-              </span>
-              <span className="text-[8px] font-bold text-success">
-                {t.amt}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-});
-
 /* ─── Phone Auth Stage ───
    This is the "morph" — instead of a modal, the same phone mockup shown in
    the hero literally grows into the login/register screen. We measure the
@@ -300,7 +209,7 @@ const PhoneMockup = React.forwardRef(function PhoneMockup({ hidden }, ref) {
    phoneStage*Class Tailwind strings defined above PhoneMockup — see the
    comment there for why the panel's transition is one arbitrary property
    instead of Tailwind's transition-/duration- utility classes. */
-function PhoneAuthStage({ overlay, onClose }) {
+function PhoneAuthStage({ overlay, onClose, mockupRef }) {
   const anchorRef = useRef(null);
   const closeTimerRef = useRef(null);
   const [rect, setRect] = useState(null);
@@ -348,7 +257,6 @@ function PhoneAuthStage({ overlay, onClose }) {
   }, [phase]);
   const isActive = phase !== "closed";
   const isExpanded = phase === "open";
-  const isPage = ["features", "rates", "help", "contact"].includes(overlay);
 
   useEffect(() => {
     if (!isActive) return undefined;
@@ -386,7 +294,13 @@ function PhoneAuthStage({ overlay, onClose }) {
 
   return (
     <>
-      <PhoneMockup ref={anchorRef} hidden={isActive} />
+      <PhoneMockup
+        ref={(node) => {
+          anchorRef.current = node;
+          if (mockupRef) mockupRef.current = node;
+        }}
+        hidden={isActive}
+      />
 
       {isActive &&
         createPortal(
@@ -403,12 +317,7 @@ function PhoneAuthStage({ overlay, onClose }) {
               className={cn(
                 phoneStagePanelClass,
                 isExpanded
-                  ? cn(
-                      isPage
-                        ? phoneStagePanelOpenWideClass
-                        : phoneStagePanelOpenClass,
-                      phoneStagePanelShadowOpenClass,
-                    )
+                  ? cn(phoneStagePanelOpenClass, phoneStagePanelShadowOpenClass)
                   : phoneStagePanelShadowClosedClass,
               )}
               style={panelStyle}
@@ -443,9 +352,23 @@ function PhoneAuthStage({ overlay, onClose }) {
                 </svg>
               </button>
 
-              <div className={cn(phoneStageNotchClass, isExpanded && "opacity-0")} />
+              <div
+                className={cn(
+                  phoneStageNotchClass,
+                  isExpanded && "opacity-0 h-0 mt-0",
+                )}
+              />
 
-              <div className={phoneStageScreenClass}>
+              <div
+                className={cn(
+                  phoneStageScreenClass,
+                  // Bezel shrinks to nothing once expanded — margins to 0 and
+                  // corners squared off so the panel's own overflow-hidden +
+                  // border-radius does the corner clipping instead, giving an
+                  // edge-to-edge screen rather than a small-phone frame.
+                  isExpanded && "mx-0 mt-0 mb-0 rounded-none",
+                )}
+              >
                 <div
                   className={cn(
                     phoneStagePreviewClass,
@@ -489,10 +412,6 @@ function PhoneAuthStage({ overlay, onClose }) {
                     {overlay === "register" && (
                       <Register onBack={onClose} embedded compact />
                     )}
-                    {overlay === "features" && <FeaturesContent />}
-                    {overlay === "rates" && <RatesContent />}
-                    {overlay === "help" && <HelpContent />}
-                    {overlay === "contact" && <ContactContent />}
                   </div>
                 </div>
               </div>
@@ -533,12 +452,74 @@ function FloatCard({ side, iconBg, icon, label, value, sub }) {
 }
 
 /* ─── Hero Section ─── */
+const HERO_SEND_AMOUNT = 2000;
+
 function Hero({ overlay, onCloseAuth }) {
   const navigate = useNavigate();
+  const mockupNodeRef = useRef(null);
+
+  // The "buried under the footer" effect needs the preview box to be
+  // shorter than the phone mockup's actual rendered height, and Footer
+  // (a sibling under Home, not a child here) needs to be told how tall a
+  // buffer to add so the buried slice stays inside its own painted
+  // background instead of spilling out past it. A static px guess for that
+  // height broke on real content (fonts/line-heights render taller than
+  // estimated), so this measures the mockup directly and republishes it as
+  // CSS vars on the root — read by both the box below (--phone-box-h) and
+  // Footer's top buffer (--phone-footer-buffer) — instead of guessing again.
+  useLayoutEffect(() => {
+    const el = mockupNodeRef.current;
+    if (!el) return undefined;
+    const update = () => {
+      const h = el.getBoundingClientRect().height;
+      if (!h) return;
+      const overlap = Math.round(h * 0.32);
+      const root = document.documentElement.style;
+      root.setProperty("--phone-box-h", `${Math.round(h - overlap)}px`);
+      root.setProperty("--phone-footer-buffer", `${overlap}px`);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  // Live-looking rates on the two floating cards: each swaps to a random
+  // destination currency every 10s, staggered 5s apart (one tick alternates
+  // which side updates) so they never change in lockstep or show the same
+  // currency at the same time.
+  const [sendDest, setSendDest] = useState(QUICK_DESTINATIONS[0]);
+  const [receiveDest, setReceiveDest] = useState(QUICK_DESTINATIONS[2]);
+  const sendDestRef = useRef(sendDest);
+  const receiveDestRef = useRef(receiveDest);
+  sendDestRef.current = sendDest;
+  receiveDestRef.current = receiveDest;
+
+  useEffect(() => {
+    let tick = 0;
+    const id = setInterval(() => {
+      tick += 1;
+      if (tick % 2 === 1) {
+        setReceiveDest(pickHeroDestination(sendDestRef.current.currency));
+      } else {
+        setSendDest(pickHeroDestination(receiveDestRef.current.currency));
+      }
+    }, 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  const sendRate = EXCHANGE_RATES.USD[sendDest.currency];
+  const receiveRate = EXCHANGE_RATES.USD[receiveDest.currency];
+  const receiveAmount = Math.round(HERO_SEND_AMOUNT * receiveRate);
+
   return (
     <section className="relative flex flex-col items-center text-center min-h-screen pt-16 px-8 pb-12">
-      <div className="fixed rounded-full border border-[rgba(var(--gold-rgb),0.07)] pointer-events-none w-[600px] h-[600px] -top-[160px] left-1/2 -translate-x-1/2" />
-      <div className="fixed rounded-full border border-[rgba(var(--gold-rgb),0.07)] pointer-events-none w-[380px] h-[380px] -top-[60px] left-1/2 -translate-x-1/2" />
+      {/* The two larger rings moved to Home, shared across every panel
+          instead of Hero-only — see the comment there. */}
       <div className="absolute rounded-full border border-[rgba(var(--gold-rgb),0.07)] pointer-events-none" />
 
       {/* <div className="inline-flex items-center gap-2 bg-white/5 border-[0.5px] border-input rounded-[20px] py-1.5 px-4 text-xs text-[var(--soft)] mb-6">
@@ -560,8 +541,9 @@ function Hero({ overlay, onCloseAuth }) {
       </h1>
 
       <p className="text-[1.3rem] text-[var(--muted)] max-w-[400px] leading-[1.7] mb-8 max-[768px]:text-sm">
-        Payzarc offers industry-leading exchange rates with no hidden fees. Save
-        more for every transaction you make.
+        Payzarc offers industry-leading exchange rates with no hidden fees on
+        local and international transfers. Save more for every transaction
+        you make.
       </p>
 
       <div className="flex gap-3 mb-14 max-[480px]:flex-col max-[480px]:items-stretch">
@@ -574,7 +556,23 @@ function Hero({ overlay, onCloseAuth }) {
         {/* <button className="bg-white/5 text-[#d1d5db] border-[0.5px] border-input rounded-[24px] py-3 px-7 text-sm font-medium cursor-pointer transition-colors duration-200 hover:bg-white/[0.09] max-[480px]:text-center">See how it works</button> */}
       </div>
 
-      <div className="relative w-full max-w-[680px] h-[min(75vh,540px)] flex items-start justify-center [perspective:1400px] max-[768px]:h-[220px]">
+      {/* Lives above the phone/cards group rather than below it — the box
+          below is deliberately shorter than the mockup so the phone
+          overflows into Footer, which leaves no clear space under the phone
+          for this pill anymore. */}
+      <div className="relative z-[3] mb-4 inline-flex items-center gap-1.5 bg-success/[0.08] border-[0.5px] border-success/25 rounded-[20px] py-[5px] px-3 text-[11px] text-success whitespace-nowrap">
+        <div className="w-1.5 h-1.5 rounded-full bg-success flex-shrink-0" />
+        Live rate · updated 2s ago
+      </div>
+
+      {/* Box is intentionally shorter than PhoneMockup's own rendered height
+          so the mockup overflows past it — and past Hero's bottom edge
+          straight into Footer, which paints over the buried bottom slice
+          (see Footer's comment). --phone-box-h is set by the measurement
+          effect above (~68% of the mockup's real height, same ratio at any
+          breakpoint since it's re-measured on resize), with this 260px
+          only as the first-paint fallback before that effect runs. */}
+      <div className="relative w-full max-w-[680px] h-[var(--phone-box-h,260px)] flex items-start justify-center [perspective:1400px]">
         <FloatCard
           side="left"
           iconBg="rgba(59,130,246,0.15)"
@@ -587,39 +585,24 @@ function Hero({ overlay, onCloseAuth }) {
             </svg>
           }
           label="You send"
-          value="$2,000"
-          sub="USD · 1 = KES 129.5"
+          value={`$${HERO_SEND_AMOUNT.toLocaleString()}`}
+          sub={`USD · 1 = ${sendDest.currency} ${sendRate}`}
         />
 
-        <PhoneAuthStage overlay={overlay} onClose={onCloseAuth} />
+        <PhoneAuthStage
+          overlay={overlay}
+          onClose={onCloseAuth}
+          mockupRef={mockupNodeRef}
+        />
 
         <FloatCard
           side="right"
           iconBg="rgba(74,222,128,0.1)"
-          icon={
-            <svg width="20" height="14" viewBox="0 0 32 22" fill="none">
-              <rect width="32" height="22" rx="2" fill="#FF9933" />
-              <rect y="7" width="32" height="8" fill="white" />
-              <rect y="15" width="32" height="7" fill="#138808" />
-              <circle
-                cx="16"
-                cy="11"
-                r="3"
-                fill="none"
-                stroke="#000080"
-                strokeWidth="1"
-              />
-            </svg>
-          }
+          icon={<span className="text-lg leading-none">{receiveDest.flag}</span>}
           label="They receive"
-          value="₹1,66,600"
-          sub="INR · fees: ₹0.00"
+          value={`${receiveDest.symbol}${receiveAmount.toLocaleString()}`}
+          sub={`${receiveDest.currency} · fees: ${receiveDest.symbol}0.00`}
         />
-
-        <div className="absolute bottom-[10px] left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 bg-success/[0.08] border-[0.5px] border-success/25 rounded-[20px] py-[5px] px-3 text-[11px] text-success whitespace-nowrap">
-          <div className="w-1.5 h-1.5 rounded-full bg-success flex-shrink-0" />
-          Live rate · updated 2s ago
-        </div>
       </div>
     </section>
   );
@@ -669,7 +652,7 @@ function FeaturesStrip() {
       {FEATURES.map((f) => (
         <div
           key={f.title}
-          className="bg-white/[0.03] border-[0.5px] border-border rounded-[14px] p-5 flex flex-col gap-1.5 transition-[border-color,background] duration-200 hover:bg-white/[0.055] hover:border-input"
+          className="bg-white/[0.03] backdrop-blur-[8px] border-[0.5px] border-border rounded-[14px] p-5 flex flex-col gap-1.5 transition-[border-color,background] duration-200 hover:bg-white/[0.055] hover:border-input"
         >
           <div
             className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center mb-1.5"
@@ -771,7 +754,7 @@ function Converter() {
         Real-time rates, zero surprises.
       </p>
 
-      <div className="bg-white/[0.03] border-[0.5px] border-border rounded-[20px] p-6 flex flex-col gap-4">
+      <div className="bg-white/[0.03] backdrop-blur-[8px] border-[0.5px] border-border rounded-[20px] p-6 flex flex-col gap-4">
         <span className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-[0.6px]">
           Exchange calculator
         </span>
@@ -861,40 +844,106 @@ function Converter() {
   );
 }
 
-/* ─── Footer — kept visually consistent with Dashboard.js's Footer: same
-   stacked/centered mobile layout, logo+tagline as a plain row that stacks
-   vertically on mobile, contact block centered underneath. Also `relative
-   z-10` with a solid background: on mobile the hero's phone mockup is
+/* ─── Footer ───
+   `relative z-10` with a solid background: the hero's phone mockup is
    deliberately allowed to overflow down past the hero section (see Hero's
-   preview box height below) so it's "buried" halfway under the footer —
-   that only reads correctly if the footer paints on top of it and isn't
-   see-through. */
+   preview box) so it's "buried" under the footer — that only reads
+   correctly if the footer paints on top of it and isn't see-through, and
+   is tall enough to actually contain the buried slice instead of it
+   sticking out past Footer's own bottom edge. min-h-[var(--phone-footer-buffer)]
+   (set by Hero's measurement effect to the real overflow amount) is a
+   floor, not padding: with this much real content the footer is already
+   taller than that floor in the normal case, so content still starts
+   flush at the top border; the floor only pads out empty space below the
+   content — instead of pushing it down from above — on the rare
+   viewport/content combo where the overflow is taller than the content. */
 function Footer() {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const year = new Date().getFullYear();
+  const QUICK_LINKS = [
+    { label: "Features", to: "/features" },
+    { label: "Rates", to: "/rates" },
+    { label: "Help Center", to: "/help" },
+    { label: "Contact", to: "/contact" },
+  ];
+
   return (
-    <footer className="relative z-10 bg-background border-t-[0.5px] border-border">
-      <div className="flex items-center justify-between max-w-[1120px] mx-auto px-8 py-5 flex-wrap gap-4 max-[768px]:flex-col max-[768px]:items-center max-[768px]:text-center max-[768px]:gap-5 max-[768px]:p-5">
-        <div className="flex items-center gap-2.5 max-[768px]:flex-col max-[768px]:gap-2">
-          <img
-            src="/images/payzarc.png"
-            className="h-[2.2rem] w-auto block"
-            alt="Payzarc"
-          />
-          <p className="text-xs text-[var(--muted)]">
-            Your trusted cross-border financial partner.
-          </p>
+    // flex-shrink-0: without it, a flex item's explicit min-height (the
+    // buffer below) replaces its *default* min-height, which is normally
+    // "never shrink below your own content" — on a marketing-page pane
+    // where content is taller than the viewport, that let flex-shrink
+    // compress this footer down to the (much smaller) buffer value,
+    // clipping nothing itself (overflow:visible) but leaving its content
+    // spilling past its own background box, into the page's bg behind it.
+    <footer className="relative z-10 flex-shrink-0 bg-[rgba(13,17,23,0.85)] backdrop-blur-[12px] border-t-[0.5px] border-border min-h-[var(--phone-footer-buffer,0px)]">
+      <div className="max-w-[1280px] mx-auto px-6 py-12 max-[768px]:px-5 max-[768px]:py-9">
+        <div className="grid grid-cols-[1.3fr_1fr_1fr] gap-10 max-[768px]:grid-cols-1 max-[768px]:gap-8 max-[768px]:text-center">
+          <div className="flex flex-col gap-3 max-[768px]:items-center">
+            <img
+              src="/images/payzarc.png"
+              className="h-9 w-auto self-start block max-[768px]:self-center"
+              alt="Payzarc"
+            />
+            <p className="text-[13px] text-[var(--muted)] leading-relaxed max-w-[280px] max-[768px]:max-w-none">
+              Send money abroad at industry-leading rates, with no hidden
+              fees — your trusted cross-border financial partner.
+            </p>
+            <div className="flex items-center gap-1.5 text-[11px] text-[var(--muted)] mt-1">
+              <ShieldCheck size={14} className="text-gold flex-shrink-0" />
+              Bank-grade security · 256-bit encryption
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2.5 max-[768px]:items-center">
+            <span className="text-[11px] font-semibold text-foreground uppercase tracking-[0.06em] mb-1">
+              Company
+            </span>
+            {QUICK_LINKS.map((l) => (
+              <button
+                key={l.label}
+                type="button"
+                onClick={() => navigate(l.to)}
+                className={cn(
+                  "bg-transparent border-0 p-0 text-left text-[13px] cursor-pointer transition-colors duration-200",
+                  pathname === l.to
+                    ? "text-gold font-semibold"
+                    : "text-[var(--muted)] hover:text-gold",
+                )}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-2.5 max-[768px]:items-center">
+            <span className="text-[11px] font-semibold text-foreground uppercase tracking-[0.06em] mb-1">
+              Get in touch
+            </span>
+            <a
+              href="mailto:info.e@payzarc.com"
+              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-gold no-underline"
+            >
+              <Mail size={13} className="flex-shrink-0" />
+              info.e@payzarc.com
+            </a>
+            <a
+              href="tel:+17138228593"
+              className="inline-flex items-center gap-1.5 text-[13px] text-[var(--muted)] no-underline transition-colors duration-200 hover:text-foreground"
+            >
+              <Phone size={13} className="flex-shrink-0" />
+              +1 (713) 822-8593
+            </a>
+            <div className="inline-flex items-start gap-1.5 text-[13px] text-[var(--muted)] max-[768px]:items-center">
+              <MapPin size={13} className="mt-0.5 flex-shrink-0 max-[768px]:mt-0" />
+              Kew Gardens Dr, Houston TX, USA
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col gap-[3px] text-center">
-          <a
-            href="mailto:info.e@payzarc.com"
-            className="text-xs font-semibold text-gold no-underline"
-          >
-            info.e@payzarc.com
-          </a>
+
+        <div className="mt-10 pt-5 border-t-[0.5px] border-border text-center">
           <span className="text-[11px] text-[var(--muted)]">
-            +1 (713) 822-8593
-          </span>
-          <span className="text-[11px] text-[var(--muted)]">
-            Kew Gardens Dr Houston Tx, USA
+            © {year} Payzarc. All rights reserved.
           </span>
         </div>
       </div>
@@ -903,11 +952,9 @@ function Footer() {
 }
 
 /* ─── Marketing pages (Features/Rates/Help/Contact) ───
-   Rendered inside PhoneAuthStage's phone-mockup morph (see
-   phoneStagePanelOpenWideClass) — same treatment as the Login/Register
-   forms — instead of full standalone routes, so every Navbar link (which
-   previously had no onClick at all) grows out of the hero mockup the same
-   way logging in does. */
+   Full-width panels in Home's horizontal strip (see PANEL_ORDER + MarketingPage
+   above Home) — each wrapped by MarketingPage there, not by these
+   components directly. */
 function PageHeader({ eyebrow, title, subtitle, titleClassName }) {
   return (
     <div className="max-w-[640px] mb-10">
@@ -987,44 +1034,47 @@ function FeaturesContent() {
       <PageHeader
         eyebrow="Features"
         title="Built for how money actually moves"
-        titleClassName="whitespace-nowrap text-[clamp(1.3rem,3.6vw,2.6rem)]"
         subtitle="Everything in Payzarc is designed around real transfers, real rates, and real people — not just a wallet balance on a screen."
       />
-      <div className="max-w-[720px]">
-        {FEATURES_LIST.map(({ icon: Icon, title, description, details }, i) => {
+      {/* Was a single-column accordion list, sized for the old ~380px phone
+          panel — a 3-up card grid (matching Rates' card style) actually
+          uses the page's real width instead of leaving it mostly empty.
+          Each card keeps the same expand-for-detail interaction (same
+          grid-template-rows 0fr->1fr trick), just triggered by its own
+          "Learn more" instead of the whole row being a giant button. */}
+      <div className="grid grid-cols-3 gap-5 max-[1024px]:grid-cols-2 max-[640px]:grid-cols-1">
+        {FEATURES_LIST.map(({ icon: Icon, title, description, details }) => {
           const isOpen = openTitle === title;
           return (
             <div
               key={title}
-              className={cn(
-                "border-white/[0.06]",
-                i < FEATURES_LIST.length - 1 && "border-b",
-              )}
+              className="bg-white/[0.03] backdrop-blur-[8px] border-[0.5px] border-border rounded-[20px] p-6 transition-colors duration-200 hover:border-input"
             >
+              <div className="w-11 h-11 rounded-xl bg-[var(--gold-pale)] text-gold flex items-center justify-center mb-4">
+                <Icon size={20} fill="currentColor" fillOpacity={0.25} />
+              </div>
+              <h3 className="text-[15px] font-bold text-foreground m-0 mb-1.5">
+                {title}
+              </h3>
+              <p className="text-[13.5px] text-[var(--muted)] leading-[1.6] m-0">
+                {description}
+              </p>
+
               <button
                 type="button"
                 onClick={() => setOpenTitle(isOpen ? null : title)}
-                className="w-full flex items-center gap-4 py-5 bg-transparent border-none text-left cursor-pointer"
+                className="inline-flex items-center gap-1 mt-3 bg-transparent border-0 p-0 text-[12px] font-semibold text-gold cursor-pointer"
               >
-                <div className="w-11 h-11 rounded-xl bg-[var(--gold-pale)] text-gold flex items-center justify-center shrink-0">
-                  <Icon size={20} fill="currentColor" fillOpacity={0.25} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-[15px] font-bold text-foreground m-0">
-                    {title}
-                  </h3>
-                  <p className="text-[13px] text-[var(--muted)] leading-[1.5] m-0 mt-0.5">
-                    {description}
-                  </p>
-                </div>
+                {isOpen ? "Show less" : "Learn more"}
                 <ChevronDown
-                  size={18}
+                  size={14}
                   className={cn(
-                    "text-[var(--muted)] shrink-0 transition-transform duration-200",
+                    "transition-transform duration-200",
                     isOpen && "rotate-180",
                   )}
                 />
               </button>
+
               {/* grid-template-rows 0fr->1fr instead of conditional
                   mount/unmount — animates smoothly both ways (open AND
                   close) without measuring scrollHeight in JS. */}
@@ -1033,18 +1083,16 @@ function FeaturesContent() {
                 style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}
               >
                 <div className="overflow-hidden">
-                  <div
+                  <p
                     className={cn(
-                      "pb-5 pl-[3.75rem] pr-8 -mt-1 transition-[opacity,transform] duration-300 ease-in-out",
+                      "text-[13px] text-[var(--muted)] leading-[1.6] m-0 pt-3 mt-3 border-t-[0.5px] border-white/[0.06] transition-[opacity,transform] duration-300 ease-in-out",
                       isOpen
                         ? "opacity-100 translate-y-0 delay-100"
                         : "opacity-0 -translate-y-1",
                     )}
                   >
-                    <p className="text-[13.5px] text-[var(--muted)] leading-[1.65] m-0">
-                      {details}
-                    </p>
-                  </div>
+                    {details}
+                  </p>
                 </div>
               </div>
             </div>
@@ -1064,7 +1112,7 @@ function RatesContent() {
         subtitle="One flat sending fee, live market rates, and no surprise charges buried in the exchange rate."
       />
       <div className="grid grid-cols-3 gap-5 mb-4 max-[768px]:grid-cols-1">
-        <div className="bg-white/[0.03] border-[0.5px] border-border rounded-[20px] p-6">
+        <div className="bg-white/[0.03] backdrop-blur-[8px] border-[0.5px] border-border rounded-[20px] p-6">
           <Percent size={20} className="text-gold mb-3" />
           <h3 className="text-[15px] font-bold text-foreground m-0 mb-1.5">
             Flat sending fee
@@ -1074,7 +1122,7 @@ function RatesContent() {
             send, never subtracted from the exchange rate.
           </p>
         </div>
-        <div className="bg-white/[0.03] border-[0.5px] border-border rounded-[20px] p-6">
+        <div className="bg-white/[0.03] backdrop-blur-[8px] border-[0.5px] border-border rounded-[20px] p-6">
           <Globe size={20} className="text-gold mb-3" />
           <h3 className="text-[15px] font-bold text-foreground m-0 mb-1.5">
             Live market rates
@@ -1084,7 +1132,7 @@ function RatesContent() {
             calculator below for an indicative quote.
           </p>
         </div>
-        <div className="bg-white/[0.03] border-[0.5px] border-border rounded-[20px] p-6">
+        <div className="bg-white/[0.03] backdrop-blur-[8px] border-[0.5px] border-border rounded-[20px] p-6">
           <UsersRound size={20} className="text-gold mb-3" />
           <h3 className="text-[15px] font-bold text-foreground m-0 mb-1.5">
             Payzarc Pro
@@ -1140,7 +1188,7 @@ function HelpContent() {
         {FAQS.map(({ q, a }) => (
           <div
             key={q}
-            className="bg-white/[0.03] border-[0.5px] border-border rounded-[16px] p-5"
+            className="bg-white/[0.03] backdrop-blur-[8px] border-[0.5px] border-border rounded-[16px] p-5"
           >
             <div className="flex items-center gap-2.5 mb-2">
               <HelpCircle size={16} className="text-gold shrink-0" />
@@ -1165,6 +1213,22 @@ function HelpContent() {
   );
 }
 
+const CONTACT_METHODS = [
+  {
+    icon: Mail,
+    label: "Email",
+    value: "info.e@payzarc.com",
+    href: "mailto:info.e@payzarc.com",
+  },
+  {
+    icon: Phone,
+    label: "Phone",
+    value: "+1 (713) 822-8593",
+    href: "tel:+17138228593",
+  },
+  { icon: MapPin, label: "Office", value: "Kew Gardens Dr, Houston TX, USA" },
+];
+
 function ContactContent() {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [sent, setSent] = useState(false);
@@ -1187,83 +1251,110 @@ function ContactContent() {
         title="Get in touch"
         subtitle="Questions about your account, a transfer, or anything else — reach out and we'll get back to you."
       />
-      <div className="grid grid-cols-[280px_1fr] gap-8 max-[768px]:grid-cols-1">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-start gap-3">
-            <Mail size={18} className="text-gold shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[13px] font-semibold text-foreground m-0">
-                Email
-              </p>
-              <a
-                href="mailto:info.e@payzarc.com"
-                className="text-[13px] text-[var(--muted)] no-underline hover:text-gold"
-              >
-                info.e@payzarc.com
-              </a>
+      <div className="grid grid-cols-[1fr_1.4fr] gap-6 max-[900px]:grid-cols-1">
+        <div className="flex flex-col gap-3">
+          {CONTACT_METHODS.map(({ icon: Icon, label, value, href }) => (
+            <div
+              key={label}
+              className="bg-white/[0.03] backdrop-blur-[8px] border-[0.5px] border-border rounded-[16px] p-5 flex items-start gap-3.5 transition-colors duration-200 hover:border-input"
+            >
+              <div className="w-10 h-10 rounded-xl bg-[var(--gold-pale)] text-gold flex items-center justify-center shrink-0">
+                <Icon size={17} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-[0.06em] m-0 mb-1">
+                  {label}
+                </p>
+                {href ? (
+                  <a
+                    href={href}
+                    className="text-[14px] font-semibold text-foreground no-underline hover:text-gold break-words"
+                  >
+                    {value}
+                  </a>
+                ) : (
+                  <p className="text-[14px] font-semibold text-foreground m-0">
+                    {value}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <Phone size={18} className="text-gold shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[13px] font-semibold text-foreground m-0">
-                Phone
-              </p>
-              <p className="text-[13px] text-[var(--muted)] m-0">
-                +1 (713) 822-8593
-              </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <MapPin size={18} className="text-gold shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[13px] font-semibold text-foreground m-0">
-                Office
-              </p>
-              <p className="text-[13px] text-[var(--muted)] m-0">
-                Kew Gardens Dr Houston Tx, USA
-              </p>
-            </div>
-          </div>
+          ))}
         </div>
 
-        <div className="bg-white/[0.03] border-[0.5px] border-border rounded-[20px] p-6">
+        <div className="bg-white/[0.03] backdrop-blur-[8px] border-[0.5px] border-border rounded-[20px] p-7 max-[768px]:p-5">
           {sent ? (
-            <div className="flex flex-col items-center text-center gap-3 py-8">
-              <CheckCircle2 size={40} className="text-success" />
-              <h3 className="text-[16px] font-bold text-foreground m-0">
+            <div className="flex flex-col items-center text-center gap-3 py-10">
+              <div className="w-14 h-14 rounded-full bg-success/10 flex items-center justify-center">
+                <CheckCircle2 size={28} className="text-success" />
+              </div>
+              <h3 className="text-[17px] font-bold text-foreground m-0">
                 Message sent
               </h3>
-              <p className="text-[13.5px] text-[var(--muted)] m-0">
+              <p className="text-[13.5px] text-[var(--muted)] m-0 max-w-[320px]">
                 Thanks, {form.name.split(" ")[0]} — we'll get back to you at{" "}
                 {form.email} soon.
               </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSent(false);
+                  setForm({ name: "", email: "", message: "" });
+                }}
+                className="mt-2 bg-transparent border-0 p-0 text-[13px] font-semibold text-gold cursor-pointer hover:text-gold-dark"
+              >
+                Send another message
+              </button>
             </div>
           ) : (
             <form onSubmit={submit} className="flex flex-col gap-4">
-              <input
-                type="text"
-                placeholder="Your name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full p-3.5 bg-white/[0.06] text-foreground border-[0.5px] border-white/10 rounded-[10px] text-[14px] outline-none transition-colors duration-200 focus:border-gold placeholder:text-[var(--muted)]"
-              />
-              <input
-                type="email"
-                placeholder="Your email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full p-3.5 bg-white/[0.06] text-foreground border-[0.5px] border-white/10 rounded-[10px] text-[14px] outline-none transition-colors duration-200 focus:border-gold placeholder:text-[var(--muted)]"
-              />
-              <textarea
-                placeholder="How can we help?"
-                rows={5}
-                value={form.message}
-                onChange={(e) =>
-                  setForm({ ...form, message: e.target.value })
-                }
-                className="w-full p-3.5 bg-white/[0.06] text-foreground border-[0.5px] border-white/10 rounded-[10px] text-[14px] outline-none transition-colors duration-200 focus:border-gold placeholder:text-[var(--muted)] resize-none"
-              />
+              <h3 className="text-[15px] font-bold text-foreground m-0">
+                Send us a message
+              </h3>
+              <div className="grid grid-cols-2 gap-4 max-[500px]:grid-cols-1">
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-[12px] font-medium text-[var(--muted)]">
+                    Name
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Your name"
+                    value={form.name}
+                    onChange={(e) =>
+                      setForm({ ...form, name: e.target.value })
+                    }
+                    className="w-full p-3.5 bg-white/[0.06] text-foreground border-[0.5px] border-white/10 rounded-[10px] text-[14px] outline-none transition-colors duration-200 focus:border-gold placeholder:text-[var(--muted)]"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-[12px] font-medium text-[var(--muted)]">
+                    Email
+                  </span>
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={form.email}
+                    onChange={(e) =>
+                      setForm({ ...form, email: e.target.value })
+                    }
+                    className="w-full p-3.5 bg-white/[0.06] text-foreground border-[0.5px] border-white/10 rounded-[10px] text-[14px] outline-none transition-colors duration-200 focus:border-gold placeholder:text-[var(--muted)]"
+                  />
+                </label>
+              </div>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-[12px] font-medium text-[var(--muted)]">
+                  Message
+                </span>
+                <textarea
+                  placeholder="How can we help?"
+                  rows={5}
+                  value={form.message}
+                  onChange={(e) =>
+                    setForm({ ...form, message: e.target.value })
+                  }
+                  className="w-full p-3.5 bg-white/[0.06] text-foreground border-[0.5px] border-white/10 rounded-[10px] text-[14px] outline-none transition-colors duration-200 focus:border-gold placeholder:text-[var(--muted)] resize-none"
+                />
+              </label>
               <button
                 type="submit"
                 disabled={!canSubmit}
@@ -1285,21 +1376,102 @@ function ContactContent() {
    `overlay` value changes. Auth no longer opens as a separate modal: the
    phone mockup in the hero morphs directly into the login/register screen
    (see PhoneAuthStage), so the transition reads as "this page transformed"
-   rather than "a new page appeared". */
+   rather than "a new page appeared". Features/Rates/Help/Contact get the
+   same treatment at the page level now: one fixed shell (Navbar + a single
+   scrollable pane below), and navigating between them swaps the pane's
+   content in place with a smooth rise (animate-page-swap-in) instead of
+   sliding between separate full-screen panels — so it reads as "this page's
+   content changed", not "a new page appeared", matching Login/Register. */
+const PANEL_ORDER = ["home", "features", "rates", "help", "contact"];
+
+// min-h-full (not h-full) — unlike the old multi-panel strip, only one of
+// these is ever mounted at a time now, so it can grow taller than the pane
+// and let the pane's own overflow-y-auto handle it, instead of needing a
+// fixed height itself. flex-col + flex-1 on the content wrapper still
+// pushes Footer to the bottom on pages shorter than the viewport.
+// No Footer here anymore — it's rendered once at the Home level now,
+// outside the swapped content, so it doesn't unmount/remount (and flicker)
+// on every page change. See Home.
+function MarketingPage({ children }) {
+  return (
+    <div className="px-8 pt-16 pb-24 max-[768px]:px-5 max-[768px]:pt-12">
+      <div className="max-w-[1120px] mx-auto">{children}</div>
+    </div>
+  );
+}
+
 function Home({ overlay }) {
   const navigate = useNavigate();
   const closeOverlay = () => navigate("/");
 
+  const isAuthOverlay = overlay === "login" || overlay === "register";
+  // Login/Register still morph out of the hero's own phone mockup, so
+  // opening either forces the pane back to "home" content first — needed
+  // for PhoneAuthStage to have a mounted mockup to measure regardless of
+  // which page the user was on when they hit the navbar's Login button.
+  const panel = isAuthOverlay
+    ? "home"
+    : PANEL_ORDER.includes(overlay)
+      ? overlay
+      : "home";
+
   return (
-    <div className="bg-[#0602145f] bg-fixed overflow-x-hidden">
-      <div className="bg-[radial-gradient(ellipse_120%_60%_at_50%_-10%,rgba(38,50,82,0.6),var(--bg)_60%)] bg-fixed text-foreground font-sans min-h-screen leading-[1.6] overflow-x-hidden">
+    // Fixed-height app shell (h-screen, overflow-hidden): Navbar stays put,
+    // and the single pane below is the only thing that scrolls — switching
+    // pages never scrolls the whole document, just swaps this pane's
+    // content. No bg-fixed needed since this shell itself never scrolls.
+    <div className="h-screen overflow-hidden bg-[#0602145f] flex flex-col">
+      <div className="relative flex-1 min-h-0 flex flex-col bg-[radial-gradient(ellipse_120%_60%_at_50%_-10%,rgba(38,50,82,0.6),var(--bg)_60%)] text-foreground font-sans leading-[1.6] overflow-hidden">
+        {/* Shared across every page (was Hero-only) — sits at this level so
+            it isn't tied to any one page's content and never scrolls away,
+            same as the gradient background above. */}
+        <div className="absolute rounded-full border border-[rgba(var(--gold-rgb),0.07)] pointer-events-none w-[600px] h-[600px] -top-[160px] left-1/2 -translate-x-1/2" />
+        <div className="absolute rounded-full border border-[rgba(var(--gold-rgb),0.07)] pointer-events-none w-[380px] h-[380px] -top-[60px] left-1/2 -translate-x-1/2" />
+
         <Navbar />
 
-        <Hero overlay={overlay} onCloseAuth={closeOverlay} />
-
-        {/* <FeaturesStrip /> */}
-        {/* <Converter /> */}
-        <Footer />
+        {/* flex-col here (not on the key={panel} div below) — Footer sits
+            outside the swapped/animated block as a stable sibling, so it
+            never unmounts or re-plays an entrance animation on page change,
+            same as Navbar. flex-1 on the swapped block still pushes Footer
+            to the bottom of the pane on pages shorter than the viewport. */}
+        <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col">
+          {/* key={panel}, not overlay — opening Login/Register while
+              already on "home" shouldn't re-trigger this fade (that's
+              PhoneAuthStage's own transition); only an actual page change
+              should. */}
+          <div key={panel} className="flex-1 animate-page-swap-in">
+            {panel === "home" && (
+              <Hero
+                overlay={isAuthOverlay ? overlay : null}
+                onCloseAuth={closeOverlay}
+              />
+            )}
+            {/* <FeaturesStrip /> */}
+            {/* <Converter /> */}
+            {panel === "features" && (
+              <MarketingPage>
+                <FeaturesContent />
+              </MarketingPage>
+            )}
+            {panel === "rates" && (
+              <MarketingPage>
+                <RatesContent />
+              </MarketingPage>
+            )}
+            {panel === "help" && (
+              <MarketingPage>
+                <HelpContent />
+              </MarketingPage>
+            )}
+            {panel === "contact" && (
+              <MarketingPage>
+                <ContactContent />
+              </MarketingPage>
+            )}
+          </div>
+          <Footer />
+        </div>
       </div>
     </div>
   );

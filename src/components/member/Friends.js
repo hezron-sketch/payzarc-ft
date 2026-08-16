@@ -87,9 +87,9 @@ function Friends({ onSelectFriend }) {
                 key={fav.id}
                 type="button"
                 onClick={() => onSelectFriend?.(fav)}
-                className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-left transition-all duration-200 shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.05)_inset] hover:-translate-y-0.5 hover:border-gold/30 hover:bg-white/[0.05] hover:shadow-[0_8px_18px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.05)_inset] active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.2)_inset]"
+                className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-left transition-colors duration-200 hover:border-gold/30 hover:bg-white/[0.05]"
               >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm shrink-0 shadow-[0_1px_0_rgba(255,255,255,0.15)_inset]">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm shrink-0">
                   {name.slice(0, 1).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
