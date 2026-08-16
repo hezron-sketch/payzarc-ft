@@ -62,7 +62,21 @@
       "Bash(echo \"cleared: $?\")",
       "Bash(kill -9 21299)",
       "Bash(echo \"cleared?: $?\")",
-      "Bash(kill -9 24551)"
+      "Bash(kill -9 24551)",
+      "Bash(gh auth *)",
+      "Bash(ssh -T git@github.com -o BatchMode=yes -o ConnectTimeout=5)",
+      "Bash(sudo dnf install -y gh)",
+      "Bash(gh config *)",
+      "Read(//home/mtuhalf/.config/**)",
+      "Bash(ssh *)",
+      "Bash(npm run *)",
+      "Bash(command -v git-filter-repo)",
+      "Bash(pip show *)",
+      "Bash(command -v pip3 pip python3)",
+      "Bash(command -v brew apt dnf)",
+      "Bash(identify /home/mtuhalf/.claude/image-cache/40aa529e-cb28-4e77-97cf-ee258e4e869a/1.png)",
+      "Bash(identify /home/mtuhalf/Documents/react/frontend/payzarc/public/images/payzarc.png)",
+      "Bash(lsof -i :3000 -sTCP:LISTEN)"
     ]
   },
   "skillOverrides": {}

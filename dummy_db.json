@@ -11,7 +11,7 @@
       "profileImageUrl": "/images/default-user.png",
       "balance": 1250.75,
       "currency": "KES",
-      "plan": "basic"
+      "plan": "pro"
     },
     {
       "id": 2,
@@ -463,14 +463,14 @@
       "owner_id": 1,
       "name": "Emergency Fund",
       "type": "emergency",
-      "balance": 866,
+      "balance": 966,
       "currency": "KES",
       "members": [
         1,
         2
       ],
       "contributions": {
-        "1": 966
+        "1": 1066
       }
     },
     {
@@ -502,6 +502,20 @@
       "contributions": {
         "1": 1000
       }
+    },
+    {
+      "id": 1786822201394,
+      "owner_id": 1,
+      "name": "Hezron's School fee",
+      "type": "emergency",
+      "balance": 0,
+      "currency": "KES",
+      "members": [
+        2,
+        3,
+        4,
+        6
+      ]
     }
   ]
 }

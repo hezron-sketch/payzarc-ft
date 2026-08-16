@@ -28,7 +28,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import History from "./History";
@@ -125,7 +124,16 @@ const modal3dClass =
 // shadow plus a 1px inset highlight so it reads as an embossed screen
 // instead of a flat bg-card block.
 const balanceCardClass =
-  "relative bg-[radial-gradient(circle_at_30%_0%,var(--card),var(--card2)_65%)] rounded-[26px] overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.04)_inset]";
+  "relative bg-[radial-gradient(circle_at_30%_0%,var(--card),var(--card2)_65%)] rounded-[22px] overflow-hidden";
+// Phone bezel wrapping the real balance card above — same dark-trim/notch
+// recipe as components/PhoneMockup's PhoneFrame, just sized for the actual
+// dashboard content instead of a small preview. This is what makes the
+// dashboard's main balance section read as an actual phone rather than a
+// plain rounded card; balanceCardClass above is now just its "screen".
+const phoneBezelClass =
+  "relative bg-[#1c2333] rounded-[34px] border-[1.5px] border-[rgba(var(--gold-rgb),0.18)] p-[10px] shadow-[0_45px_90px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.04)_inset]";
+const phoneNotchClass =
+  "w-[56px] h-[7px] bg-[#0d1117] rounded-full mx-auto mb-[10px]";
 // Embossed gold pill — a top inner highlight + bottom inner shadow (the
 // bevel) under a neutral drop shadow (not a colored gold glow) that lifts
 // on hover and flattens on press, so the button reads as floating above the
@@ -1277,78 +1285,260 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
         </p>
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 w-full max-w-[1320px] mx-auto">
-        {/* LEFT COLUMN — balance card, tab strip, whichever flow is active,
-          and Recent Activity, all sharing the same column width (matches
-          the sketch's lg:col-span-8 left column instead of the balance
-          card being its own narrower centered block). */}
-        <div className="lg:col-span-8 flex flex-col gap-8">
-          <div className="flex flex-col gap-6">
-            <div ref={balanceCardRef} className={balanceCardClass}>
-              <div className="w-full flex flex-col items-center px-8 pt-9 pb-8 max-[640px]:px-6">
-                <div className="w-full flex items-start justify-between mb-7">
-                  <div className="flex flex-col items-start">
-                    <div className="flex items-center gap-2.5 mb-2">
-                      <span className="text-muted-foreground text-[0.8rem] font-medium tracking-wide">
-                        Total Balance
-                      </span>
-                      <button
-                        className="bg-transparent border-none text-[var(--muted)] flex items-center transition-colors duration-200 hover:text-foreground"
-                        onClick={toggleBalance}
-                      >
-                        {showBalance ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                    <h1 className="text-[clamp(1.85rem,4vw,2.75rem)] font-extrabold text-gold tracking-[-1px] m-0 flex items-baseline gap-2 max-[640px]:text-[2.25rem]">
-                      <span className="opacity-75">{displayCurrency}</span>
-                      <span
+      {/* Used to be a two-column grid (balance card + a right sidebar
+        holding Quick Send). Quick Send now lives inside the phone mockup's
+        own screen alongside the balance, so there's no sidebar content left
+        — single centered column instead of a grid with an empty column. */}
+      <div className="w-full max-w-[900px] mx-auto flex flex-col gap-8">
+        <div className="flex flex-col gap-6">
+            {/* Balance section, phone-bezeled — the dashboard's main
+            component. Same real content as before (live balance, group
+            funds, Send/Withdraw), just wrapped in an actual phone frame
+            (phoneBezelClass/phoneNotchClass, matching components/
+            PhoneMockup's PhoneFrame recipe) instead of a plain card, with
+            Send/Withdraw promoted to floating buttons flanking it — the
+            same "floating card either side of the phone" composition as
+            the landing hero's FloatCards, but wired to the real flows
+            instead of showing demo numbers. */}
+            <div className="relative">
+              {/* Same FloatCard shape/positioning as the landing hero's
+              floating "You send"/"They receive" cards in App.js (icon
+              square + a small text stack, absolute + staggered top offset
+              either side of the phone) — real and clickable here instead
+              of the hero's static demo numbers. */}
+              {BALANCE_CARD_ACTIONS.map(({ key, label, icon: Icon }) => {
+                const active = activeSection === key;
+                const isSend = key === "send";
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => switchSection(key)}
+                    aria-label={label}
+                    className={cn(
+                      "absolute z-10 flex items-center gap-2.5 rounded-2xl py-[10px] px-[14px] whitespace-nowrap cursor-pointer transition-all duration-200 hover:-translate-y-0.5 max-[768px]:px-[10px] max-[768px]:py-2",
+                      isSend
+                        ? "right-0 top-[95px] max-[768px]:-right-[10px] max-[768px]:top-20"
+                        : "left-0 top-[55px] max-[768px]:-left-[10px] max-[768px]:top-10",
+                      active
+                        ? "bg-gradient-to-b from-gold to-gold-dark border-[0.5px] border-transparent"
+                        : "bg-secondary border-[0.5px] border-input hover:border-gold/30",
+                    )}
+                  >
+                    <div
+                      className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center flex-shrink-0"
+                      style={{
+                        background: active
+                          ? "rgba(0,0,0,0.12)"
+                          : isSend
+                            ? "rgba(var(--gold-rgb),0.15)"
+                            : "rgba(96,165,250,0.15)",
+                      }}
+                    >
+                      <Icon
+                        size={18}
                         className={cn(
-                          "relative overflow-hidden rounded-2xl before:content-[''] before:absolute before:inset-0 before:[backdrop-filter:blur(2rem)] before:rounded-[inherit] before:pointer-events-none before:opacity-0 before:transition-opacity before:duration-[250ms]",
-                          !showBalance && "select-none before:opacity-100",
+                          active
+                            ? "text-black"
+                            : isSend
+                              ? "text-gold"
+                              : "text-[#60a5fa]",
+                        )}
+                      />
+                    </div>
+                    <div>
+                      <div
+                        className={cn(
+                          "text-[10px]",
+                          active ? "text-black/70" : "text-[var(--muted)]",
                         )}
                       >
-                        {formattedBalance}
-                      </span>
-                    </h1>
-                    {groupFundsTotal > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => onPageChange("groups")}
-                        className="mt-2 inline-flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full px-3 py-1 text-[0.75rem] font-semibold text-muted-foreground cursor-pointer transition-colors hover:bg-white/[0.07] hover:border-gold/20 hover:text-foreground"
+                        Wallet action
+                      </div>
+                      <div
+                        className={cn(
+                          "text-[15px] font-bold max-[768px]:text-[13px]",
+                          active ? "text-black" : "text-foreground",
+                        )}
                       >
-                        <UsersRound size={12} className="text-gold" />
-                        <span
-                          className={cn(
-                            "relative overflow-hidden rounded-md before:content-[''] before:absolute before:inset-0 before:[backdrop-filter:blur(0.6rem)] before:rounded-[inherit] before:pointer-events-none before:opacity-0 before:transition-opacity before:duration-[250ms]",
-                            !showBalance && "select-none before:opacity-100",
-                          )}
-                        >
-                          {displayCurrency} {groupFundsTotal.toLocaleString()}
-                        </span>{" "}
-                        in Group Funds
-                      </button>
-                    )}
-                  </div>
-                </div>
+                        {label}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
 
-                {/* Send / Withdraw — the two most common wallet moves,
-                surfaced as pills right on the balance card. Same active/
-                inactive styling as the Add Money/Groups row below. */}
-                <div className="w-full flex items-center gap-3">
-                  {BALANCE_CARD_ACTIONS.map(({ key, label, icon: Icon }) => {
-                    const active = activeSection === key;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => switchSection(key)}
-                        className={active ? goldPillBtnClass : flatPillBtnClass}
-                      >
-                        <Icon size={16} className="shrink-0" />
-                        <span className="truncate">{label}</span>
-                      </button>
-                    );
-                  })}
+              <div ref={balanceCardRef} className={phoneBezelClass}>
+                <div className={phoneNotchClass} />
+                <div className={balanceCardClass}>
+                  <div className="w-full flex flex-col items-center px-8 pt-9 pb-8 max-[640px]:px-6">
+                    <div className="w-full flex items-start justify-between mb-7">
+                      <div className="flex flex-col items-start">
+                        <div className="flex items-center gap-2.5 mb-2">
+                          <span className="text-muted-foreground text-[0.8rem] font-medium tracking-wide">
+                            Total Balance
+                          </span>
+                          <button
+                            className="bg-transparent border-none text-[var(--muted)] flex items-center transition-colors duration-200 hover:text-foreground"
+                            onClick={toggleBalance}
+                          >
+                            {showBalance ? (
+                              <EyeOff size={16} />
+                            ) : (
+                              <Eye size={16} />
+                            )}
+                          </button>
+                        </div>
+                        <h1 className="text-[clamp(1.85rem,4vw,2.75rem)] font-extrabold text-gold tracking-[-1px] m-0 flex items-baseline gap-2 max-[640px]:text-[2.25rem]">
+                          <span className="opacity-75">{displayCurrency}</span>
+                          <span
+                            className={cn(
+                              "relative overflow-hidden rounded-2xl before:content-[''] before:absolute before:inset-0 before:[backdrop-filter:blur(2rem)] before:rounded-[inherit] before:pointer-events-none before:opacity-0 before:transition-opacity before:duration-[250ms]",
+                              !showBalance && "select-none before:opacity-100",
+                            )}
+                          >
+                            {formattedBalance}
+                          </span>
+                        </h1>
+                        {groupFundsTotal > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => onPageChange("groups")}
+                            className="mt-2 inline-flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full px-3 py-1 text-[0.75rem] font-semibold text-muted-foreground cursor-pointer transition-colors hover:bg-white/[0.07] hover:border-gold/20 hover:text-foreground"
+                          >
+                            <UsersRound size={12} className="text-gold" />
+                            <span
+                              className={cn(
+                                "relative overflow-hidden rounded-md before:content-[''] before:absolute before:inset-0 before:[backdrop-filter:blur(0.6rem)] before:rounded-[inherit] before:pointer-events-none before:opacity-0 before:transition-opacity before:duration-[250ms]",
+                                !showBalance && "select-none before:opacity-100",
+                              )}
+                            >
+                              {displayCurrency}{" "}
+                              {groupFundsTotal.toLocaleString()}
+                            </span>{" "}
+                            in Group Funds
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Quick Send — moved into the phone's own screen
+                    (used to be its own card in the right sidebar) so the
+                    phone mockup carries this dashboard component the same
+                    way it does the balance above. Content/logic untouched,
+                    just re-homed with a divider instead of its own Card
+                    chrome since it's already inside the screen's padding. */}
+                    <div className="w-full mt-8 pt-6 border-t border-white/[0.06] flex flex-col gap-5">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-base font-bold m-0">
+                          Quick Send
+                        </h2>
+                        <button
+                          className="bg-transparent border-none text-gold font-medium text-[11px] cursor-pointer transition-colors hover:text-gold-dark"
+                          onClick={() => switchSection("groups")}
+                        >
+                          See all
+                        </button>
+                      </div>
+
+                      {favourites.length === 0 ? (
+                        <p className="text-[0.85rem] text-muted-foreground">
+                          No saved recipients yet — add one from Send Money.
+                        </p>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-4 gap-3 max-[480px]:grid-cols-3">
+                            {favourites.slice(0, 3).map((fav, idx) => {
+                              const name =
+                                fav.name ||
+                                fav.full_name ||
+                                fav.phone ||
+                                fav.value ||
+                                "?";
+                              return (
+                                <button
+                                  key={fav.id || idx}
+                                  type="button"
+                                  onClick={() => {
+                                    switchSection("send");
+                                    handleSelectRecipient(fav);
+                                  }}
+                                  className="flex flex-col items-center gap-2 p-2.5 rounded-xl text-center bg-white/[0.03] border border-white/[0.06] shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.05)_inset] transition-all duration-200 hover:-translate-y-0.5 hover:border-gold/30 hover:shadow-[0_8px_18px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.05)_inset] active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.2)_inset]"
+                                >
+                                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm shadow-[0_1px_0_rgba(255,255,255,0.15)_inset]">
+                                    {name.slice(0, 1).toUpperCase()}
+                                  </div>
+                                  <span className="text-[11px] text-muted-foreground font-medium truncate w-full">
+                                    {name.split(" ")[0]}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                            <button
+                              type="button"
+                              onClick={() => switchSection("send")}
+                              className="flex flex-col items-center gap-2 p-2.5 rounded-xl text-center bg-white/[0.03] border border-white/[0.06] shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.05)_inset] transition-all duration-200 hover:-translate-y-0.5 hover:border-gold/30 hover:shadow-[0_8px_18px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.05)_inset] active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.2)_inset]"
+                            >
+                              <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center shadow-[0_1px_0_rgba(255,255,255,0.1)_inset] transition-colors hover:bg-white/[0.07]">
+                                <PlusCircle
+                                  size={18}
+                                  className="text-muted-foreground"
+                                />
+                              </div>
+                              <span className="text-[11px] text-muted-foreground font-medium truncate w-full">
+                                Add
+                              </span>
+                            </button>
+                          </div>
+
+                          {favourites.length > 0 && (
+                            <div className="pt-4 border-t border-white/[0.04] flex flex-col gap-1">
+                              {favourites.slice(0, 3).map((fav, idx) => {
+                                const name =
+                                  fav.name ||
+                                  fav.full_name ||
+                                  fav.phone ||
+                                  fav.value ||
+                                  "?";
+                                const sub = fav.phone || fav.email || "";
+                                return (
+                                  <button
+                                    key={fav.id || idx}
+                                    type="button"
+                                    onClick={() => {
+                                      switchSection("send");
+                                      handleSelectRecipient(fav);
+                                    }}
+                                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.05)_inset] transition-all duration-200 hover:-translate-y-0.5 hover:border-gold/30 hover:shadow-[0_8px_18px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.05)_inset] active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.2)_inset] group"
+                                  >
+                                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-xs shrink-0 shadow-[0_1px_0_rgba(255,255,255,0.15)_inset]">
+                                      {name.slice(0, 1).toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 text-left min-w-0">
+                                      <p className="text-xs font-semibold text-foreground truncate m-0">
+                                        {name}
+                                      </p>
+                                      {sub && (
+                                        <p className="text-[11px] text-muted-foreground truncate m-0">
+                                          {sub}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="w-7 h-7 rounded-lg bg-white/[0.04] flex items-center justify-center transition-colors group-hover:bg-gold/10 shrink-0">
+                                      <Send
+                                        size={14}
+                                        className="text-muted-foreground transition-colors group-hover:text-gold"
+                                      />
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2035,123 +2225,6 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
               </div>
             )}
           </div>
-        </div>
-
-        {/* RIGHT SIDEBAR — Quick Send + Weekly Spending, always visible
-          alongside the left column regardless of which tab is active
-          (matches the sketch; Payzarc Plus banner excluded). */}
-        <div className="lg:col-span-4 flex flex-col gap-6">
-          <Card className="rounded-2xl bg-card border-none shadow-none animate-flow-fade-in">
-            <CardContent className="p-6 flex flex-col gap-5">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-bold m-0">Quick Send</h2>
-                <button
-                  className="bg-transparent border-none text-gold font-medium text-[11px] cursor-pointer transition-colors hover:text-gold-dark"
-                  onClick={() => switchSection("groups")}
-                >
-                  See all
-                </button>
-              </div>
-
-              {favourites.length === 0 ? (
-                <p className="text-[0.85rem] text-muted-foreground">
-                  No saved recipients yet — add one from Send Money.
-                </p>
-              ) : (
-                <>
-                  <div className="grid grid-cols-4 gap-3">
-                    {favourites.slice(0, 3).map((fav, idx) => {
-                      const name =
-                        fav.name ||
-                        fav.full_name ||
-                        fav.phone ||
-                        fav.value ||
-                        "?";
-                      return (
-                        <button
-                          key={fav.id || idx}
-                          type="button"
-                          onClick={() => {
-                            switchSection("send");
-                            handleSelectRecipient(fav);
-                          }}
-                          className="flex flex-col items-center gap-2 p-2.5 rounded-xl text-center bg-white/[0.03] border border-white/[0.06] shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.05)_inset] transition-all duration-200 hover:-translate-y-0.5 hover:border-gold/30 hover:shadow-[0_8px_18px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.05)_inset] active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.2)_inset]"
-                        >
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm shadow-[0_1px_0_rgba(255,255,255,0.15)_inset]">
-                            {name.slice(0, 1).toUpperCase()}
-                          </div>
-                          <span className="text-[11px] text-muted-foreground font-medium truncate w-full">
-                            {name.split(" ")[0]}
-                          </span>
-                        </button>
-                      );
-                    })}
-                    <button
-                      type="button"
-                      onClick={() => switchSection("send")}
-                      className="flex flex-col items-center gap-2 p-2.5 rounded-xl text-center bg-white/[0.03] border border-white/[0.06] shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.05)_inset] transition-all duration-200 hover:-translate-y-0.5 hover:border-gold/30 hover:shadow-[0_8px_18px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.05)_inset] active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.2)_inset]"
-                    >
-                      <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center shadow-[0_1px_0_rgba(255,255,255,0.1)_inset] transition-colors hover:bg-white/[0.07]">
-                        <PlusCircle
-                          size={18}
-                          className="text-muted-foreground"
-                        />
-                      </div>
-                      <span className="text-[11px] text-muted-foreground font-medium truncate w-full">
-                        Add
-                      </span>
-                    </button>
-                  </div>
-
-                  {favourites.length > 0 && (
-                    <div className="pt-4 border-t border-white/[0.04] flex flex-col gap-1">
-                      {favourites.slice(0, 3).map((fav, idx) => {
-                        const name =
-                          fav.name ||
-                          fav.full_name ||
-                          fav.phone ||
-                          fav.value ||
-                          "?";
-                        const sub = fav.phone || fav.email || "";
-                        return (
-                          <button
-                            key={fav.id || idx}
-                            type="button"
-                            onClick={() => {
-                              switchSection("send");
-                              handleSelectRecipient(fav);
-                            }}
-                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.05)_inset] transition-all duration-200 hover:-translate-y-0.5 hover:border-gold/30 hover:shadow-[0_8px_18px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.05)_inset] active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.2)_inset] group"
-                          >
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-xs shrink-0 shadow-[0_1px_0_rgba(255,255,255,0.15)_inset]">
-                              {name.slice(0, 1).toUpperCase()}
-                            </div>
-                            <div className="flex-1 text-left min-w-0">
-                              <p className="text-xs font-semibold text-foreground truncate m-0">
-                                {name}
-                              </p>
-                              {sub && (
-                                <p className="text-[11px] text-muted-foreground truncate m-0">
-                                  {sub}
-                                </p>
-                              )}
-                            </div>
-                            <div className="w-7 h-7 rounded-lg bg-white/[0.04] flex items-center justify-center transition-colors group-hover:bg-gold/10 shrink-0">
-                              <Send
-                                size={14}
-                                className="text-muted-foreground transition-colors group-hover:text-gold"
-                              />
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
       </div>
 
       {/* Floating market ticker — sits to the right, follows scroll, and

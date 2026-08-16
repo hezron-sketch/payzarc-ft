@@ -76,6 +76,14 @@ module.exports = {
           from: { opacity: 0, transform: "translateY(10px) scale(0.98)" },
           to: { opacity: 1, transform: "translateY(0) scale(1)" },
         },
+        // Bigger rise than flow-fade-in, no scale — that one's sized for a
+        // small inline form swap; this is for a full page's worth of
+        // content, where a subtler zoom would barely read but a taller
+        // rise clearly does, closer to "scrolled into place" than "faded in".
+        "page-swap-in": {
+          from: { opacity: 0, transform: "translateY(28px)" },
+          to: { opacity: 1, transform: "translateY(0)" },
+        },
         "popup-in": {
           from: { opacity: 0, transform: "translateY(12px) scale(0.98)" },
           to: { opacity: 1, transform: "translateY(0) scale(1)" },
@@ -109,6 +117,9 @@ module.exports = {
         "slide-in-right": "slide-in-right 0.3s cubic-bezier(0.4,0,0.2,1)",
         "slide-in-left": "slide-in-left 0.3s cubic-bezier(0.4,0,0.2,1)",
         "flow-fade-in": "flow-fade-in 0.35s cubic-bezier(0.4,0,0.2,1)",
+        // Same easing the old strip-slide used for panel motion — a smooth
+        // decelerate-into-place curve, fitting for a full page settling in.
+        "page-swap-in": "page-swap-in 0.45s cubic-bezier(0.22,1,0.36,1)",
         "popup-in": "popup-in 0.25s cubic-bezier(0.22,1,0.36,1)",
         "modal-3d-in": "modal-3d-in 0.6s cubic-bezier(0.22,1.4,0.36,1)",
         "ticker-fade": "ticker-fade 0.35s ease",
