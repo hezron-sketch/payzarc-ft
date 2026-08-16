@@ -42,17 +42,17 @@ const FUND_TYPES = [
 ];
 const fundTypeFor = (key) => FUND_TYPES.find((t) => t.key === key) || FUND_TYPES[0];
 
-// Same embossed-row/gold-CTA recipe this file already used for the static
-// fund-type buttons, reused now for the real group cards.
+// Flat row/gold-CTA recipe this file already used for the static fund-type
+// buttons, reused now for the real group cards.
 const cardClass =
-  "w-full flex flex-col gap-3 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06] shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.05)_inset]";
+  "w-full flex flex-col gap-3 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06]";
 const createGroupBtnClass =
-  "w-full flex items-center justify-center gap-2 rounded-full py-3 px-4 text-[0.9rem] font-bold cursor-pointer text-black bg-gradient-to-b from-gold to-gold-dark transition-all duration-200 shadow-[0_8px_18px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.5)_inset,0_-2px_3px_rgba(0,0,0,0.15)_inset] hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,0,0,0.35),0_1px_0_rgba(255,255,255,0.5)_inset,0_-2px_3px_rgba(0,0,0,0.15)_inset] active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.2),0_-1px_2px_rgba(0,0,0,0.2)_inset]";
+  "w-full flex items-center justify-center gap-2 rounded-full py-3 px-4 text-[0.9rem] font-bold cursor-pointer text-black bg-gradient-to-b from-gold to-gold-dark transition-colors duration-200 hover:brightness-110";
 const smallPillBtnClass =
-  "flex-1 flex items-center justify-center gap-1.5 rounded-full py-2 px-3 text-[0.78rem] font-semibold cursor-pointer transition-all duration-200 active:scale-[0.97]";
+  "flex-1 flex items-center justify-center gap-1.5 rounded-full py-2 px-3 text-[0.78rem] font-semibold cursor-pointer transition-colors duration-200 active:scale-[0.97]";
 const contributeBtnClass = cn(
   smallPillBtnClass,
-  "text-black bg-gradient-to-b from-gold to-gold-dark shadow-[0_4px_10px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.4)_inset]",
+  "text-black bg-gradient-to-b from-gold to-gold-dark",
 );
 const addFriendBtnClass = cn(
   smallPillBtnClass,
@@ -67,7 +67,7 @@ const formLabelClass =
 const formInputClass =
   "w-full h-auto bg-white/[0.03] border-white/[0.06] rounded-xl px-4 py-3.5 text-foreground text-base placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-gold/[0.08] focus-visible:border-gold/30 focus-visible:bg-white/[0.07] shadow-none transition-colors duration-200";
 const primaryBtnClass =
-  "w-full h-auto rounded-xl px-5 py-3.5 text-base font-bold text-black transition-all duration-200 hover:bg-primary active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 mt-1 shadow-lg shadow-gold/10 hover:shadow-gold/20";
+  "w-full h-auto rounded-xl px-5 py-3.5 text-base font-bold text-black transition-colors duration-200 hover:bg-primary active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 mt-1";
 const ghostLinkBtnClass =
   "self-start bg-transparent border-none text-gold text-[0.8rem] font-semibold cursor-pointer p-0 transition-opacity hover:opacity-75";
 

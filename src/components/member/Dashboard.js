@@ -452,7 +452,7 @@ export default function Dashboard() {
 
                 {searchTermLower && (
                   <div
-                    className="absolute top-[calc(100%+8px)] left-0 w-full min-w-[260px] bg-[var(--card2)] rounded-xl shadow-2xl shadow-black/40 p-[0.6rem] z-[200] flex flex-col gap-[0.4rem] animate-popup-in"
+                    className="absolute top-[calc(100%+8px)] left-0 w-full min-w-[260px] bg-[var(--card2)] border border-white/[0.08] rounded-xl p-[0.6rem] z-[200] flex flex-col gap-[0.4rem] animate-popup-in"
                     role="listbox"
                   >
                     {matchedServices.length === 0 &&
@@ -525,7 +525,7 @@ export default function Dashboard() {
                     </div>
 
                     {isNotifOpen && (
-                      <div className="absolute top-[calc(100%+8px)] right-0 w-72 bg-[var(--card2)] rounded-xl shadow-2xl shadow-black/40 p-2 z-[200] animate-popup-in">
+                      <div className="absolute top-[calc(100%+8px)] right-0 w-72 bg-[var(--card2)] border border-white/[0.08] rounded-xl p-2 z-[200] animate-popup-in">
                         <p className="text-xs font-semibold text-[var(--muted)] px-3 pt-2 pb-1 uppercase tracking-wide">
                           Notifications
                         </p>
@@ -629,11 +629,11 @@ export default function Dashboard() {
           money-flow tabs, or the Recent Activity "View all" link). Desktop
           keeps relying on the topbar + in-page links, so this only shows
           under 768px. Floats as a rounded "dock" inset from the screen
-          edges (same radial-gradient/shadow recipe as the balance card)
-          instead of a flat full-width bar, with a gold pill behind the
-          active tab instead of just a color change. */}
+          edges, flat bg + border (no elevation shadow) instead of a flat
+          full-width bar, with a gold pill behind the active tab instead of
+          just a color change. */}
       <div className="hidden max-[768px]:block fixed bottom-0 inset-x-0 z-[100] px-4 [padding-bottom:calc(0.85rem+env(safe-area-inset-bottom))]">
-        <nav className="flex items-center justify-around gap-1 h-[64px] px-2 rounded-[24px] bg-card/80 shadow-[0_20px_50px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.05)_inset] [backdrop-filter:blur(24px)_saturate(1.2)] [-webkit-backdrop-filter:blur(24px)_saturate(1.2)]">
+        <nav className="flex items-center justify-around gap-1 h-[64px] px-2 rounded-[24px] bg-card/80 border border-white/[0.06] [backdrop-filter:blur(24px)_saturate(1.2)] [-webkit-backdrop-filter:blur(24px)_saturate(1.2)]">
           {MOBILE_NAV_TABS.map(({ key, label, icon: Icon, fab }) => {
             // "Send" doesn't have its own activePage — it opens Home's
             // internal send flow via the same goToSection helper the topbar
@@ -648,7 +648,7 @@ export default function Dashboard() {
                   aria-label={label}
                   className="flex-1 h-full flex items-center justify-center"
                 >
-                  <span className="w-12 h-12 rounded-full bg-gradient-to-b from-gold to-gold-dark text-black flex items-center justify-center shadow-[0_10px_24px_rgba(0,0,0,0.4),0_1px_0_rgba(255,255,255,0.5)_inset,0_-2px_3px_rgba(0,0,0,0.15)_inset] transition-transform duration-200 active:scale-90">
+                  <span className="w-12 h-12 rounded-full bg-gradient-to-b from-gold to-gold-dark text-black flex items-center justify-center transition-transform duration-200 active:scale-90">
                     <Icon size={22} />
                   </span>
                 </button>
