@@ -467,7 +467,8 @@
       "currency": "KES",
       "members": [
         1,
-        2
+        2,
+        5
       ],
       "contributions": {
         "1": 966

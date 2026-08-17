@@ -115,18 +115,31 @@ const modal3dClass = "bg-card border border-white/[0.06] animate-popup-in";
 // Radius = bezel's own rounded-[34px] minus its p-[5px] padding, so the
 // inner screen's corners trace concentrically with the outer bezel's
 // instead of leaving an uneven-looking bezel width around the curve.
-const balanceCardClass = "relative bg-card rounded-[29px] overflow-hidden";
+// Fixed height so the screen reads like a real device instead of stretching
+// per flow — content that doesn't fit scrolls inside it (overflow-y-auto)
+// rather than growing the card. Inset shadows ring every edge from the
+// inside (glow fading in from each border, brightest along the top like
+// glass catching light) so the light stays inside the display instead of
+// leaking onto the bezel.
+const balanceCardClass =
+  "relative bg-card rounded-[29px] overflow-hidden h-[620px] max-[640px]:h-[560px] flex flex-col shadow-[inset_0_1px_0_rgba(255,255,255,0.1),inset_0_0_0_1px_rgba(255,255,255,0.04),inset_0_28px_46px_-30px_rgba(255,255,255,0.08),inset_0_-20px_40px_-30px_rgba(var(--gold-rgb),0.18),inset_20px_0_36px_-32px_rgba(255,255,255,0.06),inset_-20px_0_36px_-32px_rgba(255,255,255,0.06)]";
 // Phone bezel wrapping the real balance card above — flat trim, no
 // elevation shadow. Capped width (thinner, more phone-shaped) instead of
 // filling the whole column. origin-top + the scale transition here is the
-// "phone zooms in" cue — a flow's fields replace Quick Send in place (see
-// phoneContentRef) and this scales up a touch at the same time, reversing
-// automatically when activeSection goes back to "dashboard" since it's
-// just a conditional class, not a one-way animation.
+// "phone zooms in" cue — a flow's fields replace Quick Send in place and
+// this scales up a touch at the same time, reversing automatically when
+// activeSection goes back to "dashboard" since it's just a conditional
+// class, not a one-way animation.
 const phoneBezelClass =
   "relative w-full max-w-[400px] mx-auto origin-top transition-transform duration-300 ease-in-out bg-[#1c2333] rounded-[34px] border border-[rgba(var(--gold-rgb),0.18)] p-[5px]";
 const phoneNotchClass =
   "w-[56px] h-[7px] bg-[#0d1117] rounded-full mx-auto mb-[10px]";
+// Thin gold-on-transparent scrollbar for the screen's scrollable content
+// area — matches the bezel's gold accent instead of the browser default.
+// Firefox via scrollbar-width/-color, WebKit via the pseudo-element
+// arbitrary variants (no plugin needed, Tailwind supports both natively).
+const phoneScrollAreaClass =
+  "[scrollbar-width:thin] [scrollbar-color:rgba(var(--gold-rgb),0.35)_transparent] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[rgba(var(--gold-rgb),0.35)] [&::-webkit-scrollbar-thumb:hover]:bg-[rgba(var(--gold-rgb),0.55)]";
 
 // Flat gold pill — solid gradient fill, no bevel/drop shadow or hover lift.
 const goldPillBtnClass =
@@ -282,6 +295,7 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
   const [dialogMessage, setDialogMessage] = useState("");
   const [dialogAction, setDialogAction] = useState(null);
   const [notificationOnly, setNotificationOnly] = useState(false);
+  const [dialogRequirePin, setDialogRequirePin] = useState(false);
 
   // Recent Transactions (Real or Placeholder)
   const [recentTransactions, setRecentTransactions] = useState([]);
@@ -488,11 +502,12 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
       })
     : "0.00";
 
-  const openConfirmationDialog = (title, message, action) => {
+  const openConfirmationDialog = (title, message, action, options = {}) => {
     setDialogTitle(title);
     setDialogMessage(message);
     setDialogAction(() => action);
     setNotificationOnly(false);
+    setDialogRequirePin(!!options.requirePin);
     setOpenDialog(true);
   };
 
@@ -514,73 +529,22 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
   const goToDashboard = () => switchSection("dashboard");
 
   // True for any flow (Add Money/Withdraw/Send/Send-to-Many/Groups) — the
-  // phone bezel below scales up slightly and the swappable content area
-  // (Quick Send at rest, the active flow's fields otherwise) grows/shrinks
-  // to fit, all in place instead of opening a separate popup.
+  // phone bezel below scales up slightly as a "phone zooms in" cue. The
+  // swappable content area itself (Quick Send at rest, the active flow's
+  // fields otherwise) sits in a fixed-height screen and scrolls internally
+  // if a flow's fields don't fit, rather than resizing the card.
   const phoneZoomActive = activeSection !== "dashboard";
 
-  // Whichever content is showing inside the phone screen swaps in place
-  // (Quick Send <-> the active flow), and this ref animates the swappable
-  // area's height smoothly between the two — same natural-height-measure +
-  // ResizeObserver-ease technique this file used to run per flow section,
-  // now applied once to whichever content is currently mounted. Reversible
-  // either direction for free since it's just "measure current vs new",
-  // not a one-way FLIP.
-  const lastPhoneContentHeightRef = useRef(null);
-  const phoneContentResizeObserverRef = useRef(null);
-  const phoneContentResizeRafRef = useRef(null);
-
-  // scrollHeight isn't reliable while an explicit (possibly shorter) height
-  // is already pinned on the node — lifting the height constraint just long
-  // enough to measure sidesteps that (same fix as the old per-section ref).
-  const measurePhoneContentHeight = (node) => {
-    const prevHeight = node.style.height;
-    node.style.height = "auto";
-    const height = node.offsetHeight;
-    node.style.height = prevHeight;
-    return height;
-  };
-
-  const phoneContentRef = (node) => {
-    if (phoneContentResizeObserverRef.current) {
-      phoneContentResizeObserverRef.current.disconnect();
-      phoneContentResizeObserverRef.current = null;
-    }
-    if (phoneContentResizeRafRef.current) {
-      cancelAnimationFrame(phoneContentResizeRafRef.current);
-      phoneContentResizeRafRef.current = null;
-    }
-    if (!node) return;
-
-    const naturalHeight = measurePhoneContentHeight(node);
-    if (lastPhoneContentHeightRef.current != null) {
-      node.style.height = `${lastPhoneContentHeightRef.current}px`;
-      phoneContentResizeRafRef.current = requestAnimationFrame(() => {
-        node.style.height = `${naturalHeight}px`;
-        lastPhoneContentHeightRef.current = naturalHeight;
-      });
-    } else {
-      lastPhoneContentHeightRef.current = naturalHeight;
-    }
-
-    // Deferring the write to the next frame (instead of inside the observer
-    // callback directly) avoids the "ResizeObserver loop completed with
-    // undelivered notifications" warning that comes from resizing the very
-    // node being observed.
-    const observer = new ResizeObserver(() => {
-      if (phoneContentResizeRafRef.current)
-        cancelAnimationFrame(phoneContentResizeRafRef.current);
-      phoneContentResizeRafRef.current = requestAnimationFrame(() => {
-        const height = measurePhoneContentHeight(node);
-        if (lastPhoneContentHeightRef.current !== height) {
-          node.style.height = `${height}px`;
-          lastPhoneContentHeightRef.current = height;
-        }
-      });
-    });
-    observer.observe(node);
-    phoneContentResizeObserverRef.current = observer;
-  };
+  // The scrollable area's scrollTop otherwise persists across content swaps
+  // (it's the same DOM node the whole time, only its child remounts) — so
+  // scrolling down in one flow, then switching to another, could leave the
+  // new flow's content starting mid-scroll instead of at the top. Snap back
+  // to the top whenever the active flow (or Groups' Friends/Groups sub-tab)
+  // changes.
+  const phoneScrollRef = useRef(null);
+  useEffect(() => {
+    if (phoneScrollRef.current) phoneScrollRef.current.scrollTop = 0;
+  }, [activeSection, groupsTab]);
 
   // Central place for changing which panel is shown below the balance.
   // Clears every flow's transient input on every switch (not just when
@@ -972,19 +936,16 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
           selectedRecipient.phone_number)) ||
       recipientSearchTerm;
 
-    if (!recipientValue || !sendAmount || inputPin.length !== 4) {
-      showNotification(
-        "error",
-        "Please fill in recipient, amount, and 4-digit PIN",
-      );
+    if (!recipientValue || !sendAmount) {
+      showNotification("error", "Please fill in recipient and amount");
       return;
     }
 
     openConfirmationDialog(
       "Confirm Send Money",
-      `Send ${sendAmount} to ${recipientValue}?\nFee: ${senderCurrency} ${sendFee.toFixed(2)} · Total: ${senderCurrency} ${sendTotal.toFixed(2)}\n\nType 1 and click Yes to confirm.`,
-      async (typedValue, buttonChoice) => {
-        if (typedValue !== "1" || buttonChoice !== "yes") {
+      `Send ${sendAmount} to ${recipientValue}?\nFee: ${senderCurrency} ${sendFee.toFixed(2)} · Total: ${senderCurrency} ${sendTotal.toFixed(2)}\n\nEnter your 4-digit PIN and click Yes to confirm.`,
+      async (pin, buttonChoice) => {
+        if (buttonChoice !== "yes" || pin.length !== 4) {
           showNotification("error", "Transaction cancelled");
           return;
         }
@@ -998,7 +959,7 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
               recipient_number: recipientValue,
               amount: parseFloat(sendAmount),
               fee: sendFee,
-              transaction_pin: inputPin,
+              transaction_pin: pin,
             },
             {
               headers: { Authorization: `Bearer ${token}` },
@@ -1024,6 +985,7 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
           showNotification("error", errorMsg);
         }
       },
+      { requirePin: true },
     );
   };
 
@@ -1350,11 +1312,11 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
               >
                 <div className={phoneNotchClass} />
                 <div className={balanceCardClass}>
-                  <div className="w-full flex flex-col items-center px-8 pt-9 pb-8 max-[640px]:px-6">
+                  <div className="w-full h-full min-h-0 flex flex-col items-center px-8 pt-9 pb-8 max-[640px]:px-6">
                     <div className="w-full flex flex-col items-center mb-7">
                       <div className="flex flex-col items-center">
                         <div className="flex items-center gap-2.5 mb-2">
-                          <span className="text-muted-foreground text-[0.8rem] font-medium tracking-wide">
+                          <span className="text-muted-foreground text-[1.6rem] font-extrabold tracking-wide uppercase">
                             Total Balance
                           </span>
                           <button
@@ -1425,16 +1387,18 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
                     {/* Whichever content is active swaps in place here —
                     Quick Send at rest, or Add Money/Withdraw/Send/Groups'
                     own fields — instead of any of them opening as a popup.
-                    phoneContentRef animates this wrapper's height to match
-                    whatever's currently inside (see its definition above),
-                    and the phone bezel itself scales up a touch at the same
-                    time (phoneZoomActive, on the bezel's own className) —
-                    together that's the "phone zooms in to fit" cue, and it
-                    reverses for free since both are just plain conditional
-                    state, not a one-way animation. */}
+                    The screen (balanceCardClass) is a fixed height, so this
+                    area just scrolls (flex-1 + overflow-y-auto) if a flow's
+                    fields run taller than the screen instead of growing it.
+                    The phone bezel itself still scales up a touch while a
+                    flow is open (phoneZoomActive, on the bezel's own
+                    className) as the "phone zooms in" cue. */}
                     <div
-                      ref={phoneContentRef}
-                      className="w-full mt-8 pt-6 border-t border-white/[0.06] overflow-hidden transition-[height] duration-300 ease-in-out"
+                      ref={phoneScrollRef}
+                      className={cn(
+                        "w-full mt-8 pt-6 border-t border-white/[0.06] flex-1 min-h-0 overflow-y-auto",
+                        phoneScrollAreaClass,
+                      )}
                     >
                       <div
                         key={activeSection}
@@ -1703,19 +1667,6 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
                       </div>
                     </div>
                   )}
-
-                  <Label className={formLabelClass}>Transaction PIN</Label>
-                  <Input
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={4}
-                    className={formInputClass}
-                    placeholder="****"
-                    value={inputPin}
-                    onChange={(e) =>
-                      setInputPin(e.target.value.replace(/\D/g, "").slice(0, 4))
-                    }
-                  />
 
                   {insufficientBalance ? (
                     <div className="flex flex-col gap-2 bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3.5">
@@ -2148,7 +2099,11 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className="text-[0.85rem] font-semibold text-foreground truncate m-0">
+                              {/* Fixed width (not just truncate) so the
+                              status badge after it lands in the same
+                              column on every row, instead of trailing
+                              wherever each name happens to end. */}
+                              <p className="w-[104px] shrink-0 text-[0.85rem] font-semibold text-foreground truncate m-0">
                                 {tx.name ||
                                   tx.description ||
                                   tx.transaction_type}
@@ -2659,6 +2614,7 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
         onSubmit={handleDialogConfirm}
         onClose={() => setOpenDialog(false)}
         isNotification={notificationOnly}
+        requirePin={dialogRequirePin}
       />
     </>
   );

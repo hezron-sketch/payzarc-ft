@@ -13,6 +13,7 @@ const YesNoPopup = ({
   message,
   type = "default",
   isNotification = false,
+  requirePin = false,
 }) => {
   const [input, setInput] = useState("");
   const [error, setError] = useState("");
@@ -33,7 +34,7 @@ const YesNoPopup = ({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         className={cn(
-          "max-w-[400px] rounded-lg p-7 gap-4 bg-[radial-gradient(circle_at_30%_0%,var(--card),var(--card2)_65%)] shadow-[0_35px_80px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.04)_inset] animate-modal-3d-in",
+          "max-w-[400px] rounded-lg p-7 gap-4 bg-[radial-gradient(circle_at_30%_0%,var(--card),var(--card2)_65%)] shadow-[0_35px_80px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.04)_inset] animate-popup-in",
         )}
       >
         <DialogTitle
@@ -53,16 +54,23 @@ const YesNoPopup = ({
         {/* Hide input if it's just a notification */}
         {!isNotification && (
           <Input
-            type="text"
+            type={requirePin ? "password" : "text"}
+            inputMode={requirePin ? "numeric" : undefined}
             value={input}
             onChange={(e) => {
-              setInput(e.target.value);
+              setInput(
+                requirePin
+                  ? e.target.value.replace(/\D/g, "").slice(0, 4)
+                  : e.target.value,
+              );
               setError("");
             }}
-            placeholder="Type exactly 1, then click Yes"
+            placeholder={
+              requirePin ? "****" : "Type exactly 1, then click Yes"
+            }
             className="h-auto w-full rounded-xl bg-secondary border-input px-3.5 py-3 text-base text-foreground placeholder:text-[var(--muted)] focus-visible:ring-0 focus-visible:border-gold shadow-none"
             ref={inputRef}
-            maxLength={1}
+            maxLength={requirePin ? 4 : 1}
             autoComplete="off"
           />
         )}
@@ -89,11 +97,15 @@ const YesNoPopup = ({
             onClick={() => {
               if (isNotification) {
                 onClose(); // Just close for notifications
-              } else if (input === "1") {
+              } else if (requirePin ? input.length === 4 : input === "1") {
                 onSubmit(input, "yes");
                 onClose();
               } else {
-                setError("You must type exactly 1 before clicking Yes");
+                setError(
+                  requirePin
+                    ? "Enter your 4-digit PIN before clicking Yes"
+                    : "You must type exactly 1 before clicking Yes",
+                );
               }
             }}
             className="h-auto rounded-xl px-[18px] py-2.5 bg-primary text-primary-foreground text-sm font-bold hover:bg-gold-dark shadow-none"
@@ -114,6 +126,7 @@ YesNoPopup.propTypes = {
   message: PropTypes.string.isRequired,
   type: PropTypes.oneOf(["default", "warning", "error"]),
   isNotification: PropTypes.bool,
+  requirePin: PropTypes.bool,
 };
 
 export default YesNoPopup;

@@ -14,6 +14,29 @@ const cellClass = (compact) =>
     compact ? "px-2.5 py-2.5 text-xs" : "px-4 py-3.5 text-sm",
   );
 const hideOnSmallClass = "hidden md:table-cell";
+// Status pill color by keyword match on the status string (no fixed enum
+// from the API) — completed reads as the default since it's the
+// overwhelmingly common status (also covers the "Received"/"Paid" fallback
+// used when the API doesn't send a status at all).
+const statusPillClass = (status, compact) => {
+  const s = (status || "").toLowerCase();
+  const tone =
+    s.includes("fail") || s.includes("declin")
+      ? "failed"
+      : s.includes("pend")
+        ? "pending"
+        : "completed";
+  return cn(
+    "font-semibold rounded-full whitespace-nowrap transition-colors",
+    compact ? "text-[0.7rem] px-2 py-1" : "text-xs px-3 py-[5px]",
+    tone === "completed" &&
+      "bg-gold border border-gold text-black hover:bg-gold-dark",
+    tone === "pending" &&
+      "bg-white/20 border border-white/20 text-foreground hover:bg-white/30",
+    tone === "failed" &&
+      "bg-destructive border border-destructive text-white hover:bg-destructive/80",
+  );
+};
 const pageBtnClass =
   "h-auto rounded-md px-4 py-2 text-[0.85rem] font-semibold bg-white/[0.06] border border-border text-foreground hover:bg-white/[0.12]";
 
@@ -46,10 +69,9 @@ function History({
       const params = {};
       if (searchTerm.trim()) params.search = searchTerm.trim();
 
-      const response = await transactionsApi.get(
-        "/api/transactions/history/",
-        { params },
-      );
+      const response = await transactionsApi.get("/api/transactions/history/", {
+        params,
+      });
 
       const data = response.data;
       const txArray = Array.isArray(data)
@@ -96,9 +118,7 @@ function History({
     <div
       className={cn(
         "w-full mx-auto flex flex-col gap-6 bg-card border border-border rounded-lg box-border",
-        compact
-          ? "p-2.5 gap-3"
-          : "max-w-[1200px] p-8 max-[640px]:p-5",
+        compact ? "p-2.5 gap-3" : "max-w-[1200px] p-8 max-[640px]:p-5",
       )}
     >
       {/* Filter Section */}
@@ -132,8 +152,15 @@ function History({
         </Button>
       </div>
 
-      {/* Table Section */}
-      <div className="overflow-x-auto rounded-lg border border-border">
+      {/* Table Section — no border/rounding of its own in compact mode,
+      since the card wrapper above already frames it; adding a second border
+      just nested a smaller "bezel" inside the first one. */}
+      <div
+        className={cn(
+          "overflow-x-auto",
+          !compact && "rounded-lg border border-border",
+        )}
+      >
         {loading && (
           <p className="text-muted-foreground text-[0.95rem] text-center py-8">
             Loading transactions...
@@ -158,22 +185,49 @@ function History({
           wrapper's rounded-lg clip in every browser, which is what made
           the bottom corners here look uneven/cut off next to the phone's
           own bezel fix. */
-          <table className="w-full max-w-full border-separate border-spacing-0 bg-secondary">
+          <table className="w-full max-w-full border-separate border-spacing-0 rounded-sm bg-secondary">
             <thead>
               <tr>
-                <th className={cn(cellClass(compact), "border-b border-border text-muted-foreground font-bold text-xs uppercase tracking-[0.04em]")}>
+                <th
+                  className={cn(
+                    cellClass(compact),
+                    "border-b border-border text-muted-foreground font-bold text-xs uppercase tracking-[0.04em]",
+                  )}
+                >
                   Date
                 </th>
-                <th className={cn(cellClass(compact), !compact && hideOnSmallClass, "border-b border-border text-muted-foreground font-bold text-xs uppercase tracking-[0.04em]")}>
+                <th
+                  className={cn(
+                    cellClass(compact),
+                    !compact && hideOnSmallClass,
+                    "border-b border-border text-muted-foreground font-bold text-xs uppercase tracking-[0.04em]",
+                  )}
+                >
                   Recipient
                 </th>
-                <th className={cn(cellClass(compact), compact ? "hidden" : hideOnSmallClass, "border-b border-border text-muted-foreground font-bold text-xs uppercase tracking-[0.04em]")}>
+                <th
+                  className={cn(
+                    cellClass(compact),
+                    compact ? "hidden" : hideOnSmallClass,
+                    "border-b border-border text-muted-foreground font-bold text-xs uppercase tracking-[0.04em]",
+                  )}
+                >
                   Currency
                 </th>
-                <th className={cn(cellClass(compact), "border-b border-border text-muted-foreground font-bold text-xs uppercase tracking-[0.04em]")}>
+                <th
+                  className={cn(
+                    cellClass(compact),
+                    "border-b border-border text-muted-foreground font-bold text-xs uppercase tracking-[0.04em]",
+                  )}
+                >
                   Amount
                 </th>
-                <th className={cn(cellClass(compact), "border-b border-border text-muted-foreground font-bold text-xs uppercase tracking-[0.04em]")}>
+                <th
+                  className={cn(
+                    cellClass(compact),
+                    "border-b border-border text-muted-foreground font-bold text-xs uppercase tracking-[0.04em]",
+                  )}
+                >
                   Status
                 </th>
               </tr>
@@ -196,10 +250,20 @@ function History({
                         tx.created_at || tx.date || tx.timestamp,
                       ).toLocaleDateString()}
                     </td>
-                    <td className={cn(cellClass(compact), !compact && hideOnSmallClass)}>
+                    <td
+                      className={cn(
+                        cellClass(compact),
+                        !compact && hideOnSmallClass,
+                      )}
+                    >
                       {recipient}
                     </td>
-                    <td className={cn(cellClass(compact), compact ? "hidden" : hideOnSmallClass)}>
+                    <td
+                      className={cn(
+                        cellClass(compact),
+                        compact ? "hidden" : hideOnSmallClass,
+                      )}
+                    >
                       {tx.currency || "USD"}
                     </td>
                     <td
@@ -215,10 +279,7 @@ function History({
                     </td>
                     <td className={cellClass(compact)}>
                       <button
-                        className={cn(
-                          "bg-gold/10 border border-gold/25 text-gold font-semibold rounded-full whitespace-nowrap transition-colors hover:bg-gold hover:text-black",
-                          compact ? "text-[0.7rem] px-2 py-1" : "text-xs px-3 py-[5px]",
-                        )}
+                        className={statusPillClass(status, compact)}
                         onClick={() => openDetailsPopup(tx)}
                       >
                         {status}
