@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { ArrowLeft, BadgeCheck, Camera, LogOut } from "lucide-react";
 import axiosInstance, { transactionsApi } from "../../utility/axiosInstance";
 import { API_URL, PRO_PLAN_PRICE } from "../../utility/constants";
 import { countries } from "../../utility/countries";
+import { isoToFlagEmoji } from "../../utility/isoToFlagEmoji";
 import { getCurrentCountry } from "../../utility/getCurrentCountry";
 import { getRegionProviders } from "../../utility/regionProviders";
 import { Button } from "@/components/ui/button";
@@ -10,12 +12,33 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import ProfileImageCapture from "./ProfileImageCapture";
 import KycVerification from "./KycVerification";
+import {
+  isValidEmail,
+  isValidPhone,
+  isValidCardNumber,
+  isValidExpiry,
+  isSafeText,
+} from "../../utility/validators";
 
 const emptyBank = { bankName: "", accountNumber: "", accountName: "" };
 const emptyCard = { cardholderName: "", cardNumber: "", expiry: "" };
 const emptyMobile = { provider: "", phoneNumber: "" };
 const emptyPasswordForm = { currentPassword: "", newPassword: "", confirmPassword: "" };
 const PASSWORD_RULE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,15}$/;
+const WEAK_PINS = [
+  "1234", "0000", "1111", "2222", "3333", "4444", "5555", "6666", "7777",
+  "8888", "9999", "4321", "3456", "6789",
+];
+
+function getPinStrength(pinValue) {
+  if (!pinValue) return { level: "none", label: "", color: "" };
+  if (pinValue.length < 4) return { level: "weak", label: "Too Short", color: "#ef4444" };
+  if (WEAK_PINS.includes(pinValue) || /^(\d)\1{3}$/.test(pinValue))
+    return { level: "weak", label: "Very Weak", color: "#ef4444" };
+  if (/(\d)\1{2}/.test(pinValue) || /123|234|345|456|567|678|789|987|876/.test(pinValue))
+    return { level: "medium", label: "Medium", color: "#f59e0b" };
+  return { level: "strong", label: "Strong", color: "#22c55e" };
+}
 
 // Same card/flow/form class strings Home.js uses (restyled to match the
 // rest of the dashboard: flat bg-card, no border, rounded-2xl, translucent
@@ -84,6 +107,10 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
   const [newBank, setNewBank] = useState(emptyBank);
   const [newCard, setNewCard] = useState(emptyCard);
   const [newMobile, setNewMobile] = useState(emptyMobile);
+  const [profileError, setProfileError] = useState("");
+  const [bankError, setBankError] = useState("");
+  const [cardError, setCardError] = useState("");
+  const [mobileError, setMobileError] = useState("");
 
   // Inline change-password flow — "idle" (just the button) -> "form"
   // (current/new/confirm) -> "otp" (code entry) -> "success". Kept as part
@@ -101,6 +128,60 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
   const [chargeTo, setChargeTo] = useState("");
   const [subError, setSubError] = useState("");
   const [subLoading, setSubLoading] = useState(false);
+
+  // Username change
+  const [showUsernameForm, setShowUsernameForm] = useState(false);
+  const [username, setUsername] = useState("");
+  const [usernameError, setUsernameError] = useState("");
+  const [usernameSuccess, setUsernameSuccess] = useState("");
+
+  // Residence update
+  const [showResidenceForm, setShowResidenceForm] = useState(false);
+  const [resCountry, setResCountry] = useState("Detecting...");
+  const [resTownCity, setResTownCity] = useState("Detecting...");
+  const [resPostalCode, setResPostalCode] = useState("Detecting...");
+  const [resAddressLine, setResAddressLine] = useState("");
+  const [residenceErrors, setResidenceErrors] = useState({});
+  const [residenceLoading, setResidenceLoading] = useState(false);
+  const [residenceSuccess, setResidenceSuccess] = useState(false);
+
+  // Secondary contact
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [contactType, setContactType] = useState("EMAIL");
+  const [contactValue, setContactValue] = useState("");
+  const [contactCountryCode, setContactCountryCode] = useState("+254");
+  const [contactError, setContactError] = useState("");
+  const [contactLoading, setContactLoading] = useState(false);
+  const [contactSuccess, setContactSuccess] = useState(false);
+  const [secondaryContacts, setSecondaryContacts] = useState([]);
+  const [showContactsList, setShowContactsList] = useState(false);
+  const [contactsListLoading, setContactsListLoading] = useState(false);
+
+  // Secondary ID
+  const [showSecondaryIdForm, setShowSecondaryIdForm] = useState(false);
+  const [secIdType, setSecIdType] = useState("Government ID");
+  const [secIdNumber, setSecIdNumber] = useState("");
+  const [secIssuedCountry, setSecIssuedCountry] = useState("");
+  const [secIdError, setSecIdError] = useState("");
+  const [secIdLoading, setSecIdLoading] = useState(false);
+  const [secIdSuccess, setSecIdSuccess] = useState(false);
+  const [secondaryIds, setSecondaryIds] = useState([]);
+  const [showIdsList, setShowIdsList] = useState(false);
+  const [idsListLoading, setIdsListLoading] = useState(false);
+
+  // Transaction PIN — required by Home.js's send-money flow
+  // (requirePin dialog sends transaction_pin), so without this section
+  // users would have no way to ever set the PIN that flow demands.
+  const [showPinForm, setShowPinForm] = useState(false);
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [pinLoading, setPinLoading] = useState(false);
+  const [pinSuccess, setPinSuccess] = useState(false);
+  const [showPinInput, setShowPinInput] = useState(false);
+  const [showConfirmPinInput, setShowConfirmPinInput] = useState(false);
+  const [pinStrength, setPinStrength] = useState({ level: "none", label: "", color: "" });
+  const [pinsMatch, setPinsMatch] = useState(false);
 
   const region = getRegionProviders(myCountry);
 
@@ -123,7 +204,19 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
   }, []);
 
   const addBank = async () => {
-    if (!newBank.bankName || !newBank.accountNumber || !newBank.accountName) return;
+    setBankError("");
+    if (!newBank.bankName || !newBank.accountNumber || !newBank.accountName) {
+      setBankError("All fields are required");
+      return;
+    }
+    if (!/^\d{6,20}$/.test(newBank.accountNumber.trim())) {
+      setBankError("Enter a valid account number");
+      return;
+    }
+    if (!isSafeText(newBank.accountName)) {
+      setBankError("Account name can't contain < or > characters");
+      return;
+    }
     const res = await transactionsApi.post("/api/payment-methods/banks/", newBank);
     setMethods((m) => ({ ...m, banks: res.data || [] }));
     setNewBank(emptyBank);
@@ -131,7 +224,23 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
   };
 
   const addCard = async () => {
-    if (!newCard.cardholderName || !newCard.cardNumber || !newCard.expiry) return;
+    setCardError("");
+    if (!newCard.cardholderName || !newCard.cardNumber || !newCard.expiry) {
+      setCardError("All fields are required");
+      return;
+    }
+    if (!isSafeText(newCard.cardholderName)) {
+      setCardError("Cardholder name can't contain < or > characters");
+      return;
+    }
+    if (!isValidCardNumber(newCard.cardNumber)) {
+      setCardError("Enter a valid card number");
+      return;
+    }
+    if (!isValidExpiry(newCard.expiry)) {
+      setCardError("Enter a valid, unexpired expiry date (MM/YY)");
+      return;
+    }
     const res = await transactionsApi.post("/api/payment-methods/cards/", newCard);
     setMethods((m) => ({ ...m, cards: res.data || [] }));
     setNewCard(emptyCard);
@@ -139,7 +248,15 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
   };
 
   const addMobile = async () => {
-    if (!newMobile.provider || !newMobile.phoneNumber) return;
+    setMobileError("");
+    if (!newMobile.provider || !newMobile.phoneNumber) {
+      setMobileError("All fields are required");
+      return;
+    }
+    if (!isValidPhone(newMobile.phoneNumber)) {
+      setMobileError("Enter a valid phone number");
+      return;
+    }
     const res = await transactionsApi.post(
       "/api/payment-methods/mobile-money/",
       newMobile,
@@ -207,6 +324,23 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
   };
 
   const saveProfile = async () => {
+    setProfileError("");
+    if (profileForm.phone && !isValidPhone(profileForm.phone)) {
+      setProfileError("Enter a valid phone number");
+      return;
+    }
+    if (profileForm.email && !isValidEmail(profileForm.email)) {
+      setProfileError("Enter a valid email address");
+      return;
+    }
+    if (
+      !isSafeText(profileForm.addressLine) ||
+      !isSafeText(profileForm.townCity) ||
+      !isSafeText(profileForm.postalCode)
+    ) {
+      setProfileError("Fields can't contain < or > characters");
+      return;
+    }
     const res = await axiosInstance.post("/api/profile-details", profileForm);
     setProfile(res.data);
     setEditingProfile(false);
@@ -268,6 +402,226 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
       setPwError(error.response?.data?.error || "Verification failed");
     } finally {
       setPwLoading(false);
+    }
+  };
+
+  const submitUsername = async () => {
+    setUsernameError("");
+    const trimmed = username.trim();
+    if (trimmed.length < 3 || trimmed.length > 30) {
+      setUsernameError("Username must be 3–30 characters");
+      return;
+    }
+    if (!/^[a-zA-Z0-9]+( [a-zA-Z0-9]+)?$/.test(trimmed)) {
+      setUsernameError("Only letters, numbers, and one single space allowed");
+      return;
+    }
+    try {
+      const res = await transactionsApi.post("/api/update-username/", {
+        username: trimmed,
+      });
+      if (res.data.success) {
+        setUsernameSuccess(trimmed);
+        setUsername("");
+        setShowUsernameForm(false);
+        onRefreshUser?.();
+      }
+    } catch (err) {
+      setUsernameError(err.response?.data?.error || "Failed to update username");
+    }
+  };
+
+  // Detect location for the residence form when it's opened.
+  useEffect(() => {
+    if (!showResidenceForm) return;
+    const setDefaults = () => {
+      setResCountry("Kenya");
+      setResTownCity("Nairobi");
+      setResPostalCode("00100");
+    };
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            const res = await axios.get(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
+            );
+            const addr = res.data.address || {};
+            setResCountry(addr.country || "Kenya");
+            setResTownCity(addr.city || addr.town || addr.village || addr.suburb || "Nairobi");
+            setResPostalCode(addr.postcode || "00100");
+          } catch {
+            setDefaults();
+          }
+        },
+        () => setDefaults(),
+      );
+    } else {
+      setDefaults();
+    }
+  }, [showResidenceForm]);
+
+  const submitResidence = async () => {
+    const errs = {};
+    if (!resAddressLine.trim()) errs.addressLine = "Address line is required";
+    else if (!isSafeText(resAddressLine)) errs.addressLine = "Address can't contain < or > characters";
+    else if (resAddressLine.length < 5) errs.addressLine = "At least 5 characters";
+    else if (resAddressLine.length > 200) errs.addressLine = "Max 200 characters";
+    if (resCountry === "Detecting...") errs.country = "Country detection failed";
+    if (resTownCity === "Detecting...") errs.townCity = "Town/City detection failed";
+    if (resPostalCode === "Detecting...") errs.postalCode = "Postal code detection failed";
+    setResidenceErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
+    setResidenceLoading(true);
+    try {
+      await transactionsApi.post("/api/update-residence/", {
+        country: resCountry.trim(),
+        townCity: resTownCity.trim(),
+        postalCode: resPostalCode.trim(),
+        addressLine: resAddressLine.trim(),
+      });
+      setResidenceSuccess(true);
+      onRefreshUser?.();
+      axiosInstance
+        .get("/api/profile-details")
+        .then((res) => setProfile(res.data))
+        .catch(() => {});
+      setTimeout(() => {
+        setResidenceSuccess(false);
+        setResAddressLine("");
+        setShowResidenceForm(false);
+      }, 2500);
+    } catch (err) {
+      setResidenceErrors({ server: err.response?.data?.error || "Update failed" });
+    } finally {
+      setResidenceLoading(false);
+    }
+  };
+
+  const fetchSecondaryContacts = async () => {
+    setContactsListLoading(true);
+    try {
+      const res = await transactionsApi.get("/api/secondary-contacts/");
+      setSecondaryContacts(res.data || []);
+    } catch (err) {
+      // no-op — list just stays empty
+    } finally {
+      setContactsListLoading(false);
+    }
+  };
+
+  const fetchSecondaryIds = async () => {
+    setIdsListLoading(true);
+    try {
+      const res = await transactionsApi.get("/api/secondary-ids/");
+      setSecondaryIds(res.data || []);
+    } catch (err) {
+      // no-op — list just stays empty
+    } finally {
+      setIdsListLoading(false);
+    }
+  };
+
+  const submitContact = async () => {
+    setContactError("");
+    let finalValue = contactValue.trim();
+    if (contactType === "PHONE") {
+      finalValue = finalValue.replace(/\D/g, "");
+      if (finalValue.startsWith("0")) finalValue = finalValue.substring(1);
+      finalValue = contactCountryCode + finalValue;
+    }
+    if (contactType === "EMAIL" && !isValidEmail(finalValue)) {
+      setContactError("Please enter a valid email address");
+      return;
+    }
+    if (contactType === "PHONE" && finalValue.length < 10) {
+      setContactError("Phone number is too short");
+      return;
+    }
+    setContactLoading(true);
+    try {
+      await transactionsApi.post("/api/secondary-contact/", {
+        type: contactType,
+        value: finalValue,
+      });
+      setContactSuccess(true);
+      setContactValue("");
+      setContactCountryCode("+254");
+      setShowContactForm(false);
+      if (showContactsList) fetchSecondaryContacts();
+    } catch (err) {
+      setContactError(err.response?.data?.error || "Failed to add contact");
+    } finally {
+      setContactLoading(false);
+    }
+  };
+
+  const submitSecondaryId = async () => {
+    setSecIdError("");
+    if (!isSafeText(secIdNumber) || !isSafeText(secIssuedCountry)) {
+      setSecIdError("Fields can't contain < or > characters");
+      return;
+    }
+    setSecIdLoading(true);
+    try {
+      await transactionsApi.post("/api/secondary-id/", {
+        idType: secIdType.trim(),
+        idNumber: secIdNumber.trim(),
+        issuedCountry: secIssuedCountry.trim(),
+      });
+      setSecIdSuccess(true);
+      setSecIdType("Government ID");
+      setSecIdNumber("");
+      setSecIssuedCountry("");
+      setShowSecondaryIdForm(false);
+      if (showIdsList) fetchSecondaryIds();
+    } catch (err) {
+      setSecIdError(err.response?.data?.error || "Failed to add secondary ID");
+    } finally {
+      setSecIdLoading(false);
+    }
+  };
+
+  const submitPin = async () => {
+    setPinError("");
+    if (pin.length !== 4 || confirmPin.length !== 4) {
+      setPinError("PIN must be exactly 4 digits");
+      return;
+    }
+    if (pin !== confirmPin) {
+      setPinError("PINs do not match");
+      return;
+    }
+    if (WEAK_PINS.includes(pin)) {
+      setPinError("Please choose a stronger PIN. Avoid obvious sequences like 1234 or 0000.");
+      return;
+    }
+    if (/^(\d)\1{3}$/.test(pin)) {
+      setPinError("PIN cannot be all identical digits (e.g. 1111)");
+      return;
+    }
+    setPinLoading(true);
+    try {
+      const response = await transactionsApi.post("/api/set-pin/", { pin });
+      if (response.data.success) {
+        setPinSuccess(true);
+        setPin("");
+        setConfirmPin("");
+        setShowPinForm(false);
+        onRefreshUser?.();
+      } else {
+        setPinError(response.data.message || "Failed to set PIN");
+      }
+    } catch (err) {
+      setPinError(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Failed to set PIN. Please try again.",
+      );
+    } finally {
+      setPinLoading(false);
     }
   };
 
@@ -377,10 +731,19 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
                 setProfileForm({ ...profileForm, postalCode: e.target.value })
               }
             />
+            {profileError && (
+              <p className="text-xs text-red-400 -mt-[0.4rem]">{profileError}</p>
+            )}
             <Button className={primaryBtnClass} onClick={saveProfile}>
               Save changes
             </Button>
-            <button className={addFavouriteBtnClass} onClick={() => setEditingProfile(false)}>
+            <button
+              className={addFavouriteBtnClass}
+              onClick={() => {
+                setEditingProfile(false);
+                setProfileError("");
+              }}
+            >
               Cancel
             </button>
           </div>
@@ -600,6 +963,378 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
         )}
       </div>
 
+      {/* Username */}
+      <div className={groupClass}>
+        <h3 className={groupTitleClass}>Username</h3>
+        {usernameSuccess && (
+          <p className="m-0 text-[0.85rem] font-semibold text-success">
+            Username updated to "{usernameSuccess}".
+          </p>
+        )}
+        {!showUsernameForm ? (
+          <button className={addFavouriteBtnClass} onClick={() => setShowUsernameForm(true)}>
+            Change username
+          </button>
+        ) : (
+          <div className={flowFormClass}>
+            <Label className={formLabelClass}>New username</Label>
+            <Input
+              className={formInputClass}
+              placeholder="3-30 letters, numbers, one space"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+            {usernameError && (
+              <p className="text-xs text-red-400 -mt-[0.4rem]">{usernameError}</p>
+            )}
+            <Button className={primaryBtnClass} onClick={submitUsername}>
+              Save username
+            </Button>
+            <button
+              className={addFavouriteBtnClass}
+              onClick={() => {
+                setShowUsernameForm(false);
+                setUsername("");
+                setUsernameError("");
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Residence */}
+      <div className={groupClass}>
+        <h3 className={groupTitleClass}>Residence</h3>
+        {residenceSuccess && (
+          <p className="m-0 text-[0.85rem] font-semibold text-success">
+            Residence updated successfully.
+          </p>
+        )}
+        {!showResidenceForm ? (
+          <button className={addFavouriteBtnClass} onClick={() => setShowResidenceForm(true)}>
+            Update residence
+          </button>
+        ) : (
+          <div className={flowFormClass}>
+            <Label className={formLabelClass}>Country (detected)</Label>
+            <Input className={formInputClass} value={resCountry} disabled />
+            {residenceErrors.country && (
+              <p className="text-xs text-red-400 -mt-[0.4rem]">{residenceErrors.country}</p>
+            )}
+            <Label className={formLabelClass}>Town / City (detected)</Label>
+            <Input className={formInputClass} value={resTownCity} disabled />
+            {residenceErrors.townCity && (
+              <p className="text-xs text-red-400 -mt-[0.4rem]">{residenceErrors.townCity}</p>
+            )}
+            <Label className={formLabelClass}>Postal code (detected)</Label>
+            <Input className={formInputClass} value={resPostalCode} disabled />
+            {residenceErrors.postalCode && (
+              <p className="text-xs text-red-400 -mt-[0.4rem]">{residenceErrors.postalCode}</p>
+            )}
+            <Label className={formLabelClass}>Address line</Label>
+            <Input
+              className={formInputClass}
+              placeholder="e.g. 123 Langata Road, Apt 4B"
+              value={resAddressLine}
+              onChange={(e) => setResAddressLine(e.target.value)}
+            />
+            {residenceErrors.addressLine && (
+              <p className="text-xs text-red-400 -mt-[0.4rem]">{residenceErrors.addressLine}</p>
+            )}
+            {residenceErrors.server && (
+              <p className="text-xs text-red-400 -mt-[0.4rem]">{residenceErrors.server}</p>
+            )}
+            <Button
+              className={primaryBtnClass}
+              onClick={submitResidence}
+              disabled={residenceLoading}
+            >
+              {residenceLoading ? "Saving…" : "Update residence"}
+            </Button>
+            <button className={addFavouriteBtnClass} onClick={() => setShowResidenceForm(false)}>
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Secondary contacts */}
+      <div className={groupClass}>
+        <div className={sectionHeaderClass}>
+          <h3 className={groupTitleClass}>Secondary contacts</h3>
+          <button
+            className={addFavouriteBtnClass}
+            onClick={() => {
+              setShowContactsList((v) => !v);
+              if (!showContactsList) fetchSecondaryContacts();
+            }}
+          >
+            {showContactsList ? "Hide list" : "View list"}
+          </button>
+        </div>
+        {contactSuccess && (
+          <p className="m-0 text-[0.85rem] font-semibold text-success">
+            Secondary contact added.
+          </p>
+        )}
+        {showContactsList && (
+          <div className="flex flex-col mb-2">
+            {contactsListLoading ? (
+              <p className={mutedClass}>Loading contacts…</p>
+            ) : secondaryContacts.length === 0 ? (
+              <p className={mutedClass}>No secondary contacts added yet.</p>
+            ) : (
+              secondaryContacts.map((contact) => (
+                <div key={contact.id} className={methodCardClass}>
+                  <span>
+                    {contact.type}: {contact.value}
+                  </span>
+                  <span className={contact.isVerified ? "text-success text-xs" : "text-[var(--muted)] text-xs"}>
+                    {contact.isVerified ? "Verified" : "Not verified"}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+        {!showContactForm ? (
+          <button className={addFavouriteBtnClass} onClick={() => setShowContactForm(true)}>
+            + Add secondary contact
+          </button>
+        ) : (
+          <div className={flowFormClass}>
+            <Label className={formLabelClass}>Type</Label>
+            <select
+              className={formInputClass}
+              value={contactType}
+              onChange={(e) => {
+                setContactType(e.target.value);
+                setContactError("");
+              }}
+            >
+              <option value="EMAIL">Email</option>
+              <option value="PHONE">Phone</option>
+            </select>
+            {contactType === "PHONE" && (
+              <>
+                <Label className={formLabelClass}>Country code</Label>
+                <select
+                  className={formInputClass}
+                  value={contactCountryCode}
+                  onChange={(e) => setContactCountryCode(e.target.value)}
+                >
+                  {countries.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {isoToFlagEmoji(c.flag)} {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
+            <Label className={formLabelClass}>
+              {contactType === "EMAIL" ? "Secondary email address" : "Phone number"}
+            </Label>
+            <Input
+              type={contactType === "EMAIL" ? "email" : "tel"}
+              className={formInputClass}
+              placeholder={contactType === "EMAIL" ? "you@example.com" : "e.g. 0711223334"}
+              value={contactValue}
+              onChange={(e) => {
+                setContactValue(e.target.value);
+                setContactError("");
+              }}
+            />
+            {contactError && (
+              <p className="text-xs text-red-400 -mt-[0.4rem]">{contactError}</p>
+            )}
+            <Button className={primaryBtnClass} onClick={submitContact} disabled={contactLoading}>
+              {contactLoading ? "Adding…" : "Add contact"}
+            </Button>
+            <button className={addFavouriteBtnClass} onClick={() => setShowContactForm(false)}>
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Secondary IDs */}
+      <div className={groupClass}>
+        <div className={sectionHeaderClass}>
+          <h3 className={groupTitleClass}>Secondary IDs</h3>
+          <button
+            className={addFavouriteBtnClass}
+            onClick={() => {
+              setShowIdsList((v) => !v);
+              if (!showIdsList) fetchSecondaryIds();
+            }}
+          >
+            {showIdsList ? "Hide list" : "View list"}
+          </button>
+        </div>
+        {secIdSuccess && (
+          <p className="m-0 text-[0.85rem] font-semibold text-success">
+            Secondary ID added.
+          </p>
+        )}
+        {showIdsList && (
+          <div className="flex flex-col mb-2">
+            {idsListLoading ? (
+              <p className={mutedClass}>Loading IDs…</p>
+            ) : secondaryIds.length === 0 ? (
+              <p className={mutedClass}>No secondary IDs added yet.</p>
+            ) : (
+              secondaryIds.map((id) => (
+                <div key={id.id} className={methodCardClass}>
+                  <span>{id.idType}</span>
+                  <span className={mutedClass}>
+                    {id.idNumber} · {id.issuedCountry}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+        {!showSecondaryIdForm ? (
+          <button className={addFavouriteBtnClass} onClick={() => setShowSecondaryIdForm(true)}>
+            + Add secondary ID
+          </button>
+        ) : (
+          <div className={flowFormClass}>
+            <Label className={formLabelClass}>ID type</Label>
+            <select
+              className={formInputClass}
+              value={secIdType}
+              onChange={(e) => setSecIdType(e.target.value)}
+            >
+              <option value="Government ID">Government ID</option>
+              <option value="Passport">Passport</option>
+              <option value="Military ID">Military ID</option>
+            </select>
+            <Label className={formLabelClass}>ID number</Label>
+            <Input
+              className={formInputClass}
+              value={secIdNumber}
+              onChange={(e) => setSecIdNumber(e.target.value)}
+            />
+            <Label className={formLabelClass}>Issued country</Label>
+            <select
+              className={formInputClass}
+              value={secIssuedCountry}
+              onChange={(e) => setSecIssuedCountry(e.target.value)}
+            >
+              <option value="">Select issued country</option>
+              {countries.map((c) => (
+                <option key={c.name} value={c.name}>
+                  {isoToFlagEmoji(c.flag)} {c.name}
+                </option>
+              ))}
+            </select>
+            {secIdError && (
+              <p className="text-xs text-red-400 -mt-[0.4rem]">{secIdError}</p>
+            )}
+            <Button className={primaryBtnClass} onClick={submitSecondaryId} disabled={secIdLoading}>
+              {secIdLoading ? "Adding…" : "Add secondary ID"}
+            </Button>
+            <button className={addFavouriteBtnClass} onClick={() => setShowSecondaryIdForm(false)}>
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Transaction PIN */}
+      <div className={groupClass}>
+        <h3 className={groupTitleClass}>Transaction PIN</h3>
+        {pinSuccess && (
+          <p className="m-0 text-[0.85rem] font-semibold text-success">
+            Transaction PIN set — you can now perform secure transactions.
+          </p>
+        )}
+        {!showPinForm ? (
+          <button className={addFavouriteBtnClass} onClick={() => setShowPinForm(true)}>
+            Set transaction PIN
+          </button>
+        ) : (
+          <div className={flowFormClass}>
+            <Label className={formLabelClass}>Enter 4-digit PIN</Label>
+            <Input
+              type={showPinInput ? "text" : "password"}
+              maxLength={4}
+              className={formInputClass}
+              placeholder="••••"
+              value={pin}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, "").slice(0, 4);
+                setPin(value);
+                setPinError("");
+                setPinStrength(getPinStrength(value));
+                if (confirmPin) setPinsMatch(value === confirmPin);
+              }}
+            />
+            <button
+              type="button"
+              className={addFavouriteBtnClass}
+              onClick={() => setShowPinInput((v) => !v)}
+            >
+              {showPinInput ? "Hide PIN" : "Show PIN"}
+            </button>
+            {pinStrength.level !== "none" && (
+              <p
+                className="text-xs font-semibold -mt-[0.4rem]"
+                style={{ color: pinStrength.color }}
+              >
+                Strength: {pinStrength.label}
+              </p>
+            )}
+            <Label className={formLabelClass}>Confirm PIN</Label>
+            <Input
+              type={showConfirmPinInput ? "text" : "password"}
+              maxLength={4}
+              className={formInputClass}
+              placeholder="••••"
+              value={confirmPin}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, "").slice(0, 4);
+                setConfirmPin(value);
+                setPinError("");
+                setPinsMatch(pin === value && value.length === 4);
+              }}
+            />
+            <button
+              type="button"
+              className={addFavouriteBtnClass}
+              onClick={() => setShowConfirmPinInput((v) => !v)}
+            >
+              {showConfirmPinInput ? "Hide PIN" : "Show PIN"}
+            </button>
+            {confirmPin.length > 0 && (
+              <p
+                className="text-xs font-semibold -mt-[0.4rem]"
+                style={{ color: pinsMatch ? "#22c55e" : "#ef4444" }}
+              >
+                {pinsMatch ? "PINs match" : "PINs do not match"}
+              </p>
+            )}
+            {pinError && <p className="text-xs text-red-400 -mt-[0.4rem]">{pinError}</p>}
+            <Button
+              className={primaryBtnClass}
+              onClick={submitPin}
+              disabled={pinLoading || pin.length !== 4 || confirmPin.length !== 4 || !pinsMatch}
+            >
+              {pinLoading ? "Activating…" : "Set PIN"}
+            </Button>
+            <button className={addFavouriteBtnClass} onClick={() => setShowPinForm(false)}>
+              Cancel
+            </button>
+            <p className={mutedClass}>
+              This PIN will be required for all transactions. Keep it secure.
+            </p>
+          </div>
+        )}
+      </div>
+
       <div className={groupClass}>
         <h3 className={groupTitleClass}>Bank accounts</h3>
         {methods.banks.map((b) => (
@@ -641,12 +1376,21 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
               value={newBank.accountName}
               onChange={(e) => setNewBank({ ...newBank, accountName: e.target.value })}
             />
+            {bankError && (
+              <p className="text-xs text-red-400 -mt-[0.4rem]">{bankError}</p>
+            )}
             <Button className={primaryBtnClass} onClick={addBank}>
               Save bank account
             </Button>
           </div>
         ) : (
-          <button className={addFavouriteBtnClass} onClick={() => setShowAddBank(true)}>
+          <button
+            className={addFavouriteBtnClass}
+            onClick={() => {
+              setShowAddBank(true);
+              setBankError("");
+            }}
+          >
             + Add bank
           </button>
         )}
@@ -695,6 +1439,9 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
                   setNewMobile({ ...newMobile, phoneNumber: e.target.value })
                 }
               />
+              {mobileError && (
+                <p className="text-xs text-red-400 -mt-[0.4rem]">{mobileError}</p>
+              )}
               <Button className={primaryBtnClass} onClick={addMobile}>
                 Save mobile money account
               </Button>
@@ -702,7 +1449,10 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
           ) : (
             <button
               className={addFavouriteBtnClass}
-              onClick={() => setShowAddMobile(true)}
+              onClick={() => {
+                setShowAddMobile(true);
+                setMobileError("");
+              }}
             >
               + Add mobile money account
             </button>
@@ -750,12 +1500,21 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
               value={newCard.expiry}
               onChange={(e) => setNewCard({ ...newCard, expiry: e.target.value })}
             />
+            {cardError && (
+              <p className="text-xs text-red-400 -mt-[0.4rem]">{cardError}</p>
+            )}
             <Button className={primaryBtnClass} onClick={addCard}>
               Save card
             </Button>
           </div>
         ) : (
-          <button className={addFavouriteBtnClass} onClick={() => setShowAddCard(true)}>
+          <button
+            className={addFavouriteBtnClass}
+            onClick={() => {
+              setShowAddCard(true);
+              setCardError("");
+            }}
+          >
             + Add card
           </button>
         )}
