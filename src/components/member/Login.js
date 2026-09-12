@@ -200,6 +200,7 @@ function Login({ onBack, embedded = false, compact = false }) {
   const [email, setEmail] = useState("");
   const [remainingTime, setRemainingTime] = useState(120);
   const [timerStarted, setTimerStarted] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [showExpired, setShowExpired] = useState(false);
 
   // popup states
@@ -237,6 +238,14 @@ function Login({ onBack, embedded = false, compact = false }) {
     setPassword("");
     setError("");
   }, [useUsername]);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return undefined;
+    const interval = setInterval(() => {
+      setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resendCooldown]);
 
   const formatTime = (s) =>
     `${Math.floor(s / 60)
@@ -286,12 +295,14 @@ function Login({ onBack, embedded = false, compact = false }) {
       });
       setFullName(res.data.fullName || "User");
       setEmail(loginEmail);
+      setOtp("");
       setStep(2);
       setRemainingTime(120);
+      setResendCooldown(30);
       setTimerStarted(true);
       setShowExpired(false);
     } catch (err) {
-      const msg = err.response?.data?.error || "";
+      const msg = err.response?.data?.error || err.message || "";
       if (err.response?.status === 401)
         showPopup("Login failed", "Incorrect username or password.");
       else if (msg.toLowerCase().includes("blocked"))
@@ -380,6 +391,7 @@ function Login({ onBack, embedded = false, compact = false }) {
     try {
       await axiosInstance.post("/api/login", { email, password: "resend" });
       setRemainingTime(120);
+      setResendCooldown(30);
       setTimerStarted(true);
       setShowExpired(false);
       setError("");
@@ -648,10 +660,14 @@ function Login({ onBack, embedded = false, compact = false }) {
                       </p>
                       <button
                         onClick={resendOtp}
-                        className="bg-[rgba(var(--gold-rgb),0.1)] text-gold border-[0.5px] border-[rgba(var(--gold-rgb),0.3)] rounded-sm py-[7px] px-5 text-[13px] font-semibold cursor-pointer transition-colors hover:bg-[rgba(var(--gold-rgb),0.18)]"
-                        disabled={isLoading}
+                        className="bg-[rgba(var(--gold-rgb),0.1)] text-gold border-[0.5px] border-[rgba(var(--gold-rgb),0.3)] rounded-sm py-[7px] px-5 text-[13px] font-semibold cursor-pointer transition-colors hover:bg-[rgba(var(--gold-rgb),0.18)] disabled:opacity-60 disabled:cursor-not-allowed"
+                        disabled={isLoading || resendCooldown > 0}
                       >
-                        {isLoading ? "Sending…" : "Resend code"}
+                        {isLoading
+                          ? "Sending…"
+                          : resendCooldown > 0
+                            ? `Resend code in ${resendCooldown}s`
+                            : "Resend code"}
                       </button>
                     </div>
                   )}
