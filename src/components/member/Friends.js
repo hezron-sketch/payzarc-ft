@@ -13,6 +13,14 @@ function Friends({ onSelectFriend }) {
 
   const fetchAllFavourites = async () => {
     try {
+      const token =
+        localStorage.getItem("token") || localStorage.getItem("accessToken");
+      if (!token) {
+        setError("No token found. Please log in again.");
+        setLoading(false);
+        return;
+      }
+
       const response = await djangoApis.system2.get("/api/favorites/all/");
       const result = response.data;
 

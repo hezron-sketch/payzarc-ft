@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { Download } from "lucide-react";
 import { countries } from "../../utility/countries";
+import { isoToFlagEmoji } from "../../utility/isoToFlagEmoji";
 import { generateReceiptPDF } from "../../utility/generateReceipt";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,7 @@ function TransactionDetails({ transaction, closeDetailsPopup }) {
     const country = countries.find(
       (c) => c.name?.toLowerCase() === countryName?.toLowerCase(),
     );
-    return country ? country.flag : "🏳️";
+    return country ? isoToFlagEmoji(country.flag) : "🏳️";
   };
 
   // `transaction` here is the raw tx object History.js fetched from the API
