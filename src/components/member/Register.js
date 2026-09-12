@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Check, Camera, RotateCw, Mail } from "lucide-react";
+import { ArrowLeft, Check, Camera, RotateCw, Mail, FileText, ScanLine } from "lucide-react";
 import axios from "axios";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,76 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { countries } from "../../utility/countries";
 import { getCurrentCountry } from "../../utility/getCurrentCountry";
 import { API_URL } from "../../utility/constants";
+import { isValidEmail, isSafeText } from "../../utility/validators";
 import * as faceapi from "face-api.js";
+import { createWorker } from "tesseract.js";
+
+// ─── ID-scan OCR helpers ───
+// Best-effort text extraction from a photographed ID document, used only to
+// pre-fill step 1's name fields — never sent to the backend (the register-full
+// payload below is built from formData alone, which never gains an idImage
+// field). Users can still type everything manually if OCR misses.
+const cleanOCRText = (text) => {
+  if (!text) return "";
+  return text
+    .replace(/\r/g, "\n")
+    .replace(/[|]/g, "I")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+};
+const normalizeLine = (line) => line.replace(/[|]/g, "I").replace(/\s+/g, " ").trim();
+const extractIDNumber = (text) => {
+  const patterns = [/\b\d{8}\b/, /\b\d{7,9}\b/, /\b[A-Z]{1,3}\d{6,12}\b/i];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return match[0].replace(/\s/g, "");
+  }
+  return "";
+};
+const extractDOB = (text) => {
+  const patterns = [
+    /\b(19|20)\d{2}[-/]\d{1,2}[-/]\d{1,2}\b/,
+    /\b\d{1,2}[-/]\d{1,2}[-/](19|20)\d{2}\b/,
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const value = match[0];
+      if (/^\d{4}[-/]/.test(value)) return value.replace(/\//g, "-");
+      const parts = value.split(/[-/]/);
+      if (parts.length === 3) {
+        const day = parts[0].padStart(2, "0");
+        const month = parts[1].padStart(2, "0");
+        const year = parts[2];
+        return `${year}-${month}-${day}`;
+      }
+    }
+  }
+  return "";
+};
+const extractName = (text) => {
+  const lines = cleanOCRText(text).split("\n").map(normalizeLine).filter(Boolean);
+  const ignored = [
+    "REPUBLIC OF KENYA", "REPUBLIC", "KENYA", "NATIONAL IDENTITY CARD",
+    "IDENTITY CARD", "IDENTIFICATION", "DATE OF BIRTH", "DATE", "SEX",
+    "GENDER", "NATIONALITY", "DISTRICT", "COUNTY", "SERIAL", "NUMBER", "ID NUMBER",
+  ];
+  const candidates = lines.filter((line) => {
+    const upper = line.toUpperCase();
+    if (ignored.some((word) => upper.includes(word))) return false;
+    if (/\d/.test(line)) return false;
+    const words = line.split(/\s+/);
+    return words.length >= 2 && words.length <= 5 && /^[A-Za-z .'-]+$/.test(line);
+  });
+  if (!candidates.length) return null;
+  const parts = candidates[0].split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts[0] || "",
+    middleName: parts.length > 2 ? parts.slice(1, -1).join(" ") : "",
+    surname: parts.length > 1 ? parts[parts.length - 1] : "",
+  };
+};
 
 // Shared class-builders for pieces whose sizing changes in compact mode
 // (Register rendered inside the phone-width Phone Auth Stage) — mirrors
@@ -131,8 +200,20 @@ function Register({ onBack, embedded = false, compact = false }) {
   const [isModelsLoaded, setIsModelsLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // ID-scan OCR — kept out of formData deliberately (see the helpers above):
+  // idImage is a multi-MB data URL and formData is spread as-is into the
+  // register-full request body, so folding it in there would silently bloat
+  // that payload.
+  const [idImage, setIdImage] = useState("");
+  const [idCameraError, setIdCameraError] = useState("");
+  const [isOCRProcessing, setIsOCRProcessing] = useState(false);
+  const [ocrProgress, setOCRProgress] = useState(0);
+  const [idCaptured, setIdCaptured] = useState(false);
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const idVideoRef = useRef(null);
+  const idCanvasRef = useRef(null);
   const otpRefs = useRef([]);
 
   useEffect(() => {
@@ -201,6 +282,8 @@ function Register({ onBack, embedded = false, compact = false }) {
             newErrors.countryOfBirth = "Country of birth required";
           if (!formData.townCity.trim())
             newErrors.townCity = "Town/City required";
+          else if (!isSafeText(formData.townCity))
+            newErrors.townCity = "Town/City contains invalid characters";
           break;
 
         case 4:
@@ -212,6 +295,8 @@ function Register({ onBack, embedded = false, compact = false }) {
             formData.email.length > emailsizeMax
           )
             newErrors.email = `Email ${emailsizeMin}-${emailsizeMax} characters`;
+          else if (!isValidEmail(formData.email))
+            newErrors.email = "Enter a valid email address";
           break;
 
         case 5:
@@ -283,8 +368,142 @@ function Register({ onBack, embedded = false, compact = false }) {
   const handleBack = (targetStep = step - 1) => {
     setStep(targetStep);
     setCameraError("");
+    setIdCameraError("");
     stopCamera();
+    stopIDCamera();
   };
+
+  const stopIDCamera = useCallback(() => {
+    if (idVideoRef.current && idVideoRef.current.srcObject) {
+      idVideoRef.current.srcObject.getTracks().forEach((track) => track.stop());
+      idVideoRef.current.srcObject = null;
+    }
+  }, []);
+
+  const startIDCamera = useCallback(async () => {
+    stopIDCamera();
+    setIdCameraError("");
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setIdCameraError("Camera is not supported by this browser.");
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+      });
+      if (idVideoRef.current) {
+        idVideoRef.current.srcObject = stream;
+        idVideoRef.current.onloadedmetadata = () => {
+          idVideoRef.current?.play().catch(() => {});
+        };
+      }
+    } catch (err) {
+      setIdCameraError(
+        "Unable to access the camera. Please allow camera permission and try again.",
+      );
+    }
+  }, [stopIDCamera]);
+
+  const processIDWithOCR = async (imageData) => {
+    setIsOCRProcessing(true);
+    setOCRProgress(0);
+    setIdCameraError("");
+    try {
+      const worker = await createWorker("eng", 1, {
+        logger: (message) => {
+          if (message.status === "recognizing text") {
+            setOCRProgress(Math.round((message.progress || 0) * 100));
+          }
+        },
+      });
+      const result = await worker.recognize(imageData);
+      const text = result?.data?.text || "";
+      await worker.terminate();
+
+      const cleaned = cleanOCRText(text);
+      const extractedID = extractIDNumber(cleaned);
+      const extractedDOB = extractDOB(cleaned);
+      const extractedName = extractName(cleaned);
+      const upper = cleaned.toUpperCase();
+      let extractedIDType = "";
+      if (upper.includes("PASSPORT")) extractedIDType = "Passport";
+      else if (
+        upper.includes("NATIONAL ID") ||
+        upper.includes("IDENTITY CARD") ||
+        upper.includes("KENYA")
+      )
+        extractedIDType = "Government";
+
+      setFormData((prev) => ({
+        ...prev,
+        ...(extractedName
+          ? {
+              firstName: extractedName.firstName || prev.firstName,
+              middleName: extractedName.middleName || prev.middleName,
+              surname: extractedName.surname || prev.surname,
+            }
+          : {}),
+        ...(extractedID ? { idNumber: extractedID } : {}),
+        ...(extractedDOB ? { dob: extractedDOB } : {}),
+        ...(extractedIDType ? { idType: extractedIDType } : {}),
+      }));
+
+      setOCRProgress(100);
+      if (!extractedID && !extractedDOB && !extractedName) {
+        setIdCameraError(
+          "The ID was captured, but the text could not be read clearly. Please retake the ID photo or enter the details manually.",
+        );
+      }
+    } catch (error) {
+      setIdCameraError("Unable to read the ID automatically. You can enter the details manually.");
+    } finally {
+      setIsOCRProcessing(false);
+    }
+  };
+
+  const captureIDDocument = async () => {
+    if (!idVideoRef.current || !idCanvasRef.current) {
+      setIdCameraError("Camera is not ready. Please wait and try again.");
+      return;
+    }
+    const video = idVideoRef.current;
+    const canvas = idCanvasRef.current;
+    if (!video.videoWidth || !video.videoHeight) {
+      setIdCameraError("Camera is still loading. Please try again.");
+      return;
+    }
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = canvas.toDataURL("image/jpeg", 0.9);
+
+    setIdImage(imageData);
+    setIdCaptured(true);
+    stopIDCamera();
+    await processIDWithOCR(imageData);
+  };
+
+  const retakeID = () => {
+    setIdImage("");
+    setIdCaptured(false);
+    setOCRProgress(0);
+    setIdCameraError("");
+    startIDCamera();
+  };
+
+  useEffect(() => {
+    if (step === 1 && !idCaptured) {
+      startIDCamera();
+    } else {
+      stopIDCamera();
+    }
+    return () => stopIDCamera();
+  }, [step, idCaptured, startIDCamera, stopIDCamera]);
 
   const startCamera = useCallback(async () => {
     stopCamera();
@@ -491,6 +710,93 @@ function Register({ onBack, embedded = false, compact = false }) {
             <div className={formGapClass(compact)}>
               {step === 1 && (
                 <>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-[10px] bg-[rgba(var(--gold-rgb),0.1)] border border-[rgba(var(--gold-rgb),0.25)] flex items-center justify-center">
+                      <FileText size={20} className="text-gold" />
+                    </div>
+                    <div>
+                      <h2 className="text-[17px] font-extrabold text-[#f9fafb]">
+                        Scan your ID (optional)
+                      </h2>
+                      <p className="text-xs text-[var(--muted)]">
+                        Auto-fills the fields below — or skip and type them in.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="relative w-full aspect-[4/3] bg-black rounded-2xl overflow-hidden border border-white/10">
+                    {idImage ? (
+                      <img
+                        src={idImage}
+                        className="w-full h-full object-contain"
+                        alt="Captured ID"
+                      />
+                    ) : (
+                      <video
+                        ref={idVideoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                    <canvas ref={idCanvasRef} className="hidden" />
+                    {!idImage && (
+                      <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                        <div className="w-[85%] h-[58%] border-2 border-gold/60 rounded-xl" />
+                      </div>
+                    )}
+                  </div>
+
+                  {idCameraError && (
+                    <p className={inlineErrorClass}>{idCameraError}</p>
+                  )}
+
+                  {isOCRProcessing && (
+                    <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <ScanLine size={16} className="text-gold" />
+                        <span className="text-xs text-[#f9fafb] font-semibold">
+                          Reading ID...
+                        </span>
+                        <span className="ml-auto text-xs text-gold">{ocrProgress}%</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gold transition-all duration-200"
+                          style={{ width: `${ocrProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {!idImage ? (
+                    <Button
+                      onClick={captureIDDocument}
+                      disabled={isOCRProcessing}
+                      className={primaryBtnClass(compact)}
+                    >
+                      <Camera size={16} /> Capture ID
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={retakeID}
+                      disabled={isOCRProcessing}
+                      className={secondaryBtnClass(compact)}
+                    >
+                      <RotateCw size={16} /> Retake ID
+                    </Button>
+                  )}
+
+                  {idImage && (
+                    <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3">
+                      <p className="text-xs text-[var(--muted)]">
+                        The information below was extracted from your ID.
+                        Please review and correct anything that is wrong.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="flex flex-col gap-1.5">
                     <label className={fieldLabelClass}>First Name</label>
                     <Input
@@ -529,7 +835,23 @@ function Register({ onBack, embedded = false, compact = false }) {
                       className={inputFieldClass(compact)}
                     />
                   </div>
-                  <Button onClick={handleNext} className={primaryBtnClass(compact)}>
+                  <div className="flex flex-col gap-1.5">
+                    <label className={fieldLabelClass}>
+                      Other Name (Optional)
+                    </label>
+                    <Input
+                      name="otherName"
+                      value={formData.otherName}
+                      onChange={handleChange}
+                      placeholder="Enter other name"
+                      className={inputFieldClass(compact)}
+                    />
+                  </div>
+                  <Button
+                    onClick={handleNext}
+                    disabled={isOCRProcessing}
+                    className={primaryBtnClass(compact)}
+                  >
                     Next Step
                   </Button>
                 </>
