@@ -40,6 +40,13 @@ import { EXCHANGE_RATES } from "../../utility/exchangeRates";
 import { getLiveExchangeRates } from "../../utility/getLiveExchangeRates";
 import { getRegionProviders } from "../../utility/regionProviders";
 import { API_URL } from "../../utility/constants";
+import {
+  isValidEmail,
+  isValidPhone,
+  isValidCardNumber,
+  isValidExpiry,
+  isSafeText,
+} from "../../utility/validators";
 
 // countries.js stores each entry's ISO alpha-2 code under `flag` (e.g. "KE");
 // this turns that into an actual flag emoji. Already-emoji values (the
@@ -745,6 +752,17 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
     const value = recipientSearchTerm.trim();
     if (!value) return;
     const favouriteType = value.includes("@") ? "email" : "phone";
+    if (
+      favouriteType === "email"
+        ? !isValidEmail(value)
+        : !isValidPhone(value)
+    ) {
+      showNotification(
+        "error",
+        `Enter a valid ${favouriteType === "email" ? "email address" : "phone number"}`,
+      );
+      return;
+    }
     if (favouriteType === "phone" && myPhone && value === myPhone) {
       showNotification(
         "error",
@@ -804,6 +822,10 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
   const addSendManyPhone = () => {
     const value = sendManyPhoneInput.trim();
     if (!value) return;
+    if (!isValidPhone(value)) {
+      showNotification("error", "Enter a valid phone number");
+      return;
+    }
     if (sendManyRecipients.length >= sendManyLimit) {
       showNotification("error", sendManyLimitMsg);
       return;
@@ -935,15 +957,34 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
           selectedRecipient.phone ||
           selectedRecipient.phone_number)) ||
       recipientSearchTerm;
+    // Name for display only — recipientValue (a phone number/handle) is
+    // still what's sent to the API below.
+    const recipientDisplayName =
+      (selectedRecipient &&
+        (selectedRecipient.name || selectedRecipient.full_name)) ||
+      recipientValue;
 
-    if (!recipientValue || !sendAmount) {
-      showNotification("error", "Please fill in recipient and amount");
+    if (!recipientValue || !sendAmount || Number(sendAmount) <= 0) {
+      showNotification(
+        "error",
+        "Please fill in recipient and a valid amount",
+      );
+      return;
+    }
+    // Only format-check a raw typed value — a selectedRecipient came from
+    // favourites/friends and was already validated when it was saved.
+    if (
+      !selectedRecipient &&
+      !isValidPhone(recipientValue) &&
+      !isValidEmail(recipientValue)
+    ) {
+      showNotification("error", "Enter a valid phone number or email");
       return;
     }
 
     openConfirmationDialog(
       "Confirm Send Money",
-      `Send ${sendAmount} to ${recipientValue}?\nFee: ${senderCurrency} ${sendFee.toFixed(2)} · Total: ${senderCurrency} ${sendTotal.toFixed(2)}\n\nEnter your 4-digit PIN and click Yes to confirm.`,
+      `Send ${sendAmount} to ${recipientDisplayName}?\nFee: ${senderCurrency} ${sendFee.toFixed(2)} · Total: ${senderCurrency} ${sendTotal.toFixed(2)}\n\nEnter your 4-digit PIN and click Yes to confirm.`,
       async (pin, buttonChoice) => {
         if (buttonChoice !== "yes" || pin.length !== 4) {
           showNotification("error", "Transaction cancelled");
@@ -1014,6 +1055,14 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
       );
       return;
     }
+    if (!/^\d{6,20}$/.test(newBank.accountNumber.trim())) {
+      showNotification("error", "Enter a valid account number");
+      return;
+    }
+    if (!isSafeText(newBank.accountName)) {
+      showNotification("error", "Account name can't contain < or > characters");
+      return;
+    }
     try {
       const res = await transactionsApi.post(
         "/api/payment-methods/banks/",
@@ -1037,6 +1086,24 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
       );
       return;
     }
+    if (!isSafeText(newCard.cardholderName)) {
+      showNotification(
+        "error",
+        "Cardholder name can't contain < or > characters",
+      );
+      return;
+    }
+    if (!isValidCardNumber(newCard.cardNumber)) {
+      showNotification("error", "Enter a valid card number");
+      return;
+    }
+    if (!isValidExpiry(newCard.expiry)) {
+      showNotification(
+        "error",
+        "Enter a valid, unexpired expiry date (MM/YY)",
+      );
+      return;
+    }
     try {
       const res = await transactionsApi.post(
         "/api/payment-methods/cards/",
@@ -1057,10 +1124,10 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
       showNotification("error", "Enter a valid amount");
       return;
     }
-    if (addMoneyCategory === "mobile" && !mpesaNumber) {
+    if (addMoneyCategory === "mobile" && !isValidPhone(mpesaNumber)) {
       showNotification(
         "error",
-        `Enter the ${mobileProvider} number to add from`,
+        `Enter a valid ${mobileProvider} number to add from`,
       );
       return;
     }
@@ -1146,15 +1213,19 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
   };
 
   const handleWithdraw = async () => {
+    const validDestination =
+      withdrawDestination === "mpesa"
+        ? isValidPhone(withdrawDestinationValue)
+        : /^[A-Za-z0-9-]{3,20}$/.test(withdrawDestinationValue);
     if (
       !withdrawAmount ||
       Number(withdrawAmount) <= 0 ||
-      !withdrawDestinationValue ||
+      !validDestination ||
       inputPin.length !== 4
     ) {
       showNotification(
         "error",
-        `Enter an amount, ${withdrawDestination === "mpesa" ? "Mpesa number" : "agent number"}, and 4-digit PIN`,
+        `Enter an amount, valid ${withdrawDestination === "mpesa" ? "Mpesa number" : "agent number"}, and 4-digit PIN`,
       );
       return;
     }
@@ -1244,6 +1315,11 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
               flush at 0) so they hang partially outside the now-narrower
               phone's edges, same idea as the landing hero's own mobile
               FloatCard treatment. */}
+              {/* Below sm, there's no gutter beside the (now full-width)
+              phone for these to float into — they'd either get clipped by
+              the viewport edge or overlap the balance text. Hidden here;
+              the mobileActionRow below (inside the phone screen) covers
+              Send/Withdraw on those widths instead. */}
               {BALANCE_CARD_ACTIONS.map(({ key, label, icon: Icon }) => {
                 const active = activeSection === key;
                 const isSend = key === "send";
@@ -1254,7 +1330,7 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
                     onClick={() => switchSection(key)}
                     aria-label={label}
                     className={cn(
-                      "absolute z-10 flex items-center gap-2.5 rounded-2xl py-[10px] px-[14px] whitespace-nowrap cursor-pointer transition-all duration-200 hover:-translate-y-0.5 max-[768px]:px-[10px] max-[768px]:py-2",
+                      "hidden sm:flex absolute z-10 items-center gap-2.5 rounded-2xl py-[10px] px-[14px] whitespace-nowrap cursor-pointer transition-all duration-200 hover:-translate-y-0.5 max-[768px]:px-[10px] max-[768px]:py-2",
                       isSend
                         ? "-left-28 top-[55px] max-[768px]:-left-10 max-[480px]:top-10"
                         : "-right-28 top-[160px] max-[768px]:-right-10 max-[480px]:top-32",
@@ -1363,11 +1439,13 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
                       </div>
                     </div>
 
-                    {/* Add Money / Groups — moved inside the phone screen,
-                    below the balance, per the same "carry dashboard
-                    components inside the phone" idea as Quick Send below.
-                    Same switchSection wiring as the balance-card pills. */}
-                    <div className="w-full flex items-center gap-3 mb-2">
+                    {/* Below sm, Send/Withdraw don't get the floating pills
+                    beside the phone (no room — see BALANCE_CARD_ACTIONS
+                    above), so a second, mobile-only row carries all four
+                    actions instead of just Add Money/Groups. Two rows
+                    toggled by breakpoint (not one row switched in JS) so
+                    there's no resize listener to keep in sync. */}
+                    <div className="w-full hidden sm:flex items-center gap-3 mb-2">
                       {ICON_ROW_ACTIONS.map(({ key, label, icon: Icon }) => {
                         const active = activeSection === key;
                         return (
@@ -1376,6 +1454,25 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
                             type="button"
                             onClick={() => switchSection(key)}
                             className={active ? goldPillBtnClass : flatPillBtnClass}
+                          >
+                            <Icon size={16} className="shrink-0" />
+                            <span className="truncate">{label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="w-full flex sm:hidden flex-wrap items-center gap-3 mb-2">
+                      {ACTION_TILES.map(({ key, label, icon: Icon }) => {
+                        const active = activeSection === key;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => switchSection(key)}
+                            className={cn(
+                              active ? goldPillBtnClass : flatPillBtnClass,
+                              "basis-[calc(50%-0.375rem)] flex-none",
+                            )}
                           >
                             <Icon size={16} className="shrink-0" />
                             <span className="truncate">{label}</span>
@@ -2148,7 +2245,7 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
       {activeSection === "dashboard" && tickerMessages.length > 0 && (
         <button
           type="button"
-          className="fixed right-8 z-50 max-w-[260px] bg-card/90 [backdrop-filter:blur(14px)_saturate(1.3)] [-webkit-backdrop-filter:blur(14px)_saturate(1.3)] border border-[var(--gold-border)] text-gold text-[0.8rem] font-semibold leading-[1.4] text-left px-[1.1rem] py-[0.7rem] rounded-2xl cursor-pointer transition-[transform,bottom] duration-150 hover:-translate-y-0.5 max-[768px]:right-4 max-[768px]:max-w-[190px] max-[768px]:text-[0.72rem] max-[768px]:px-[0.9rem] max-[768px]:py-[0.6rem] max-[768px]:bg-card/75 max-[768px]:[backdrop-filter:blur(28px)_saturate(1.6)] max-[768px]:[-webkit-backdrop-filter:blur(28px)_saturate(1.6)] max-[768px]:[--mobile-nav-clearance:calc(70px+env(safe-area-inset-bottom)+12px)]"
+          className="hidden sm:block fixed right-8 z-50 max-w-[260px] bg-card/90 [backdrop-filter:blur(14px)_saturate(1.3)] [-webkit-backdrop-filter:blur(14px)_saturate(1.3)] border border-[var(--gold-border)] text-gold text-[0.8rem] font-semibold leading-[1.4] text-left px-[1.1rem] py-[0.7rem] rounded-2xl cursor-pointer transition-[transform,bottom] duration-150 hover:-translate-y-0.5 max-[768px]:right-4 max-[768px]:max-w-[190px] max-[768px]:text-[0.72rem] max-[768px]:px-[0.9rem] max-[768px]:py-[0.6rem] max-[768px]:bg-card/75 max-[768px]:[backdrop-filter:blur(28px)_saturate(1.6)] max-[768px]:[-webkit-backdrop-filter:blur(28px)_saturate(1.6)] max-[768px]:[--mobile-nav-clearance:calc(70px+env(safe-area-inset-bottom)+12px)]"
           style={{
             bottom: `calc(${tickerBottom}px + var(--mobile-nav-clearance, 0px))`,
           }}
