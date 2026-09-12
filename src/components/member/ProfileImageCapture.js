@@ -46,7 +46,11 @@ function ProfileImageCapture({ user, onRefreshUser, onBack }) {
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        try {
+          await videoRef.current.play();
+        } catch (playError) {
+          console.warn('Video playback warning:', playError);
+        }
       }
       setIsCameraActive(true);
       setCameraError('');
@@ -58,13 +62,22 @@ function ProfileImageCapture({ user, onRefreshUser, onBack }) {
 
   const captureImage = () => {
     if (!videoRef.current || !canvasRef.current || !isCameraActive) return;
+    const video = videoRef.current;
+    if (!video.videoWidth || !video.videoHeight) {
+      setCameraError('Camera is not ready yet. Please try again.');
+      return;
+    }
     setFlash(true);
     setTimeout(() => setFlash(false), 350);
     const canvas = canvasRef.current;
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(videoRef.current, 0, 0);
+    if (!ctx) {
+      setCameraError('Unable to capture image.');
+      return;
+    }
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const imageData = canvas.toDataURL('image/png');
     setCapturedImage(imageData);
     stopCamera();
@@ -75,22 +88,46 @@ function ProfileImageCapture({ user, onRefreshUser, onBack }) {
     setUploadError('');
     setUploading(true);
     try {
-      const blob = await fetch(capturedImage).then(r => r.blob());
+      // Content-Type is intentionally left unset here — axiosInstance's
+      // request interceptor strips any manual override for FormData bodies
+      // so the browser generates the multipart boundary itself.
+      const blob = await fetch(capturedImage).then((r) => {
+        if (!r.ok) throw new Error(`Failed to prepare image: ${r.status}`);
+        return r.blob();
+      });
       const file = new File([blob], "profile.png", { type: "image/png" });
       const formData = new FormData();
       formData.append("image", file);
-      const response = await axiosInstance.post('/api/upload-profile-image', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const response = await axiosInstance.post(
+        '/api/upload-profile-image',
+        formData,
+        { timeout: 60000 },
+      );
       if (response.data.success) {
         onRefreshUser();
         setSuccess(true);
         setTimeout(onBack, 1600);
       } else {
-        setUploadError('Upload failed. Please try again.');
+        setUploadError(
+          response.data?.error ||
+            response.data?.message ||
+            'Upload failed. Please try again.',
+        );
       }
     } catch (err) {
-      setUploadError('Upload failed. Please try again.');
+      if (err.code === 'ECONNABORTED') {
+        setUploadError('Upload timed out. Please check your connection and try again.');
+      } else if (err.response) {
+        setUploadError(
+          err.response.data?.error ||
+            err.response.data?.message ||
+            `Upload failed (server error ${err.response.status}).`,
+        );
+      } else if (err.request) {
+        setUploadError('Upload failed: no response from server.');
+      } else {
+        setUploadError(err.message || 'Upload failed. Please try again.');
+      }
     } finally {
       setUploading(false);
     }
