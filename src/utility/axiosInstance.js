@@ -1,5 +1,5 @@
 import axios from "axios";
-import { API_URL } from "./constants";
+import { SPRINGBOOT_URL, TRANSACTIONS_URL, CONTACTS_URL } from "./constants";
 
 const getTunnelHeaders = () => ({
   "Bypass-Tunnel-Reminder": "true",
@@ -57,6 +57,14 @@ const addInterceptors = (instance) => {
     config.headers = { ...config.headers, ...getTunnelHeaders() };
     const accessToken = localStorage.getItem("accessToken");
     if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+
+    // FormData (e.g. face-verification image uploads) needs the browser to
+    // generate its own multipart boundary — a hardcoded Content-Type blocks that.
+    if (config.data instanceof FormData) {
+      delete config.headers["Content-Type"];
+      delete config.headers["content-type"];
+    }
+
     return config;
   });
   setupSessionInterceptor(instance);
@@ -64,15 +72,15 @@ const addInterceptors = (instance) => {
 
 // Create instances
 export const springApi = axios.create({
-  baseURL: API_URL,
+  baseURL: SPRINGBOOT_URL,
   ...instanceConfig,
 });
 export const transactionsApi = axios.create({
-  baseURL: API_URL,
+  baseURL: TRANSACTIONS_URL,
   ...instanceConfig,
 });
 export const contactsApi = axios.create({
-  baseURL: API_URL,
+  baseURL: CONTACTS_URL,
   ...instanceConfig,
 });
 
