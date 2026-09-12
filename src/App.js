@@ -107,7 +107,12 @@ const phoneStagePanelShadowClosedClass =
 const phoneStagePanelShadowOpenClass =
   "shadow-[0_55px_100px_rgba(0,0,0,0.5),0_100px_180px_-40px_rgba(0,0,0,0.6)]";
 const phoneStagePanelClass =
-  "fixed flex flex-col bg-[#1c2333] border-[1.5px] border-white/10 overflow-hidden rounded-[26px] z-[1001] [transition:top_0.32s_cubic-bezier(0.16,1,0.3,1),left_0.32s_cubic-bezier(0.16,1,0.3,1),width_0.32s_cubic-bezier(0.16,1,0.3,1),height_0.32s_cubic-bezier(0.16,1,0.3,1),border-radius_0.32s_cubic-bezier(0.16,1,0.3,1),border-width_0.32s_cubic-bezier(0.16,1,0.3,1),transform_0.32s_cubic-bezier(0.16,1,0.3,1),box-shadow_0.32s_ease,background_0.32s_ease,border-color_0.32s_ease]";
+  // mask-image forces Chrome to clip this element's rounded corners on its
+  // own masking layer instead of the default overflow-hidden+3D-transform
+  // path — without it, translateZ (below, once expanded) makes the browser
+  // clip border-radius against the un-transformed layer, leaving a jagged
+  // sliver of the square edge visible past the rounded corner.
+  "fixed flex flex-col bg-[#1c2333] border-[1.5px] border-white/10 overflow-hidden rounded-[26px] [mask-image:radial-gradient(white,black)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] z-[1001] [transition:top_0.32s_cubic-bezier(0.16,1,0.3,1),left_0.32s_cubic-bezier(0.16,1,0.3,1),width_0.32s_cubic-bezier(0.16,1,0.3,1),height_0.32s_cubic-bezier(0.16,1,0.3,1),border-radius_0.32s_cubic-bezier(0.16,1,0.3,1),border-width_0.32s_cubic-bezier(0.16,1,0.3,1),transform_0.32s_cubic-bezier(0.16,1,0.3,1),box-shadow_0.32s_ease,background_0.32s_ease,border-color_0.32s_ease]";
 const phoneStagePanelOpenClass =
   // translateZ(48px) (with the backdrop's perspective above) is the "above
   // the screen" 3D lift — it grows in alongside width/height/etc since
