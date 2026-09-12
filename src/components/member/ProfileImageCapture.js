@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, Camera, RotateCcw, Check, CheckCircle2, Loader2 } from 'lucide-react';
 import axiosInstance from '../../utility/axiosInstance';
+import { useStopCameraWhenHidden } from '../../utility/useStopCameraWhenHidden';
 import { cn } from '@/lib/utils';
 
 // Same flow-card/back-button/button recipe as PaymentMethods.js and Home.js
@@ -37,6 +38,8 @@ function ProfileImageCapture({ user, onRefreshUser, onBack }) {
     }
     setIsCameraActive(false);
   }, []);
+
+  useStopCameraWhenHidden(stopCamera);
 
   const startCamera = useCallback(async () => {
     stopCamera();

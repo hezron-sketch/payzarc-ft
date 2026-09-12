@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, IdCard, ScanFace, Check, RotateCcw, CheckCircle2, Loader2 } from 'lucide-react';
 import axiosInstance from '../../utility/axiosInstance';
+import { useStopCameraWhenHidden } from '../../utility/useStopCameraWhenHidden';
 import { cn } from '@/lib/utils';
 
 // Same flow-card recipe as ProfileImageCapture.js/PaymentMethods.js — kept
@@ -60,6 +61,8 @@ function KycVerification({ onRefreshUser, onBack }) {
     }
     setIsCameraActive(false);
   }, []);
+
+  useStopCameraWhenHidden(stopCamera);
 
   const startCamera = useCallback(async () => {
     stopCamera();

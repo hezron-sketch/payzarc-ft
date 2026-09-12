@@ -10,6 +10,7 @@ import { countries } from "../../utility/countries";
 import { getCurrentCountry } from "../../utility/getCurrentCountry";
 import { API_URL } from "../../utility/constants";
 import { isValidEmail, isSafeText } from "../../utility/validators";
+import { useStopCameraWhenHidden } from "../../utility/useStopCameraWhenHidden";
 import * as faceapi from "face-api.js";
 import { createWorker } from "tesseract.js";
 
@@ -380,6 +381,8 @@ function Register({ onBack, embedded = false, compact = false }) {
     }
   }, []);
 
+  useStopCameraWhenHidden(stopIDCamera);
+
   const startIDCamera = useCallback(async () => {
     stopIDCamera();
     setIdCameraError("");
@@ -526,13 +529,15 @@ function Register({ onBack, embedded = false, compact = false }) {
     }
   }, []);
 
-  const stopCamera = () => {
+  const stopCamera = useCallback(() => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject;
       stream.getTracks().forEach((track) => track.stop());
       videoRef.current.srcObject = null;
     }
-  };
+  }, []);
+
+  useStopCameraWhenHidden(stopCamera);
 
   const captureImage = async () => {
     if (!videoRef.current || !canvasRef.current || !isModelsLoaded) return;
