@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { API_URL } from '../../utility/constants';
+import springApi from '../../utility/axiosInstance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { RotateCw } from 'lucide-react';
 
 const inputFieldClass =
   'h-auto w-full rounded-sm bg-secondary border-input px-2.5 py-2.5 text-base text-foreground focus-visible:ring-0 focus-visible:border-gold shadow-none';
 const setpswdButtonClass =
-  'h-auto w-full rounded-sm px-2.5 py-2.5 text-base font-bold text-[#1a202c] bg-gold hover:bg-gold-dark shadow-none';
+  'h-auto w-full rounded-sm px-2.5 py-2.5 text-base font-bold text-[#1a202c] bg-gold hover:bg-gold-dark shadow-none flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed';
 const popupOverlayClass =
   'fixed inset-0 bg-black/50 flex justify-center items-center z-[1000]';
 const popupContentClass =
@@ -25,6 +25,7 @@ function SetPassword({ onBack }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Must match the Spring Boot backend's password regex exactly.
   const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,15}$/;
@@ -33,7 +34,7 @@ function SetPassword({ onBack }) {
     const checkIfBlocked = async () => {
       if (email) {
         try {
-          const response = await axios.get(`${API_URL}/api/is-blocked?email=${email}`);
+          const response = await springApi.get(`/api/is-blocked?email=${email}`);
           setBlocked(response.data);
         } catch (err) {
           console.error('Failed to check blocked status:', err);
@@ -45,7 +46,7 @@ function SetPassword({ onBack }) {
 
   const logAttempt = async (remark) => {
     try {
-      const response = await axios.post(`${API_URL}/api/register/password-attempt`, { email, remark });
+      const response = await springApi.post('/api/register/password-attempt', { email, remark });
       if (response.data.blocked) {
         setBlocked(true);
       }
@@ -90,8 +91,9 @@ function SetPassword({ onBack }) {
       return;
     }
 
+    setIsSubmitting(true);
     try {
-      const response = await axios.post(`${API_URL}/api/register/password`, {
+      const response = await springApi.post('/api/register/password', {
         email,
         password,
         confirmPassword
@@ -104,6 +106,8 @@ function SetPassword({ onBack }) {
       const message = err.response?.data || 'Failed to set password. Please try again.';
       setError(message);
       await logAttempt(message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -186,8 +190,15 @@ function SetPassword({ onBack }) {
 
               {error && <p className="text-destructive text-sm my-2">{error}</p>}
 
-              <Button type="submit" className={setpswdButtonClass}>
-                Set Password
+              <Button type="submit" className={setpswdButtonClass} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <RotateCw className="w-4 h-4 animate-spin" />
+                    Setting Password...
+                  </>
+                ) : (
+                  "Set Password"
+                )}
               </Button>
             </form>
 
