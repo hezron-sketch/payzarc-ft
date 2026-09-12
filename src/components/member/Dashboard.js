@@ -252,7 +252,14 @@ export default function Dashboard() {
     };
 
     const saved = localStorage.getItem("user");
-    if (saved) setUser(JSON.parse(saved));
+    if (saved) {
+      try {
+        setUser(JSON.parse(saved));
+      } catch (err) {
+        console.warn("Invalid saved user data:", err);
+        localStorage.removeItem("user");
+      }
+    }
     fetchUser();
   }, [navigate]);
 
@@ -310,7 +317,14 @@ export default function Dashboard() {
 
   const refreshUser = () => {
     const saved = localStorage.getItem("user");
-    if (saved) setUser(JSON.parse(saved));
+    if (saved) {
+      try {
+        setUser(JSON.parse(saved));
+      } catch (err) {
+        console.warn("Invalid saved user data:", err);
+        localStorage.removeItem("user");
+      }
+    }
     axiosInstance
       .get("/api/dashboard")
       .then((res) => {
