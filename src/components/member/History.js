@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Search } from "lucide-react";
+import { Search, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +60,8 @@ function History({
   const [page, setPage] = useState(1);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const fetchTransactions = async () => {
     setLoading(true);
@@ -68,6 +70,8 @@ function History({
     try {
       const params = {};
       if (searchTerm.trim()) params.search = searchTerm.trim();
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
 
       const response = await transactionsApi.get("/api/transactions/history/", {
         params,
@@ -108,6 +112,33 @@ function History({
     return `${prefix}${amount.toFixed(2)}`;
   };
 
+  // Statement export — CSV of whatever's currently loaded (respects the
+  // active search filter), built client-side so no new dependency is
+  // needed for something this small.
+  const exportStatement = () => {
+    const header = ["Date", "Recipient", "Currency", "Amount", "Status"];
+    const rows = transactions.map((tx) => [
+      new Date(tx.created_at || tx.date || tx.timestamp).toLocaleDateString(),
+      tx.name || tx.recipient_name || tx.sender_name || "N/A",
+      tx.currency || "USD",
+      formatAmount(tx),
+      tx.status || (tx.transaction_type === "CREDIT" ? "Received" : "Paid"),
+    ]);
+    const csv = [header, ...rows]
+      .map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
+      )
+      .join("\n");
+    const url = URL.createObjectURL(
+      new Blob([csv], { type: "text/csv;charset=utf-8;" }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Payzarc_Statement_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const totalPages = Math.max(1, Math.ceil(transactions.length / PAGE_SIZE));
   const pagedTransactions = transactions.slice(
     (page - 1) * PAGE_SIZE,
@@ -137,6 +168,28 @@ function History({
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+        {!compact && (
+          <>
+            <div className="flex flex-col max-[640px]:flex-1">
+              <Input
+                type="date"
+                aria-label="From date"
+                className="w-full h-11 rounded-xl border-input bg-secondary text-foreground text-[0.85rem] focus-visible:ring-0 focus-visible:border-gold focus-visible:bg-card"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col max-[640px]:flex-1">
+              <Input
+                type="date"
+                aria-label="To date"
+                className="w-full h-11 rounded-xl border-input bg-secondary text-foreground text-[0.85rem] focus-visible:ring-0 focus-visible:border-gold focus-visible:bg-card"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+              />
+            </div>
+          </>
+        )}
         <Button
           className={cn(
             "h-11 rounded-xl font-bold shrink-0",
@@ -150,6 +203,17 @@ function History({
         >
           {loading ? "..." : compact ? <Search size={16} /> : "Search"}
         </Button>
+        {!compact && transactions.length > 0 && (
+          <Button
+            variant="ghost"
+            className={pageBtnClass}
+            onClick={exportStatement}
+            title="Export statement as CSV"
+          >
+            <Download size={16} className="mr-1.5" />
+            Export
+          </Button>
+        )}
       </div>
 
       {/* Table Section — no border/rounding of its own in compact mode,
