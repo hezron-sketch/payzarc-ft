@@ -58,6 +58,12 @@ const extractDOB = (text) => {
   }
   return "";
 };
+const extractGender = (text) => {
+  const upper = text.toUpperCase();
+  if (/\bF(EMALE)?\b/.test(upper)) return "Female";
+  if (/\bM(ALE)?\b/.test(upper)) return "Male";
+  return "";
+};
 const extractName = (text) => {
   const lines = cleanOCRText(text).split("\n").map(normalizeLine).filter(Boolean);
   const ignored = [
@@ -431,6 +437,7 @@ function Register({ onBack, embedded = false, compact = false }) {
       const extractedID = extractIDNumber(cleaned);
       const extractedDOB = extractDOB(cleaned);
       const extractedName = extractName(cleaned);
+      const extractedGender = extractGender(cleaned);
       const upper = cleaned.toUpperCase();
       let extractedIDType = "";
       if (upper.includes("PASSPORT")) extractedIDType = "Passport";
@@ -453,10 +460,11 @@ function Register({ onBack, embedded = false, compact = false }) {
         ...(extractedID ? { idNumber: extractedID } : {}),
         ...(extractedDOB ? { dob: extractedDOB } : {}),
         ...(extractedIDType ? { idType: extractedIDType } : {}),
+        ...(extractedGender ? { gender: extractedGender } : {}),
       }));
 
       setOCRProgress(100);
-      if (!extractedID && !extractedDOB && !extractedName) {
+      if (!extractedID && !extractedDOB && !extractedName && !extractedGender) {
         setIdCameraError(
           "The ID was captured, but the text could not be read clearly. Please retake the ID photo or enter the details manually.",
         );
