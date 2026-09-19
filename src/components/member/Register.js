@@ -16,9 +16,14 @@ import { createWorker } from "tesseract.js";
 
 // ─── ID-scan OCR helpers ───
 // Best-effort text extraction from a photographed ID document, used only to
-// pre-fill step 1's name fields — never sent to the backend (the register-full
+// pre-fill step 1/2's fields — never sent to the backend (the register-full
 // payload below is built from formData alone, which never gains an idImage
 // field). Users can still type everything manually if OCR misses.
+//
+// Kenyan national IDs lay fields out behind fixed printed labels (ID Number,
+// Full Names, Date of Birth, Sex, ...). Anchoring on those labels is far more
+// reliable than guessing from position/shape alone, since it can't confuse
+// e.g. a serial number for the ID number, or "Date of Issue" for the DOB.
 const cleanOCRText = (text) => {
   if (!text) return "";
   return text
@@ -29,62 +34,161 @@ const cleanOCRText = (text) => {
     .trim();
 };
 const normalizeLine = (line) => line.replace(/[|]/g, "I").replace(/\s+/g, " ").trim();
-const extractIDNumber = (text) => {
-  const patterns = [/\b\d{8}\b/, /\b\d{7,9}\b/, /\b[A-Z]{1,3}\d{6,12}\b/i];
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match) return match[0].replace(/\s/g, "");
-  }
-  return "";
-};
-const extractDOB = (text) => {
-  const patterns = [
-    /\b(19|20)\d{2}[-/]\d{1,2}[-/]\d{1,2}\b/,
-    /\b\d{1,2}[-/]\d{1,2}[-/](19|20)\d{2}\b/,
-  ];
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match) {
-      const value = match[0];
-      if (/^\d{4}[-/]/.test(value)) return value.replace(/\//g, "-");
-      const parts = value.split(/[-/]/);
-      if (parts.length === 3) {
-        const day = parts[0].padStart(2, "0");
-        const month = parts[1].padStart(2, "0");
-        const year = parts[2];
-        return `${year}-${month}-${day}`;
+const getLines = (text) => cleanOCRText(text).split("\n").map(normalizeLine).filter(Boolean);
+
+// Every fixed/printed label or static string that appears on the card,
+// besides the fields we actually want. A line matching one of these is never
+// a person's name, an ID number, or a date value in disguise.
+// "DATE" tolerates a leading D-vs-P misread — Tesseract confuses the two
+// fairly often on a blurry or low-angle scan (e.g. "DATE OF BIRTH" -> "PATE
+// OF BIRTH"), which was letting the label itself get picked up as a name.
+const ID_STATIC_LABELS = [
+  /\bJAMHURI\b/i,
+  /\bREPUBLIC\b/i,
+  /\bKENYA\b/i,
+  /\bNATIONAL(\s+IDENTITY)?(\s+CARD)?\b/i,
+  /\bIDENTI(TY|FICATION)\b/i,
+  /\b[DP]ATE(\s+OF\s+(BIRTH|ISSUE))?\b/i,
+  /\bSEX\b/i,
+  /\bGENDER\b/i,
+  /\bNATIONALITY\b/i,
+  /\bDISTRICT(\s+OF\s+BIRTH)?\b/i,
+  /\bPLACE\s+OF\s+(BIRTH|ISSUE)\b/i,
+  /\bCOUNTY\b/i,
+  /\bSERIAL(\s+NUMBER)?\b/i,
+  /\bID\s*NO\b/i,
+  /\bID\s*NUMBER\b/i,
+  /\bFULL\s*NAMES?\b/i,
+  /\bHOLDER'?S?\s*SIGN(ATURE)?\b/i,
+];
+const isLabelLine = (line) => ID_STATIC_LABELS.some((pattern) => pattern.test(line));
+
+// Returns the value tied to a labeled field: whatever follows the label on
+// the same line, or the next non-label line down if the label sits on its
+// own (skipping past any further labels OCR ran together with it).
+const findLabelValue = (lines, labelPatterns) => {
+  for (let i = 0; i < lines.length; i++) {
+    for (const pattern of labelPatterns) {
+      const match = lines[i].match(pattern);
+      if (!match) continue;
+      const rest = lines[i]
+        .slice(match.index + match[0].length)
+        .replace(/^[:\s.-]+/, "")
+        .trim();
+      if (rest && !isLabelLine(rest)) return rest;
+      for (let j = i + 1; j < lines.length; j++) {
+        if (lines[j] && !isLabelLine(lines[j])) return lines[j];
       }
     }
   }
   return "";
 };
-const extractGender = (text) => {
-  const upper = text.toUpperCase();
+
+const ID_NUMBER_LABELS = [/\bID\s*NO\b/i, /\bID\s*NUMBER\b/i];
+const digitsFromValue = (value) => {
+  const cleaned = value.replace(/[oO]/g, "0").replace(/[lI]/g, "1");
+  const match = cleaned.match(/\d[\d\s]{4,12}\d/);
+  return match ? match[0].replace(/\s/g, "") : "";
+};
+const extractIDNumber = (text) => {
+  const labeled = digitsFromValue(findLabelValue(getLines(text), ID_NUMBER_LABELS));
+  if (labeled) return labeled;
+  // Label wasn't readable — fall back to scanning the whole document.
+  const patterns = [/\b\d{8}\b/, /\b\d{7,9}\b/, /\b[A-Z]{1,3}\d{6,12}\b/i];
+  for (const pattern of patterns) {
+    const match = cleanOCRText(text).match(pattern);
+    if (match) return match[0].replace(/\s/g, "");
+  }
+  return "";
+};
+
+const DOB_LABELS = [/\b[DP]ATE\s*OF\s*BIRTH\b/i, /\bD\.?\s*O\.?\s*B\.?\b/i];
+const dateFromValue = (value) => {
+  const patterns = [
+    /\b(19|20)\d{2}[-/.]\d{1,2}[-/.]\d{1,2}\b/,
+    /\b\d{1,2}[-/.]\d{1,2}[-/.](19|20)\d{2}\b/,
+  ];
+  for (const pattern of patterns) {
+    const match = value.match(pattern);
+    if (match) {
+      const raw = match[0];
+      if (/^\d{4}/.test(raw)) return raw.replace(/[/.]/g, "-");
+      const [day, month, year] = raw.split(/[-/.]/);
+      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+  }
+  return "";
+};
+const extractDOB = (text) => {
+  const labeled = dateFromValue(findLabelValue(getLines(text), DOB_LABELS));
+  if (labeled) return labeled;
+  // Label wasn't readable — fall back to the first date-shaped string
+  // (risks picking up Date of Issue instead, but better than nothing).
+  return dateFromValue(cleanOCRText(text));
+};
+
+const SEX_LABELS = [/\bSEX\b/i, /\bGENDER\b/i];
+const genderFromValue = (value) => {
+  const upper = value.toUpperCase();
   if (/\bF(EMALE)?\b/.test(upper)) return "Female";
   if (/\bM(ALE)?\b/.test(upper)) return "Male";
   return "";
 };
-const extractName = (text) => {
-  const lines = cleanOCRText(text).split("\n").map(normalizeLine).filter(Boolean);
-  const ignored = [
-    "REPUBLIC OF KENYA", "REPUBLIC", "KENYA", "NATIONAL IDENTITY CARD",
-    "IDENTITY CARD", "IDENTIFICATION", "DATE OF BIRTH", "DATE", "SEX",
-    "GENDER", "NATIONALITY", "DISTRICT", "COUNTY", "SERIAL", "NUMBER", "ID NUMBER",
-  ];
-  const candidates = lines.filter((line) => {
-    const upper = line.toUpperCase();
-    if (ignored.some((word) => upper.includes(word))) return false;
-    if (/\d/.test(line)) return false;
-    const words = line.split(/\s+/);
-    return words.length >= 2 && words.length <= 5 && /^[A-Za-z .'-]+$/.test(line);
-  });
-  if (!candidates.length) return null;
-  const parts = candidates[0].split(/\s+/).filter(Boolean);
+const extractGender = (text) => {
+  const labeled = genderFromValue(findLabelValue(getLines(text), SEX_LABELS));
+  if (labeled) return labeled;
+  return genderFromValue(cleanOCRText(text));
+};
+
+const NAME_LABELS = [/\bFULL\s*NAMES?\b/i];
+// A name-shaped line: 2-5 words, letters only. Word order is kept as printed
+// (first word -> first name, last word -> surname) to match how the manual
+// entry fields below are labeled.
+const nameFromLine = (line) => {
+  if (!line) return null;
+  const words = line.split(/\s+/).filter(Boolean);
+  if (words.length < 2 || words.length > 5 || !/^[A-Za-z .'-]+$/.test(line)) return null;
   return {
-    firstName: parts[0] || "",
-    middleName: parts.length > 2 ? parts.slice(1, -1).join(" ") : "",
-    surname: parts.length > 1 ? parts[parts.length - 1] : "",
+    firstName: words[0] || "",
+    middleName: words.length > 2 ? words.slice(1, -1).join(" ") : "",
+    surname: words[words.length - 1] || "",
   };
+};
+const extractName = (text) => {
+  const lines = getLines(text);
+  const labeled = nameFromLine(findLabelValue(lines, NAME_LABELS));
+  if (labeled) return labeled;
+  // Label wasn't readable — fall back to scanning for a plausible name line.
+  const candidate = lines.find((line) => {
+    if (isLabelLine(line)) return false;
+    if (/\d/.test(line)) return false;
+    return nameFromLine(line) !== null;
+  });
+  return candidate ? nameFromLine(candidate) : null;
+};
+
+// Both camera previews are shown in an aspect-[4/3] box via object-cover, so
+// what the user frames the shot with is a crop of the raw video. Capturing
+// the full uncropped frame instead (as toDataURL(video) would) saves far more
+// dead space than the user ever saw — the ID card ends up a tiny sliver in
+// mostly black padding, which is why OCR was reading garbage.
+const captureVideoFrame = (video, canvas, mimeType, quality) => {
+  const boxRatio = 4 / 3;
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  const videoRatio = vw / vh;
+  let sx = 0, sy = 0, sw = vw, sh = vh;
+  if (videoRatio > boxRatio) {
+    sw = vh * boxRatio;
+    sx = (vw - sw) / 2;
+  } else {
+    sh = vw / boxRatio;
+    sy = (vh - sh) / 2;
+  }
+  canvas.width = sw;
+  canvas.height = sh;
+  canvas.getContext("2d").drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+  return canvas.toDataURL(mimeType, quality);
 };
 
 // Shared class-builders for pieces whose sizing changes in compact mode
@@ -166,8 +270,6 @@ function Register({ onBack, embedded = false, compact = false }) {
 
   const namesizeMin = 3;
   const namesizeMax = 15;
-  const citynamesizeMin = 3;
-  const citynamesizeMax = 30;
   const phonenosize = 10;
   const emailsizeMin = 7;
   const emailsizeMax = 30;
@@ -196,10 +298,6 @@ function Register({ onBack, embedded = false, compact = false }) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState({});
-  const [phoneError, setPhoneError] = useState("");
-  const [resendMessage, setResendMessage] = useState("");
-  const [isResendDisabled, setIsResendDisabled] = useState(false);
-  const [cooldownEndTime, setCooldownEndTime] = useState(null);
   const [cameraError, setCameraError] = useState("");
   const [errorPopup, setErrorPopup] = useState("");
   const [generatedAt, setGeneratedAt] = useState(null);
@@ -221,7 +319,6 @@ function Register({ onBack, embedded = false, compact = false }) {
   const canvasRef = useRef(null);
   const idVideoRef = useRef(null);
   const idCanvasRef = useRef(null);
-  const otpRefs = useRef([]);
 
   useEffect(() => {
     const fetchCountry = async () => {
@@ -238,11 +335,6 @@ function Register({ onBack, embedded = false, compact = false }) {
     };
     fetchCountry();
   }, []);
-
-  const capitalizeFirstLetter = (str) => {
-    if (!str || typeof str !== "string") return "";
-    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-  };
 
   const validateStep = useCallback(
     (currentStep) => {
@@ -466,7 +558,7 @@ function Register({ onBack, embedded = false, compact = false }) {
       setOCRProgress(100);
       if (!extractedID && !extractedDOB && !extractedName && !extractedGender) {
         setIdCameraError(
-          "The ID was captured, but the text could not be read clearly. Please retake the ID photo or enter the details manually.",
+          "Couldn't read the ID. Make sure the whole card — including the top with your photo, names and ID number — fits inside the frame, then retake, or enter the details manually.",
         );
       }
     } catch (error) {
@@ -487,11 +579,7 @@ function Register({ onBack, embedded = false, compact = false }) {
       setIdCameraError("Camera is still loading. Please try again.");
       return;
     }
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const imageData = canvas.toDataURL("image/jpeg", 0.9);
+    const imageData = captureVideoFrame(video, canvas, "image/jpeg", 0.9);
 
     setIdImage(imageData);
     setIdCaptured(true);
@@ -516,6 +604,16 @@ function Register({ onBack, embedded = false, compact = false }) {
     return () => stopIDCamera();
   }, [step, idCaptured, startIDCamera, stopIDCamera]);
 
+  const stopCamera = useCallback(() => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject;
+      stream.getTracks().forEach((track) => track.stop());
+      videoRef.current.srcObject = null;
+    }
+  }, []);
+
+  useStopCameraWhenHidden(stopCamera);
+
   const startCamera = useCallback(async () => {
     stopCamera();
     try {
@@ -535,26 +633,12 @@ function Register({ onBack, embedded = false, compact = false }) {
     } catch (err) {
       setCameraError("Camera access denied or unavailable.");
     }
-  }, []);
-
-  const stopCamera = useCallback(() => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject;
-      stream.getTracks().forEach((track) => track.stop());
-      videoRef.current.srcObject = null;
-    }
-  }, []);
-
-  useStopCameraWhenHidden(stopCamera);
+  }, [stopCamera]);
 
   const captureImage = async () => {
     if (!videoRef.current || !canvasRef.current || !isModelsLoaded) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const options = new faceapi.TinyFaceDetectorOptions({
       inputSize: 416,
@@ -566,7 +650,7 @@ function Register({ onBack, embedded = false, compact = false }) {
         setCameraError("No face detected. Please face the camera clearly.");
         return;
       }
-      const imageData = canvas.toDataURL("image/png");
+      const imageData = captureVideoFrame(video, canvas, "image/png");
       setFormData((prev) => ({ ...prev, memberImage: imageData }));
       stopCamera();
     } catch (err) {
@@ -591,7 +675,7 @@ function Register({ onBack, embedded = false, compact = false }) {
     } else {
       stopCamera();
     }
-  }, [step, startCamera]);
+  }, [step, startCamera, stopCamera]);
 
   useEffect(() => {
     if (generatedAt && step === 7) {
@@ -1232,7 +1316,7 @@ function Register({ onBack, embedded = false, compact = false }) {
                     in to your dashboard.
                   </p>
                   <Button
-                    onClick={() => navigate("/components/member/login")}
+                    onClick={() => navigate("/login")}
                     className={cn(primaryBtnClass(compact), "mt-8")}
                   >
                     Go to Login
@@ -1244,7 +1328,7 @@ function Register({ onBack, embedded = false, compact = false }) {
             <p className="text-[13px] text-[var(--muted)] text-center">
               Already have an account?{" "}
               <Link
-                to="/components/member/login"
+                to="/login"
                 className="text-gold font-semibold no-underline transition-opacity hover:opacity-80"
               >
                 Log in

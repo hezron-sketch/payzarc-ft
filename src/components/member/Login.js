@@ -563,7 +563,7 @@ function Login({ onBack, embedded = false, compact = false }) {
 
                   <div className="flex justify-end -mt-1">
                     <Link
-                      to="/components/member/reset-password"
+                      to="/reset-password"
                       className="text-xs text-gold no-underline font-medium transition-opacity hover:opacity-80"
                     >
                       Forgot password?
@@ -593,7 +593,7 @@ function Login({ onBack, embedded = false, compact = false }) {
                 <p className="text-[13px] text-[var(--muted)] text-center">
                   Don't have an account?{" "}
                   <Link
-                    to="/components/member/register"
+                    to="/register"
                     className="text-gold font-semibold no-underline transition-opacity hover:opacity-80"
                   >
                     Create one

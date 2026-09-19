@@ -183,7 +183,7 @@
     {
       "id": 1,
       "success": true,
-      "balance": 1850.75,
+      "balance": 4150.75,
       "currency": "KES"
     },
     {
@@ -463,7 +463,7 @@
       "owner_id": 1,
       "name": "Emergency Fund",
       "type": "emergency",
-      "balance": 866,
+      "balance": 66,
       "currency": "KES",
       "members": [
         1,
@@ -479,7 +479,7 @@
       "owner_id": 1,
       "name": "Wedding Savings",
       "type": "wedding",
-      "balance": 2000,
+      "balance": 500,
       "currency": "KES",
       "members": [
         3,

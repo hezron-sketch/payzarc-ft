@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { EXCHANGE_RATES } from "./utility/exchangeRates";
 import { PRO_PLAN_PRICE } from "./utility/constants";
+import { isValidEmail, isSafeText } from "./utility/validators";
 import {
   PhoneMockup,
   psHeaderClass,
@@ -187,7 +188,7 @@ function Navbar() {
         </div>
         <button
           className="group inline-flex items-center gap-1.5 bg-gold text-[#111] border-none rounded-[20px] px-[1.3rem] py-[0.55rem] text-[13px] font-bold cursor-pointer shadow-[0_4px_14px_rgba(var(--gold-rgb),0.25)] transition-[background,transform,box-shadow] duration-200 hover:bg-gold-dark hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(var(--gold-rgb),0.4)]"
-          onClick={() => navigate("/components/member/login")}
+          onClick={() => navigate("/login")}
         >
           Login{" "}
           <ArrowRightIcon
@@ -250,9 +251,10 @@ function PhoneAuthStage({ overlay, onClose, mockupRef }) {
     setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
     setPhase("closing");
     return undefined;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- must only re-run
-    // when overlay flips, so it captures phase as of that moment; adding phase
-    // would re-fire this on every phase transition and re-snapshot the rect.
+    // Must only re-run when overlay flips, so it captures phase as of that
+    // moment; adding phase would re-fire this on every phase transition and
+    // re-snapshot the rect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [overlay]);
 
   useEffect(() => {
@@ -554,7 +556,7 @@ function Hero({ overlay, onCloseAuth }) {
       <div className="flex gap-3 mb-14 max-[480px]:flex-col max-[480px]:items-stretch">
         <button
           className="inline-flex items-center justify-center gap-2 bg-gold text-[#111] border-none rounded-[2rem] py-3 px-7 text-2xl font-semibold cursor-pointer transition-[background,transform] duration-200 hover:bg-gold-dark hover:-translate-y-px max-[768px]:text-lg"
-          onClick={() => navigate("/components/member/register")}
+          onClick={() => navigate("/register")}
         >
           Get started <ArrowRightIcon />
         </button>
@@ -821,7 +823,7 @@ function Converter() {
         {canSend && (
           <button
             className="w-full py-[0.9rem] bg-gold text-[#111] border-none rounded-md text-[15px] font-bold cursor-pointer transition-[background,transform] duration-200 hover:bg-gold-dark hover:-translate-y-px"
-            onClick={() => navigate("/components/member/login")}
+            onClick={() => navigate("/login")}
           >
             Send to {toCountry} →
           </button>
@@ -1182,6 +1184,9 @@ const FAQS = [
 
 function HelpContent() {
   const navigate = useNavigate();
+  // Single index open at a time — a standard accordion, not a checklist of
+  // independently-toggled panels.
+  const [openIndex, setOpenIndex] = useState(0);
   return (
     <>
       <PageHeader
@@ -1190,22 +1195,39 @@ function HelpContent() {
         subtitle="Can't find what you need? The team is one message away."
       />
       <div className="flex flex-col gap-3 max-w-[720px]">
-        {FAQS.map(({ q, a }) => (
-          <div
-            key={q}
-            className="bg-white/[0.03] backdrop-blur-[8px] border-[0.5px] border-border rounded-[16px] p-5"
-          >
-            <div className="flex items-center gap-2.5 mb-2">
-              <HelpCircle size={16} className="text-gold shrink-0" />
-              <h3 className="text-[14.5px] font-bold text-foreground m-0">
-                {q}
-              </h3>
+        {FAQS.map(({ q, a }, i) => {
+          const isOpen = openIndex === i;
+          return (
+            <div
+              key={q}
+              className="bg-white/[0.03] backdrop-blur-[8px] border-[0.5px] border-border rounded-[16px] p-5"
+            >
+              <button
+                type="button"
+                onClick={() => setOpenIndex(isOpen ? -1 : i)}
+                aria-expanded={isOpen}
+                className="w-full flex items-center gap-2.5 bg-transparent border-none p-0 cursor-pointer text-left"
+              >
+                <HelpCircle size={16} className="text-gold shrink-0" />
+                <h3 className="flex-1 text-[14.5px] font-bold text-foreground m-0">
+                  {q}
+                </h3>
+                <ChevronDown
+                  size={16}
+                  className={cn(
+                    "text-[var(--muted)] shrink-0 transition-transform duration-200",
+                    isOpen && "rotate-180",
+                  )}
+                />
+              </button>
+              {isOpen && (
+                <p className="text-[13.5px] text-[var(--muted)] leading-[1.6] m-0 mt-2 pl-[26px]">
+                  {a}
+                </p>
+              )}
             </div>
-            <p className="text-[13.5px] text-[var(--muted)] leading-[1.6] m-0">
-              {a}
-            </p>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <button
         type="button"
@@ -1237,12 +1259,22 @@ const CONTACT_METHODS = [
 function ContactContent() {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [sent, setSent] = useState(false);
+  const [formError, setFormError] = useState("");
 
   const canSubmit = form.name && form.email && form.message;
 
   const submit = (e) => {
     e.preventDefault();
     if (!canSubmit) return;
+    if (!isSafeText(form.name) || !isSafeText(form.message)) {
+      setFormError("Name and message can't contain < or > characters");
+      return;
+    }
+    if (!isValidEmail(form.email)) {
+      setFormError("Enter a valid email address");
+      return;
+    }
+    setFormError("");
     // No support-ticketing backend exists for the marketing site — this is
     // an honest client-side "mock success", same pattern the rest of the
     // app uses for flows without a real endpoint behind them yet.
@@ -1360,6 +1392,9 @@ function ContactContent() {
                   className="w-full p-3.5 bg-white/[0.06] text-foreground border-[0.5px] border-white/10 rounded-[10px] text-[14px] outline-none transition-colors duration-200 focus:border-gold placeholder:text-[var(--muted)] resize-none"
                 />
               </label>
+              {formError && (
+                <p className="text-[13px] text-red-400 -mt-2">{formError}</p>
+              )}
               <button
                 type="submit"
                 disabled={!canSubmit}
@@ -1494,26 +1529,26 @@ function AppContent() {
   const path = location.pathname;
 
   const standaloneRoutes = [
-    "components/member/set-password",
-    "components/member/reset-password",
-    "components/member/set-new-password",
+    "set-password",
+    "reset-password",
+    "set-new-password",
     "dashboard",
   ];
 
-  if (standaloneRoutes.some((r) => path === `/${r}` || path === r)) {
+  if (standaloneRoutes.some((r) => path === `/${r}`)) {
     const goHome = () => navigate("/");
     return (
       <Routes>
         <Route
-          path="components/member/set-password"
+          path="set-password"
           element={<SetPassword onBack={goHome} />}
         />
         <Route
-          path="components/member/reset-password"
+          path="reset-password"
           element={<ResetPassword onBack={goHome} />}
         />
         <Route
-          path="components/member/set-new-password"
+          path="set-new-password"
           element={<SetNewPassword onBack={goHome} />}
         />
         <Route
@@ -1533,8 +1568,8 @@ function AppContent() {
   // underneath and only the overlay value changes, rather than unmounting
   // into a separate standalone page.
   const OVERLAY_PATHS = {
-    "/components/member/login": "login",
-    "/components/member/register": "register",
+    "/login": "login",
+    "/register": "register",
     "/features": "features",
     "/rates": "rates",
     "/help": "help",

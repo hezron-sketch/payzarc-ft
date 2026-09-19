@@ -142,7 +142,7 @@ function SetPassword({ onBack }) {
             </p>
             <div className="flex justify-center">
               <Button
-                onClick={() => navigate('/components/member/login')}
+                onClick={() => navigate('/login')}
                 className={`${popupButtonClass} font-bold bg-gold text-[#1a202c] hover:bg-gold-dark`}
               >
                 Now Login

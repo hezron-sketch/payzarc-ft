@@ -117,8 +117,6 @@ export default function Dashboard() {
   const searchRef = useRef(null);
   const notifRef = useRef(null);
   const lastScrollY = useRef(0);
-  const balanceCardElRef = useRef(null);
-  const snapInFlightRef = useRef(false);
 
   // Only the search results and the notification preview need manual
   // outside-click handling — the user dropdown is a Radix DropdownMenu,
@@ -142,55 +140,9 @@ export default function Dashboard() {
   // Hides the topbar while scrolling down (past its own height, so it
   // doesn't flicker right at the top) and brings it back the moment the
   // user scrolls up at all — the standard "proper" hide-on-scroll pattern.
-  //
-  // Also owns the "snap the hero away" behavior: the first (non-trivial)
-  // scroll on the home page jumps straight to the balance card's resting
-  // position instead of stopping mid-hero, landing its top right under the
-  // still-visible sticky header. Both live in one listener (rather than a
-  // second one inside Home) so they can't race — while a snap is in
-  // flight the hide-on-scroll check is skipped entirely, otherwise it'd
-  // hide the header the instant scrollY crosses 96 mid-animation, which
-  // is exactly where we're trying to land it looking untouched.
   useEffect(() => {
-    // ponytail: matches the header's own h-[68px] below — not pulled into
-    // a shared constant for one number used in two files.
-    const HEADER_HEIGHT = 68;
-    const SLIGHT_SCROLL_PX = 12;
-
     const handleScroll = () => {
       const currentY = window.scrollY;
-
-      if (snapInFlightRef.current) {
-        lastScrollY.current = currentY;
-        return;
-      }
-
-      const card = balanceCardElRef.current;
-      if (card) {
-        const target = Math.round(
-          card.getBoundingClientRect().top + currentY - HEADER_HEIGHT,
-        );
-        if (currentY > SLIGHT_SCROLL_PX && currentY < target) {
-          snapInFlightRef.current = true;
-          setHideTopBar(false);
-          window.scrollTo({ top: target, behavior: "smooth" });
-          const finishSnap = () => {
-            snapInFlightRef.current = false;
-            window.removeEventListener("scroll", checkArrived);
-          };
-          const checkArrived = () => {
-            if (Math.abs(window.scrollY - target) < 2) finishSnap();
-          };
-          window.addEventListener("scroll", checkArrived, { passive: true });
-          // Safety net in case the smooth scroll gets interrupted (e.g. the
-          // user grabs the scrollbar mid-animation) and never fires close
-          // enough to `target` for checkArrived to release the guard.
-          setTimeout(finishSnap, 700);
-          lastScrollY.current = currentY;
-          return;
-        }
-      }
-
       const scrolledPastBar = currentY > 96;
       const scrollingDown = currentY > lastScrollY.current;
       setHideTopBar(scrolledPastBar && scrollingDown);
@@ -244,7 +196,7 @@ export default function Dashboard() {
         } else {
           localStorage.removeItem("accessToken");
           localStorage.removeItem("user");
-          navigate("/components/member/login");
+          navigate("/login");
         }
       } finally {
         setLoading(false);
@@ -271,7 +223,7 @@ export default function Dashboard() {
     } finally {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("user");
-      navigate("/components/member/login");
+      navigate("/login");
     }
   };
 
@@ -347,7 +299,6 @@ export default function Dashboard() {
             onPageChange={handleNavClick}
             user={user}
             navigateRequest={navigateRequest}
-            balanceCardRef={balanceCardElRef}
           />
         );
       case "groups":
@@ -401,7 +352,6 @@ export default function Dashboard() {
             onPageChange={handleNavClick}
             user={user}
             navigateRequest={navigateRequest}
-            balanceCardRef={balanceCardElRef}
           />
         );
     }
@@ -631,8 +581,11 @@ export default function Dashboard() {
             </div>
           </header>
 
-          {/* Content Area */}
-          <main className="flex-1 pt-12 pb-8 max-[768px]:pt-4 max-[768px]:pb-24">
+          {/* Content Area — rounded top corners + a faint glass surface (same
+          bg-white/[0.0X] + border-white/[0.06] language as the app's other
+          panels) so it reads as a distinct rounded sheet sitting under the
+          flat topbar, instead of content floating directly on the page bg. */}
+          <main className="flex-1 pt-12 pb-8 max-[768px]:pt-4 max-[768px]:pb-24 bg-white/[0.015] border-t border-white/[0.06] rounded-t-[28px]">
             <div className="max-w-[1400px] mx-auto px-[4%]">
               <div key={activePage} className="animate-flow-fade-in">
                 {renderContent()}

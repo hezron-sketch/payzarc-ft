@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import axiosInstance, { contactsApi } from "../../utility/axiosInstance";
+import { isSafeText } from "../../utility/validators";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -381,6 +382,10 @@ function Groups({ onTotalChange, onWalletChange }) {
   const createGroup = async () => {
     if (!newName.trim()) {
       setCreateError("Give the group a name");
+      return;
+    }
+    if (!isSafeText(newName)) {
+      setCreateError("Group name can't contain < or > characters");
       return;
     }
     setCreateError("");

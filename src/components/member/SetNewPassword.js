@@ -1,6 +1,6 @@
 // src/components/member/SetNewPassword.jsx
 import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Home } from 'lucide-react';
 import axiosInstance from '../../utility/axiosInstance';
 import { Button } from '@/components/ui/button';
@@ -24,8 +24,7 @@ function SetNewPassword() {
   const [loading, setLoading] = useState(false);
 
   if (!email) {
-    navigate('/reset-password');
-    return null;
+    return <Navigate to="/reset-password" replace />;
   }
 
   const handleSubmit = async (e) => {

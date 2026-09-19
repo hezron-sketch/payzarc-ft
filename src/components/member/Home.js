@@ -1,4 +1,3 @@
-import axios from "axios";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   PlusCircle,
@@ -10,14 +9,6 @@ import {
   TrendingUp,
   TrendingDown,
   ArrowRight,
-  Plus,
-  ArrowUpIcon,
-  Handshake,
-  Tv,
-  Briefcase,
-  ShoppingCart,
-  University,
-  ArrowDownIcon,
   Check,
   RefreshCw,
   ChevronLeft,
@@ -39,7 +30,6 @@ import { getCurrentCountry } from "../../utility/getCurrentCountry";
 import { EXCHANGE_RATES } from "../../utility/exchangeRates";
 import { getLiveExchangeRates } from "../../utility/getLiveExchangeRates";
 import { getRegionProviders } from "../../utility/regionProviders";
-import { API_URL } from "../../utility/constants";
 import {
   isValidEmail,
   isValidPhone,
@@ -212,12 +202,10 @@ const txStatusDotClass = (status) => {
   );
 };
 
-function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
+function Home({ onPageChange, user, navigateRequest }) {
   const [activeSection, setActiveSection] = useState("dashboard");
   const [showBalance, setShowBalance] = useState(false);
   const [balanceData, setBalanceData] = useState(null);
-  const [loadingBalance, setLoadingBalance] = useState(true);
-  const [balanceError, setBalanceError] = useState(null);
   // Group funds are their own pool, separate from the wallet balance above
   // — summed here just to show a distinguishing total on the balance card;
   // the Groups tab (onPageChange("groups")) is the source of truth.
@@ -233,20 +221,26 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
   const [mpesaNumber, setMpesaNumber] = useState("");
   const [addMoneyCategory, setAddMoneyCategory] = useState("bank"); // "mobile" | "bank" | "card"
   const [mobileProvider, setMobileProvider] = useState("");
-  const [withdrawDestination, setWithdrawDestination] = useState("mpesa"); // "mpesa" | "agent"
+  const [withdrawDestination, setWithdrawDestination] = useState("mpesa"); // "mpesa" | "bank" | "agent"
   const [inputPin, setInputPin] = useState("");
   const [showAddMoneyPopup, setShowAddMoneyPopup] = useState(false);
 
-  // Banks/cards linked from the Profile "Payment Methods" panel — offered
-  // as Add Money sources alongside region-specific mobile money providers.
+  // Banks/cards/mobile money linked from the Profile "Payment Methods" panel
+  // — offered as Add Money sources alongside region-specific mobile money
+  // providers, and as the ONLY valid Withdraw destinations (mpesa/bank): a
+  // withdrawal must land on an account the user has already verified is
+  // theirs, never a number typed in on the spot.
   const [paymentMethods, setPaymentMethods] = useState({
     banks: [],
     cards: [],
+    mobileMoney: [],
   });
   const [selectedBankId, setSelectedBankId] = useState(null);
   const [selectedCardId, setSelectedCardId] = useState(null);
+  const [selectedMobileMoneyId, setSelectedMobileMoneyId] = useState(null);
   const [showAddBankForm, setShowAddBankForm] = useState(false);
   const [showAddCardForm, setShowAddCardForm] = useState(false);
+  const [showAddMobileMoneyForm, setShowAddMobileMoneyForm] = useState(false);
   const [newBank, setNewBank] = useState({
     bankName: "",
     accountNumber: "",
@@ -256,6 +250,10 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
     cardholderName: "",
     cardNumber: "",
     expiry: "",
+  });
+  const [newMobileMoney, setNewMobileMoney] = useState({
+    provider: "",
+    phoneNumber: "",
   });
   const [showWithdrawPopup, setShowWithdrawPopup] = useState(false);
   // Populated from the withdrawal endpoint's response on success; drives the
@@ -337,6 +335,10 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
         setGroupFundsTotal(list.reduce((sum, g) => sum + g.balance, 0));
       })
       .catch(() => {});
+    // Initial load only — these all get re-triggered individually after
+    // whatever mutation needs a fresh balance/history/etc, not on every
+    // render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -382,25 +384,8 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
     };
   }, []);
 
-  // const fetchBalance = async () => {
-  //   setLoadingBalance(true);
-  //   try {
-  //     const token = localStorage.getItem("accessToken");
-  //     const res = await transactionsApi.get("/api/balance/", {
-  //       headers: { Authorization: `Bearer ${token}` },
-  //     });
-  //     setBalanceData(res.data);
-  //   } catch (err) {
-  //     setBalanceError("Failed to load balance");
-  //   } finally {
-  //     setLoadingBalance(false);
-  //   }
-  // };
-
-  // Old fetchBalance
   const fetchBalance = async () => {
     if (!user?.email) {
-      setLoadingBalance(false);
       return;
     }
     try {
@@ -414,18 +399,9 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
       const data = response.data;
       if (data.success !== undefined) {
         setBalanceData(data);
-      } else {
-        setBalanceError(data.error || "Failed to load balance");
       }
     } catch (err) {
       console.error("Balance fetch failed:", err);
-      if (err.response?.status === 404) {
-        setBalanceError("No wallet found for this account.");
-      } else {
-        setBalanceError("Could not load wallet balance");
-      }
-    } finally {
-      setLoadingBalance(false);
     }
   };
 
@@ -489,6 +465,7 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
       setPaymentMethods({
         banks: res.data?.banks || [],
         cards: res.data?.cards || [],
+        mobileMoney: res.data?.mobileMoney || [],
       });
     } catch (err) {
       console.error("Failed to fetch payment methods", err);
@@ -664,6 +641,18 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
     findCountryByName(r?.country || r?.country_name) ||
     detectCountryFromPhone(r?.phone || r?.value || r?.phone_number);
 
+  // A bare local number — all digits, no "+", no dial code already on it —
+  // is assumed to be in the sender's own country, so typing "0707069007" (or
+  // "707069007") while sending from Kenya resolves to "+254707069007"
+  // without the user having to prefix it themselves. Left untouched for
+  // emails, already-coded numbers, and once a favourite is picked.
+  const withSenderCountryCode = (value) => {
+    const trimmed = (value || "").trim();
+    if (!trimmed || trimmed.includes("@") || !myCountry?.code) return trimmed;
+    if (!/^\d+$/.test(trimmed) || detectCountryFromPhone(trimmed)) return trimmed;
+    return `${myCountry.code}${trimmed.replace(/^0+/, "")}`;
+  };
+
   const recipientCountry = (() => {
     if (selectedRecipient) {
       return findCountryByName(
@@ -683,7 +672,7 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
         : null;
     }
 
-    return detectCountryFromPhone(term);
+    return detectCountryFromPhone(withSenderCountryCode(term));
   })();
 
   // Converted value of the amount being sent, in the recipient's currency.
@@ -749,7 +738,7 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
   };
 
   const handleAddRecipientToFavourites = async () => {
-    const value = recipientSearchTerm.trim();
+    const value = withSenderCountryCode(recipientSearchTerm.trim());
     if (!value) return;
     const favouriteType = value.includes("@") ? "email" : "phone";
     if (
@@ -951,12 +940,14 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
   const handleSendMoney = async () => {
     // Allow either a picked favourite OR a number typed straight into the
     // search box — previously this only worked if a favourite was selected.
+    // A raw typed number gets the sender's own country code assumed (a
+    // selectedRecipient's stored value is already fully qualified).
     const recipientValue =
       (selectedRecipient &&
         (selectedRecipient.value ||
           selectedRecipient.phone ||
           selectedRecipient.phone_number)) ||
-      recipientSearchTerm;
+      withSenderCountryCode(recipientSearchTerm);
     // Name for display only — recipientValue (a phone number/handle) is
     // still what's sent to the API below.
     const recipientDisplayName =
@@ -1078,6 +1069,30 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
     }
   };
 
+  const handleAddMobileMoney = async () => {
+    if (!newMobileMoney.provider || !newMobileMoney.phoneNumber) {
+      showNotification("error", "Select a provider and enter a phone number");
+      return;
+    }
+    if (!isValidPhone(newMobileMoney.phoneNumber)) {
+      showNotification("error", "Enter a valid phone number");
+      return;
+    }
+    try {
+      const res = await transactionsApi.post(
+        "/api/payment-methods/mobile-money/",
+        newMobileMoney,
+      );
+      const mobileMoney = res.data || [];
+      setPaymentMethods((pm) => ({ ...pm, mobileMoney }));
+      setSelectedMobileMoneyId(mobileMoney[mobileMoney.length - 1]?.id ?? null);
+      setShowAddMobileMoneyForm(false);
+      setNewMobileMoney({ provider: "", phoneNumber: "" });
+    } catch (error) {
+      showNotification("error", "Failed to save mobile money account");
+    }
+  };
+
   const handleAddCard = async () => {
     if (!newCard.cardholderName || !newCard.cardNumber || !newCard.expiry) {
       showNotification(
@@ -1194,8 +1209,28 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
     );
   };
 
-  const withdrawDestinationValue =
-    withdrawDestination === "mpesa" ? mpesaNumber : agentNumber;
+  // Mpesa/bank withdrawals must land on an account already linked to this
+  // user (see paymentMethods above) — never a number typed in on the spot.
+  // Agent is the one exception: it's a physical cash-out code, not an
+  // account, so it stays free text.
+  const selectedWithdrawMobileMoney = paymentMethods.mobileMoney.find(
+    (m) => m.id === selectedMobileMoneyId,
+  );
+  const selectedWithdrawBank = paymentMethods.banks.find(
+    (b) => b.id === selectedBankId,
+  );
+  const withdrawDestinationLabel =
+    withdrawDestination === "mpesa"
+      ? selectedWithdrawMobileMoney
+        ? `${selectedWithdrawMobileMoney.provider} •••• ${String(selectedWithdrawMobileMoney.phoneNumber).slice(-4)}`
+        : ""
+      : withdrawDestination === "bank"
+        ? selectedWithdrawBank
+          ? `${selectedWithdrawBank.bankName} •••• ${String(selectedWithdrawBank.accountNumber).slice(-4)}`
+          : ""
+        : agentNumber
+          ? `agent ${agentNumber}`
+          : "";
 
   const handleWithdrawClick = () => {
     if (
@@ -1207,32 +1242,42 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
       return;
     }
     // Mpesa is only a real withdrawal rail in Kenya — default elsewhere to
-    // the option that's actually shown.
-    if (region.mobileMoney.length === 0) setWithdrawDestination("agent");
+    // Bank, which (like Mpesa) is a linked-account destination.
+    setWithdrawDestination(region.mobileMoney.length > 0 ? "mpesa" : "bank");
+    setShowAddBankForm(paymentMethods.banks.length === 0);
+    setShowAddMobileMoneyForm(paymentMethods.mobileMoney.length === 0);
     setShowWithdrawPopup(true);
   };
 
   const handleWithdraw = async () => {
     const validDestination =
       withdrawDestination === "mpesa"
-        ? isValidPhone(withdrawDestinationValue)
-        : /^[A-Za-z0-9-]{3,20}$/.test(withdrawDestinationValue);
+        ? !!selectedMobileMoneyId
+        : withdrawDestination === "bank"
+          ? !!selectedBankId
+          : /^[A-Za-z0-9-]{3,20}$/.test(agentNumber);
     if (
       !withdrawAmount ||
       Number(withdrawAmount) <= 0 ||
       !validDestination ||
       inputPin.length !== 4
     ) {
+      const destinationName =
+        withdrawDestination === "mpesa"
+          ? "a linked Mpesa account"
+          : withdrawDestination === "bank"
+            ? "a linked bank account"
+            : "a valid agent number";
       showNotification(
         "error",
-        `Enter an amount, valid ${withdrawDestination === "mpesa" ? "Mpesa number" : "agent number"}, and 4-digit PIN`,
+        `Enter an amount, select ${destinationName}, and a 4-digit PIN`,
       );
       return;
     }
 
     openConfirmationDialog(
       "Confirm Withdrawal",
-      `Withdraw ${displayCurrency}${withdrawAmount} to ${withdrawDestination === "mpesa" ? "Mpesa" : "agent"} ${withdrawDestinationValue}?\n\nType 1 and click Yes to confirm.`,
+      `Withdraw ${displayCurrency}${withdrawAmount} to ${withdrawDestinationLabel}?\n\nType 1 and click Yes to confirm.`,
       async (typedValue, buttonChoice) => {
         if (typedValue !== "1" || buttonChoice !== "yes") {
           showNotification("error", "Transaction cancelled");
@@ -1241,16 +1286,19 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
         try {
           const token = localStorage.getItem("accessToken");
           // Agent path confirmed against MerchantWithdrawalService: it reads
-          // `merchant_code`, not `agent_number`. Mpesa path is still
-          // unconfirmed — ponytail: guessed field name, fix if the backend
-          // uses something else once that rail is implemented.
+          // `merchant_code`, not `agent_number`. Mpesa/bank paths send the id
+          // of the linked account (mirroring Add Money's bank_id/card_id) —
+          // ponytail: guessed field names, fix if the backend uses something
+          // else once those rails are implemented.
           const { data } = await transactionsApi.post(
             "/api/withdraw/",
             {
               destination: withdrawDestination,
               ...(withdrawDestination === "mpesa"
-                ? { mpesa_number: withdrawDestinationValue }
-                : { merchant_code: withdrawDestinationValue }),
+                ? { mobile_money_id: selectedMobileMoneyId }
+                : withdrawDestination === "bank"
+                  ? { bank_id: selectedBankId }
+                  : { merchant_code: agentNumber }),
               amount: parseFloat(withdrawAmount),
               transaction_pin: inputPin,
             },
@@ -1315,11 +1363,19 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
               flush at 0) so they hang partially outside the now-narrower
               phone's edges, same idea as the landing hero's own mobile
               FloatCard treatment. */}
-              {/* Below sm, there's no gutter beside the (now full-width)
-              phone for these to float into — they'd either get clipped by
-              the viewport edge or overlap the balance text. Hidden here;
-              the mobileActionRow below (inside the phone screen) covers
-              Send/Withdraw on those widths instead. */}
+              {/* Kept visible at every width, including below sm — the phone
+              modal and its floating Send/Withdraw stay the same composition
+              everywhere instead of collapsing into an inline tile below sm.
+              Above 480px there's a real side gutter (or at least tablet
+              padding) for the full labeled pill to hang into. Below 480px
+              there's no gutter left at all and the balance card's own rows
+              (Total Balance/USD/Add Money/Groups) pack in tight enough that
+              no vertical slot over the card face is ever safely empty — so
+              instead of chasing a gap between rows, these collapse to a
+              small icon-only circle and move to straddle the phone's TOP
+              corners: half hanging in the blank margin above the bezel, half
+              over its own decorative top padding/notch — genuinely empty
+              space either way, well above where "Total Balance" starts. */}
               {BALANCE_CARD_ACTIONS.map(({ key, label, icon: Icon }) => {
                 const active = activeSection === key;
                 const isSend = key === "send";
@@ -1330,17 +1386,17 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
                     onClick={() => switchSection(key)}
                     aria-label={label}
                     className={cn(
-                      "hidden sm:flex absolute z-10 items-center gap-2.5 rounded-2xl py-[10px] px-[14px] whitespace-nowrap cursor-pointer transition-all duration-200 hover:-translate-y-0.5 max-[768px]:px-[10px] max-[768px]:py-2",
+                      "flex absolute z-10 items-center gap-2.5 rounded-2xl py-[10px] px-[14px] whitespace-nowrap cursor-pointer transition-all duration-200 hover:-translate-y-0.5 max-[768px]:px-[10px] max-[768px]:py-2 max-[480px]:gap-0 max-[480px]:p-0 max-[480px]:w-11 max-[480px]:h-11 max-[480px]:rounded-full max-[480px]:justify-center",
                       isSend
-                        ? "-left-28 top-[55px] max-[768px]:-left-10 max-[480px]:top-10"
-                        : "-right-28 top-[160px] max-[768px]:-right-10 max-[480px]:top-32",
+                        ? "-left-28 top-[55px] max-[768px]:-left-10 max-[480px]:-left-2 max-[480px]:top-[-18px]"
+                        : "-right-28 top-[160px] max-[768px]:-right-10 max-[480px]:-right-2 max-[480px]:top-[-18px]",
                       active
                         ? "bg-gradient-to-b from-gold to-gold-dark border-[0.5px] border-transparent"
                         : "bg-secondary border-[0.5px] border-input hover:border-gold/30",
                     )}
                   >
                     <div
-                      className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center flex-shrink-0"
+                      className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center flex-shrink-0 max-[480px]:w-full max-[480px]:h-full max-[480px]:rounded-full"
                       style={{
                         background: active
                           ? "rgba(0,0,0,0.12)"
@@ -1360,7 +1416,7 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
                         )}
                       />
                     </div>
-                    <div>
+                    <div className="hidden min-[481px]:block">
                       <div
                         className={cn(
                           "text-[10px]",
@@ -1383,7 +1439,6 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
               })}
 
               <div
-                ref={balanceCardRef}
                 className={cn(phoneBezelClass, phoneZoomActive && "scale-[1.02]")}
               >
                 <div className={phoneNotchClass} />
@@ -1439,13 +1494,11 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
                       </div>
                     </div>
 
-                    {/* Below sm, Send/Withdraw don't get the floating pills
-                    beside the phone (no room — see BALANCE_CARD_ACTIONS
-                    above), so a second, mobile-only row carries all four
-                    actions instead of just Add Money/Groups. Two rows
-                    toggled by breakpoint (not one row switched in JS) so
-                    there's no resize listener to keep in sync. */}
-                    <div className="w-full hidden sm:flex items-center gap-3 mb-2">
+                    {/* Add Money/Groups, same row at every width now — Send/
+                    Withdraw live only in the floating pills beside the phone
+                    (BALANCE_CARD_ACTIONS above), which stay visible below sm
+                    too, so they're never duplicated in here. */}
+                    <div className="w-full flex items-center gap-3 mb-2">
                       {ICON_ROW_ACTIONS.map(({ key, label, icon: Icon }) => {
                         const active = activeSection === key;
                         return (
@@ -1454,25 +1507,6 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
                             type="button"
                             onClick={() => switchSection(key)}
                             className={active ? goldPillBtnClass : flatPillBtnClass}
-                          >
-                            <Icon size={16} className="shrink-0" />
-                            <span className="truncate">{label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <div className="w-full flex sm:hidden flex-wrap items-center gap-3 mb-2">
-                      {ACTION_TILES.map(({ key, label, icon: Icon }) => {
-                        const active = activeSection === key;
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            onClick={() => switchSection(key)}
-                            className={cn(
-                              active ? goldPillBtnClass : flatPillBtnClass,
-                              "basis-[calc(50%-0.375rem)] flex-none",
-                            )}
                           >
                             <Icon size={16} className="shrink-0" />
                             <span className="truncate">{label}</span>
@@ -1666,7 +1700,11 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
                   </Label>
                   <Input
                     className={formInputClass}
-                    placeholder="Search favourites or enter a number"
+                    placeholder={
+                      myCountry
+                        ? `Search favourites or enter a local number, e.g. 707069007`
+                        : "Search favourites or enter a number"
+                    }
                     value={recipientSearchTerm}
                     onChange={(e) => {
                       setRecipientSearchTerm(e.target.value);
@@ -2493,8 +2531,8 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
           </DialogTitle>
           <div className="flex gap-2 -mt-[0.6rem]">
             {(region.mobileMoney.length > 0
-              ? ["mpesa", "agent"]
-              : ["agent"]
+              ? ["mpesa", "bank", "agent"]
+              : ["bank", "agent"]
             ).map((dest) => (
               <button
                 key={dest}
@@ -2502,28 +2540,167 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
                 className={methodBtnClass(withdrawDestination === dest)}
                 onClick={() => setWithdrawDestination(dest)}
               >
-                {dest === "mpesa" ? "Mpesa" : "Agent"}
+                {dest === "mpesa" ? "Mpesa" : dest === "bank" ? "Bank" : "Agent"}
               </button>
             ))}
           </div>
 
-          <Label className={formLabelClass}>
-            {withdrawDestination === "mpesa" ? "Mpesa number" : "Agent number"}
-          </Label>
-          <Input
-            className={formInputClass}
-            placeholder={
-              withdrawDestination === "mpesa"
-                ? "e.g. 254712345678"
-                : "e.g. AG-10293"
-            }
-            value={withdrawDestination === "mpesa" ? mpesaNumber : agentNumber}
-            onChange={(e) =>
-              withdrawDestination === "mpesa"
-                ? setMpesaNumber(e.target.value)
-                : setAgentNumber(e.target.value)
-            }
-          />
+          {withdrawDestination === "mpesa" &&
+            (showAddMobileMoneyForm ? (
+              <>
+                <Label className={formLabelClass}>Provider</Label>
+                <select
+                  className={formInputClass}
+                  value={newMobileMoney.provider}
+                  onChange={(e) =>
+                    setNewMobileMoney({ ...newMobileMoney, provider: e.target.value })
+                  }
+                >
+                  <option value="">Select a provider</option>
+                  {region.mobileMoney.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+                <Label className={formLabelClass}>Phone number</Label>
+                <Input
+                  className={formInputClass}
+                  placeholder="e.g. 254712345678"
+                  value={newMobileMoney.phoneNumber}
+                  onChange={(e) =>
+                    setNewMobileMoney({ ...newMobileMoney, phoneNumber: e.target.value })
+                  }
+                />
+                <button
+                  type="button"
+                  className={modalAddLinkClass}
+                  onClick={handleAddMobileMoney}
+                >
+                  + Save mobile money account
+                </button>
+                {paymentMethods.mobileMoney.length > 0 && (
+                  <button
+                    type="button"
+                    className={modalAddLinkClass}
+                    onClick={() => setShowAddMobileMoneyForm(false)}
+                  >
+                    Use a saved account instead
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <Label className={formLabelClass}>Mpesa account</Label>
+                <div className="flex flex-wrap gap-2 -mt-[0.6rem]">
+                  {paymentMethods.mobileMoney.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      className={favouriteChipClass(selectedMobileMoneyId === m.id)}
+                      onClick={() => setSelectedMobileMoneyId(m.id)}
+                    >
+                      {m.provider} •••• {String(m.phoneNumber).slice(-4)}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className={modalAddLinkClass}
+                  onClick={() => setShowAddMobileMoneyForm(true)}
+                >
+                  + Add another mobile money account
+                </button>
+              </>
+            ))}
+
+          {withdrawDestination === "bank" &&
+            (showAddBankForm ? (
+              <>
+                <Label className={formLabelClass}>Bank</Label>
+                <select
+                  className={formInputClass}
+                  value={newBank.bankName}
+                  onChange={(e) =>
+                    setNewBank({ ...newBank, bankName: e.target.value })
+                  }
+                >
+                  <option value="">Select a bank</option>
+                  {region.partnerBanks.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </select>
+                <Label className={formLabelClass}>Account number</Label>
+                <Input
+                  className={formInputClass}
+                  value={newBank.accountNumber}
+                  onChange={(e) =>
+                    setNewBank({ ...newBank, accountNumber: e.target.value })
+                  }
+                />
+                <Label className={formLabelClass}>Account name</Label>
+                <Input
+                  className={formInputClass}
+                  value={newBank.accountName}
+                  onChange={(e) =>
+                    setNewBank({ ...newBank, accountName: e.target.value })
+                  }
+                />
+                <button
+                  type="button"
+                  className={modalAddLinkClass}
+                  onClick={handleAddBank}
+                >
+                  + Save bank account
+                </button>
+                {paymentMethods.banks.length > 0 && (
+                  <button
+                    type="button"
+                    className={modalAddLinkClass}
+                    onClick={() => setShowAddBankForm(false)}
+                  >
+                    Use a saved bank instead
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <Label className={formLabelClass}>Bank account</Label>
+                <div className="flex flex-wrap gap-2 -mt-[0.6rem]">
+                  {paymentMethods.banks.map((b) => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      className={favouriteChipClass(selectedBankId === b.id)}
+                      onClick={() => setSelectedBankId(b.id)}
+                    >
+                      {b.bankName} •••• {String(b.accountNumber).slice(-4)}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className={modalAddLinkClass}
+                  onClick={() => setShowAddBankForm(true)}
+                >
+                  + Add another bank
+                </button>
+              </>
+            ))}
+
+          {withdrawDestination === "agent" && (
+            <>
+              <Label className={formLabelClass}>Agent number</Label>
+              <Input
+                className={formInputClass}
+                placeholder="e.g. AG-10293"
+                value={agentNumber}
+                onChange={(e) => setAgentNumber(e.target.value)}
+              />
+            </>
+          )}
 
           <Button
             className={primaryBtnClass}

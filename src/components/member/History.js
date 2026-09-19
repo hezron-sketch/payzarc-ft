@@ -99,6 +99,9 @@ function History({
 
   useEffect(() => {
     fetchTransactions();
+    // Load once on mount only — searches/date-filter changes trigger a
+    // fetch via handleSearch instead, not on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSearch = (e) => {
