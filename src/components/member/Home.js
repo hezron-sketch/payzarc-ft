@@ -13,8 +13,12 @@ import {
   RefreshCw,
   ChevronLeft,
   X,
+  FileText,
 } from "lucide-react";
-import axiosInstance, { transactionsApi, contactsApi } from "../../utility/axiosInstance";
+import axiosInstance, {
+  transactionsApi,
+  contactsApi,
+} from "../../utility/axiosInstance";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,12 +66,13 @@ const ACTION_TILES = [
   { key: "withdraw", label: "Withdraw", icon: ArrowDownCircle },
   { key: "send", label: "Send", icon: Send },
   { key: "groups", label: "Groups", icon: UsersRound },
+  { key: "reports", label: "Reports", icon: FileText },
 ];
 const BALANCE_CARD_ACTIONS = ["send", "withdraw"].map((key) =>
   ACTION_TILES.find((t) => t.key === key),
 );
 const ICON_ROW_ACTIONS = ACTION_TILES.filter(
-  (t) => t.key === "add-money" || t.key === "groups",
+  (t) => t.key === "add-money" || t.key === "groups" || t.key === "reports",
 );
 
 // Send to Many is capped for free-tier accounts; Payzarc Pro (see the
@@ -118,8 +123,12 @@ const modal3dClass = "bg-card border border-white/[0.06] animate-popup-in";
 // inside (glow fading in from each border, brightest along the top like
 // glass catching light) so the light stays inside the display instead of
 // leaking onto the bezel.
+// Below 768px, Dashboard.js's own app shell already frames the whole page
+// as a full-screen "phone" — this card drops its fixed height there (so it
+// flows instead of internally scrolling) but keeps its own rounded corners,
+// still reading as a distinct card instead of a flat edge-to-edge block.
 const balanceCardClass =
-  "relative bg-card rounded-[29px] overflow-hidden h-[620px] max-[640px]:h-[560px] flex flex-col shadow-[inset_0_1px_0_rgba(255,255,255,0.1),inset_0_0_0_1px_rgba(255,255,255,0.04),inset_0_28px_46px_-30px_rgba(255,255,255,0.08),inset_0_-20px_40px_-30px_rgba(var(--gold-rgb),0.18),inset_20px_0_36px_-32px_rgba(255,255,255,0.06),inset_-20px_0_36px_-32px_rgba(255,255,255,0.06)]";
+  "relative bg-card rounded-[29px] overflow-hidden h-[620px] max-[768px]:h-auto max-[640px]:h-auto flex flex-col shadow-[inset_0_1px_0_rgba(255,255,255,0.1),inset_0_0_0_1px_rgba(255,255,255,0.04),inset_0_28px_46px_-30px_rgba(255,255,255,0.08),inset_0_-20px_40px_-30px_rgba(var(--gold-rgb),0.18),inset_20px_0_36px_-32px_rgba(255,255,255,0.06),inset_-20px_0_36px_-32px_rgba(255,255,255,0.06)]";
 // Phone bezel wrapping the real balance card above — flat trim, no
 // elevation shadow. Capped width (thinner, more phone-shaped) instead of
 // filling the whole column. origin-top + the scale transition here is the
@@ -128,9 +137,9 @@ const balanceCardClass =
 // activeSection goes back to "dashboard" since it's just a conditional
 // class, not a one-way animation.
 const phoneBezelClass =
-  "relative w-full max-w-[400px] mx-auto origin-top transition-transform duration-300 ease-in-out bg-[#1c2333] rounded-[34px] border border-[rgba(var(--gold-rgb),0.18)] p-[5px]";
+  "relative w-full max-w-[400px] mx-auto origin-top transition-transform duration-300 ease-in-out bg-[#1c2333] rounded-[34px] border border-[rgba(var(--gold-rgb),0.18)] p-[5px] max-[768px]:max-w-none max-[768px]:rounded-none max-[768px]:border-none max-[768px]:bg-transparent max-[768px]:p-0";
 const phoneNotchClass =
-  "w-[56px] h-[7px] bg-[#0d1117] rounded-full mx-auto mb-[10px]";
+  "w-[56px] h-[7px] bg-[#0d1117] rounded-full mx-auto mb-[10px] max-[768px]:hidden";
 // Thin gold-on-transparent scrollbar for the screen's scrollable content
 // area — matches the bezel's gold accent instead of the browser default.
 // Firefox via scrollbar-width/-color, WebKit via the pseudo-element
@@ -138,13 +147,16 @@ const phoneNotchClass =
 const phoneScrollAreaClass =
   "[scrollbar-width:thin] [scrollbar-color:rgba(var(--gold-rgb),0.35)_transparent] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[rgba(var(--gold-rgb),0.35)] [&::-webkit-scrollbar-thumb:hover]:bg-[rgba(var(--gold-rgb),0.55)]";
 
+// Fixed w-[140px] h-12 — shared with the floating Send/Withdraw pills
+// (BALANCE_CARD_ACTIONS below) so every action button on the card is the
+// same size, not just the same padding.
 // Flat gold pill — solid gradient fill, no bevel/drop shadow or hover lift.
 const goldPillBtnClass =
-  "flex-1 flex items-center justify-center gap-2 rounded-full py-3 px-4 text-[0.85rem] font-semibold cursor-pointer text-black bg-gradient-to-b from-gold to-gold-dark transition-colors duration-200 hover:brightness-110";
+  "flex items-center justify-center gap-2 w-[140px] h-12 rounded-full text-[0.85rem] font-semibold cursor-pointer text-black bg-gradient-to-b from-gold to-gold-dark transition-colors duration-200 hover:brightness-110";
 // Same flat treatment for the inactive pill state (Add Money/Groups row
 // below the balance card) so both rows share one flat-button language.
 const flatPillBtnClass =
-  "flex-1 flex items-center justify-center gap-2 rounded-full py-3 px-4 text-[0.85rem] font-semibold cursor-pointer text-foreground bg-white/[0.06] border border-white/[0.1] transition-colors duration-200 hover:bg-white/[0.1]";
+  "flex items-center justify-center gap-2 w-[140px] h-12 rounded-full text-[0.85rem] font-semibold cursor-pointer text-foreground bg-white/[0.06] border border-white/[0.1] transition-colors duration-200 hover:bg-white/[0.1]";
 const addFavouriteBtnClass =
   "self-start bg-transparent border-none text-gold text-[0.8rem] font-semibold cursor-pointer p-0 -mt-[0.6rem] transition-opacity hover:opacity-75";
 // Add Money modal's own "+ Save/Add/Use a saved..." links — a real
@@ -202,10 +214,25 @@ const txStatusDotClass = (status) => {
   );
 };
 
-function Home({ onPageChange, user, navigateRequest }) {
+// Recent Activity amount with an explicit +/- (credit/debit) — the API's
+// tx.amount may or may not already carry a sign, so strip it first.
+const getFormattedAmount = (amt, isCredit) => {
+  if (amt === undefined || amt === null) return "0.00";
+  return `${isCredit ? "+" : "-"}${String(amt).trim().replace(/^[+-]/, "")}`;
+};
+
+// CSV-escape one cell: quote it if it has a comma, quote or newline.
+const csvCell = (v) => {
+  const str = v === undefined || v === null ? "" : String(v);
+  return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+};
+
+function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
   const [activeSection, setActiveSection] = useState("dashboard");
   const [showBalance, setShowBalance] = useState(false);
   const [balanceData, setBalanceData] = useState(null);
+  const [loadingBalance, setLoadingBalance] = useState(true);
+  const [balanceError, setBalanceError] = useState(null);
   // Group funds are their own pool, separate from the wallet balance above
   // — summed here just to show a distinguishing total on the balance card;
   // the Groups tab (onPageChange("groups")) is the source of truth.
@@ -224,6 +251,11 @@ function Home({ onPageChange, user, navigateRequest }) {
   const [withdrawDestination, setWithdrawDestination] = useState("mpesa"); // "mpesa" | "bank" | "agent"
   const [inputPin, setInputPin] = useState("");
   const [showAddMoneyPopup, setShowAddMoneyPopup] = useState(false);
+
+  // Reports flow — date range for the CSV export.
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
 
   // Banks/cards/mobile money linked from the Profile "Payment Methods" panel
   // — offered as Add Money sources alongside region-specific mobile money
@@ -386,22 +418,111 @@ function Home({ onPageChange, user, navigateRequest }) {
 
   const fetchBalance = async () => {
     if (!user?.email) {
+      setLoadingBalance(false);
       return;
     }
     try {
-      console.log("Sending request to /api/balance/");
-      console.log(
-        "Token from localStorage:",
-        localStorage.getItem("accessToken"),
-      );
-      console.log("Full headers:", transactionsApi.defaults.headers);
       const response = await transactionsApi.get("/api/balance/");
       const data = response.data;
       if (data.success !== undefined) {
         setBalanceData(data);
+        setBalanceError(null);
+      } else {
+        setBalanceError(data.error || "Failed to load balance");
       }
     } catch (err) {
       console.error("Balance fetch failed:", err);
+      setBalanceError(
+        err.response?.status === 404
+          ? "No wallet found for this account."
+          : "Could not load wallet balance",
+      );
+    } finally {
+      setLoadingBalance(false);
+    }
+  };
+
+  // Downloads the transaction history for the chosen date range as CSV.
+  // Sends the range to the API (same date_from/date_to params History.js
+  // uses) and re-filters client-side in case the backend ignores them.
+  // ponytail: single request — if /history/ paginates, only the first page
+  // is exported; follow `next` links here if that becomes a problem.
+  const handleExportCSV = async () => {
+    try {
+      setIsExporting(true);
+      const params = {};
+      if (startDate) params.date_from = startDate;
+      if (endDate) params.date_to = endDate;
+      const res = await transactionsApi.get("/api/transactions/history/", {
+        params,
+      });
+      const data = res.data;
+      let txs = Array.isArray(data)
+        ? data
+        : data.results || data.transactions || [];
+
+      const txDate = (tx) => new Date(tx.date || tx.created_at);
+      if (startDate) {
+        const from = new Date(startDate);
+        txs = txs.filter((tx) => txDate(tx) >= from);
+      }
+      if (endDate) {
+        const to = new Date(endDate);
+        to.setHours(23, 59, 59, 999);
+        txs = txs.filter((tx) => txDate(tx) <= to);
+      }
+
+      if (txs.length === 0) {
+        showNotification(
+          "error",
+          "No transactions found for the selected date range.",
+        );
+        return;
+      }
+
+      const headers = [
+        "ID",
+        "Type",
+        "Name/Description",
+        "Amount",
+        "Date",
+        "Fee",
+        "Currency",
+        "Status",
+      ];
+      const rows = txs.map((tx) =>
+        [
+          tx.id,
+          tx.transaction_type || tx.type,
+          tx.name || tx.description,
+          tx.amount,
+          tx.date || tx.created_at,
+          tx.fee,
+          tx.currency,
+          tx.status,
+        ]
+          .map(csvCell)
+          .join(","),
+      );
+      const csv = [headers.join(","), ...rows].join("\n");
+
+      const url = URL.createObjectURL(
+        new Blob([csv], { type: "text/csv;charset=utf-8;" }),
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `transaction_report_${startDate || "all"}_to_${endDate || "all"}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showNotification("success", "Transaction report downloaded successfully!");
+    } catch (err) {
+      console.error("Export failed", err);
+      showNotification("error", "Failed to export transaction report.");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -649,7 +770,8 @@ function Home({ onPageChange, user, navigateRequest }) {
   const withSenderCountryCode = (value) => {
     const trimmed = (value || "").trim();
     if (!trimmed || trimmed.includes("@") || !myCountry?.code) return trimmed;
-    if (!/^\d+$/.test(trimmed) || detectCountryFromPhone(trimmed)) return trimmed;
+    if (!/^\d+$/.test(trimmed) || detectCountryFromPhone(trimmed))
+      return trimmed;
     return `${myCountry.code}${trimmed.replace(/^0+/, "")}`;
   };
 
@@ -742,9 +864,7 @@ function Home({ onPageChange, user, navigateRequest }) {
     if (!value) return;
     const favouriteType = value.includes("@") ? "email" : "phone";
     if (
-      favouriteType === "email"
-        ? !isValidEmail(value)
-        : !isValidPhone(value)
+      favouriteType === "email" ? !isValidEmail(value) : !isValidPhone(value)
     ) {
       showNotification(
         "error",
@@ -956,10 +1076,7 @@ function Home({ onPageChange, user, navigateRequest }) {
       recipientValue;
 
     if (!recipientValue || !sendAmount || Number(sendAmount) <= 0) {
-      showNotification(
-        "error",
-        "Please fill in recipient and a valid amount",
-      );
+      showNotification("error", "Please fill in recipient and a valid amount");
       return;
     }
     // Only format-check a raw typed value — a selectedRecipient came from
@@ -1113,10 +1230,7 @@ function Home({ onPageChange, user, navigateRequest }) {
       return;
     }
     if (!isValidExpiry(newCard.expiry)) {
-      showNotification(
-        "error",
-        "Enter a valid, unexpired expiry date (MM/YY)",
-      );
+      showNotification("error", "Enter a valid, unexpired expiry date (MM/YY)");
       return;
     }
     try {
@@ -1345,7 +1459,7 @@ function Home({ onPageChange, user, navigateRequest }) {
         top-level pieces side by side instead of one stacked column. */}
       <div className="w-full max-w-[960px] mx-auto grid grid-cols-1 lg:grid-cols-[400px_420px] gap-8 lg:gap-x-32 items-start">
         <div className="flex flex-col gap-6">
-            {/* Balance section, phone-bezeled — the dashboard's main
+          {/* Balance section, phone-bezeled — the dashboard's main
             component. Same real content as before (live balance, group
             funds, Send/Withdraw), just wrapped in an actual phone frame
             (phoneBezelClass/phoneNotchClass, matching components/
@@ -1354,168 +1468,155 @@ function Home({ onPageChange, user, navigateRequest }) {
             same "floating card either side of the phone" composition as
             the landing hero's FloatCards, but wired to the real flows
             instead of showing demo numbers. */}
-            <div className="relative w-full max-w-[400px] mx-auto">
-              {/* Same FloatCard shape/positioning as the landing hero's
+          <div className="relative w-full max-w-[400px] mx-auto">
+            {/* Same FloatCard shape/positioning as the landing hero's
               floating "You send"/"They receive" cards in App.js (icon
               square + a small text stack, absolute + staggered top offset
               either side of the phone) — real and clickable here instead
-              of the hero's static demo numbers. Offset negative (instead of
-              flush at 0) so they hang partially outside the now-narrower
-              phone's edges, same idea as the landing hero's own mobile
-              FloatCard treatment. */}
-              {/* Kept visible at every width, including below sm — the phone
-              modal and its floating Send/Withdraw stay the same composition
-              everywhere instead of collapsing into an inline tile below sm.
-              Above 480px there's a real side gutter (or at least tablet
-              padding) for the full labeled pill to hang into. Below 480px
-              there's no gutter left at all and the balance card's own rows
-              (Total Balance/USD/Add Money/Groups) pack in tight enough that
-              no vertical slot over the card face is ever safely empty — so
-              instead of chasing a gap between rows, these collapse to a
-              small icon-only circle and move to straddle the phone's TOP
-              corners: half hanging in the blank margin above the bezel, half
-              over its own decorative top padding/notch — genuinely empty
-              space either way, well above where "Total Balance" starts. */}
-              {BALANCE_CARD_ACTIONS.map(({ key, label, icon: Icon }) => {
-                const active = activeSection === key;
-                const isSend = key === "send";
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => switchSection(key)}
-                    aria-label={label}
+              of the hero's static demo numbers.
+              Always floating, at every width: Send straddles the phone's
+              left edge next to the Total Balance/KES line, half hanging
+              in the margin outside the bezel and half over it. Withdraw
+              straddles the right edge lower down, in the gap right below
+              the Add Money/Groups row — clear of both that row and Quick
+              Send beneath it, instead of overlapping either. */}
+            {BALANCE_CARD_ACTIONS.map(({ key, label, icon: Icon }) => {
+              const active = activeSection === key;
+              const isSend = key === "send";
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => switchSection(key)}
+                  aria-label={label}
+                  className={cn(
+                    // Same fixed w-[140px] h-12 as the Add Money/Groups
+                    // pills below (goldPillBtnClass/flatPillBtnClass), so
+                    // every action button on the card is the same size.
+                    "flex absolute z-10 items-center justify-center gap-2 w-[140px] h-12 rounded-lg whitespace-nowrap cursor-pointer text-[0.85rem] font-semibold transition-all duration-200 hover:-translate-y-0.5",
+                    // Send sits lower now (beside the Group Funds pill
+                    // instead of the Total Balance/KES line) — swapped with
+                    // Group Funds' old spot per request. Withdraw shifts
+                    // down by the same amount so it stays clear of the
+                    // Add Money/Groups row, which moved down too (see the
+                    // balance wrapper's mb-16 below). The card's own
+                    // max-[640px] padding/type-size shrinks this whole area
+                    // vertically, so both offsets need a smaller mobile
+                    // value too — reusing the same numbers here would land
+                    // Send on Add Money and Withdraw on Quick Send.
+                    isSend
+                      ? "-left-5 top-[156px] max-[640px]:top-[136px]"
+                      : "-right-5 top-[271px] max-[640px]:top-[248px]",
+                    active
+                      ? "bg-gradient-to-b from-gold to-gold-dark border-[0.5px] border-transparent text-black"
+                      : "bg-secondary border-[0.5px] border-input hover:border-gold/30 text-foreground",
+                  )}
+                >
+                  <Icon
+                    size={16}
                     className={cn(
-                      "flex absolute z-10 items-center gap-2.5 rounded-2xl py-[10px] px-[14px] whitespace-nowrap cursor-pointer transition-all duration-200 hover:-translate-y-0.5 max-[768px]:px-[10px] max-[768px]:py-2 max-[480px]:gap-0 max-[480px]:p-0 max-[480px]:w-11 max-[480px]:h-11 max-[480px]:rounded-full max-[480px]:justify-center",
-                      isSend
-                        ? "-left-28 top-[55px] max-[768px]:-left-10 max-[480px]:-left-2 max-[480px]:top-[-18px]"
-                        : "-right-28 top-[160px] max-[768px]:-right-10 max-[480px]:-right-2 max-[480px]:top-[-18px]",
+                      "shrink-0",
                       active
-                        ? "bg-gradient-to-b from-gold to-gold-dark border-[0.5px] border-transparent"
-                        : "bg-secondary border-[0.5px] border-input hover:border-gold/30",
+                        ? "text-black"
+                        : isSend
+                          ? "text-gold"
+                          : "text-[#60a5fa]",
                     )}
-                  >
-                    <div
-                      className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center flex-shrink-0 max-[480px]:w-full max-[480px]:h-full max-[480px]:rounded-full"
-                      style={{
-                        background: active
-                          ? "rgba(0,0,0,0.12)"
-                          : isSend
-                            ? "rgba(var(--gold-rgb),0.15)"
-                            : "rgba(96,165,250,0.15)",
-                      }}
-                    >
-                      <Icon
-                        size={18}
-                        className={cn(
-                          active
-                            ? "text-black"
-                            : isSend
-                              ? "text-gold"
-                              : "text-[#60a5fa]",
-                        )}
-                      />
-                    </div>
-                    <div className="hidden min-[481px]:block">
-                      <div
-                        className={cn(
-                          "text-[10px]",
-                          active ? "text-black/70" : "text-[var(--muted)]",
-                        )}
-                      >
-                        Wallet action
-                      </div>
-                      <div
-                        className={cn(
-                          "text-[15px] font-bold max-[768px]:text-[13px]",
-                          active ? "text-black" : "text-foreground",
-                        )}
-                      >
-                        {label}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
+                  />
+                  <span className="truncate">{label}</span>
+                </button>
+              );
+            })}
 
-              <div
-                className={cn(phoneBezelClass, phoneZoomActive && "scale-[1.02]")}
-              >
-                <div className={phoneNotchClass} />
-                <div className={balanceCardClass}>
-                  <div className="w-full h-full min-h-0 flex flex-col items-center px-8 pt-9 pb-8 max-[640px]:px-6">
-                    <div className="w-full flex flex-col items-center mb-7">
-                      <div className="flex flex-col items-center">
-                        <div className="flex items-center gap-2.5 mb-2">
-                          <span className="text-muted-foreground text-[1.6rem] font-extrabold tracking-wide uppercase">
-                            Total Balance
-                          </span>
-                          <button
-                            className="bg-transparent border-none text-[var(--muted)] flex items-center transition-colors duration-200 hover:text-foreground"
-                            onClick={toggleBalance}
-                          >
-                            {showBalance ? (
-                              <EyeOff size={16} />
-                            ) : (
-                              <Eye size={16} />
-                            )}
-                          </button>
-                        </div>
-                        <h1 className="text-[clamp(1.4rem,3vw,1.9rem)] font-extrabold text-gold tracking-[-1px] m-0 flex items-baseline gap-2 max-[640px]:text-[1.6rem]">
-                          <span className="opacity-75">{displayCurrency}</span>
+            <div
+              ref={balanceCardRef}
+              className={cn(phoneBezelClass, phoneZoomActive && "scale-[1.02]")}
+            >
+              <div className={phoneNotchClass} />
+              <div className={balanceCardClass}>
+                <div className="w-full h-full min-h-0 flex flex-col items-center px-8 pt-9 pb-8 max-[640px]:px-6">
+                  <div className="w-full flex flex-col items-center mb-16">
+                    <div className="flex flex-col items-center">
+                      <div className="flex items-center gap-2.5 mb-2">
+                        <span className="text-muted-foreground text-[1rem] font-extrabold tracking-wide uppercase">
+                          Total Balance
+                        </span>
+                        <button
+                          className="bg-transparent border-none text-[var(--muted)] flex items-center transition-colors duration-200 hover:text-foreground"
+                          onClick={toggleBalance}
+                        >
+                          {showBalance ? (
+                            <EyeOff size={16} />
+                          ) : (
+                            <Eye size={16} />
+                          )}
+                        </button>
+                      </div>
+                      <h1 className="text-[1.1rem] font-black text-gold tracking-[-1px] m-0 flex items-baseline gap-2">
+                        <span className="opacity-75">{displayCurrency}</span>
+                        <span
+                          className={cn(
+                            "relative overflow-hidden rounded-2xl before:content-[''] before:absolute before:inset-0 before:[backdrop-filter:blur(2rem)] before:rounded-[inherit] before:pointer-events-none before:opacity-0 before:transition-opacity before:duration-[250ms]",
+                            !showBalance && "select-none before:opacity-100",
+                          )}
+                        >
+                          {loadingBalance ? "..." : formattedBalance}
+                        </span>
+                      </h1>
+                      {balanceError && (
+                        <p className="mt-2 mb-0 text-[0.75rem] text-destructive">
+                          {balanceError}
+                        </p>
+                      )}
+                      {groupFundsTotal > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => onPageChange("groups")}
+                          className="mt-2 inline-flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full px-3 py-1 text-[0.75rem] font-semibold text-muted-foreground cursor-pointer transition-colors hover:bg-white/[0.07] hover:border-gold/20 hover:text-foreground"
+                        >
+                          <UsersRound size={12} className="text-gold" />
                           <span
                             className={cn(
-                              "relative overflow-hidden rounded-2xl before:content-[''] before:absolute before:inset-0 before:[backdrop-filter:blur(2rem)] before:rounded-[inherit] before:pointer-events-none before:opacity-0 before:transition-opacity before:duration-[250ms]",
+                              "relative overflow-hidden rounded-md before:content-[''] before:absolute before:inset-0 before:[backdrop-filter:blur(0.6rem)] before:rounded-[inherit] before:pointer-events-none before:opacity-0 before:transition-opacity before:duration-[250ms]",
                               !showBalance && "select-none before:opacity-100",
                             )}
                           >
-                            {formattedBalance}
-                          </span>
-                        </h1>
-                        {groupFundsTotal > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => onPageChange("groups")}
-                            className="mt-2 inline-flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full px-3 py-1 text-[0.75rem] font-semibold text-muted-foreground cursor-pointer transition-colors hover:bg-white/[0.07] hover:border-gold/20 hover:text-foreground"
-                          >
-                            <UsersRound size={12} className="text-gold" />
-                            <span
-                              className={cn(
-                                "relative overflow-hidden rounded-md before:content-[''] before:absolute before:inset-0 before:[backdrop-filter:blur(0.6rem)] before:rounded-[inherit] before:pointer-events-none before:opacity-0 before:transition-opacity before:duration-[250ms]",
-                                !showBalance && "select-none before:opacity-100",
-                              )}
-                            >
-                              {displayCurrency}{" "}
-                              {groupFundsTotal.toLocaleString()}
-                            </span>{" "}
-                            in Group Funds
-                          </button>
-                        )}
-                      </div>
+                            {displayCurrency} {groupFundsTotal.toLocaleString()}
+                          </span>{" "}
+                          in Group Funds
+                        </button>
+                      )}
                     </div>
+                  </div>
 
-                    {/* Add Money/Groups, same row at every width now — Send/
+                  {/* Add Money/Groups, same row at every width — Send/
                     Withdraw live only in the floating pills beside the phone
-                    (BALANCE_CARD_ACTIONS above), which stay visible below sm
-                    too, so they're never duplicated in here. */}
-                    <div className="w-full flex items-center gap-3 mb-2">
-                      {ICON_ROW_ACTIONS.map(({ key, label, icon: Icon }) => {
-                        const active = activeSection === key;
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            onClick={() => switchSection(key)}
-                            className={active ? goldPillBtnClass : flatPillBtnClass}
-                          >
-                            <Icon size={16} className="shrink-0" />
-                            <span className="truncate">{label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                    (BALANCE_CARD_ACTIONS above), which stay visible at every
+                    width too, so they're never duplicated in here. */}
+                  <div className="w-full flex items-center justify-center gap-2 mb-2">
+                    {ICON_ROW_ACTIONS.map(({ key, label, icon: Icon }) => {
+                      const active = activeSection === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => switchSection(key)}
+                          // Three pills don't fit at the shared fixed 140px
+                          // width inside the card — share the row instead,
+                          // keeping the same h-12 height and styling.
+                          className={cn(
+                            active ? goldPillBtnClass : flatPillBtnClass,
+                            "w-auto flex-1 min-w-0 px-2 gap-1.5",
+                          )}
+                        >
+                          <Icon size={16} className="shrink-0" />
+                          <span className="truncate">{label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
 
-                    {/* Whichever content is active swaps in place here —
+                  {/* Whichever content is active swaps in place here —
                     Quick Send at rest, or Add Money/Withdraw/Send/Groups'
                     own fields — instead of any of them opening as a popup.
                     The screen (balanceCardClass) is a fixed height, so this
@@ -1524,755 +1625,842 @@ function Home({ onPageChange, user, navigateRequest }) {
                     The phone bezel itself still scales up a touch while a
                     flow is open (phoneZoomActive, on the bezel's own
                     className) as the "phone zooms in" cue. */}
+                  <div
+                    ref={phoneScrollRef}
+                    className={cn(
+                      "w-full mt-8 pt-6 border-t border-white/[0.06] flex-1 min-h-0 overflow-y-auto",
+                      phoneScrollAreaClass,
+                    )}
+                  >
                     <div
-                      ref={phoneScrollRef}
-                      className={cn(
-                        "w-full mt-8 pt-6 border-t border-white/[0.06] flex-1 min-h-0 overflow-y-auto",
-                        phoneScrollAreaClass,
-                      )}
+                      key={activeSection}
+                      className="w-full flex flex-col gap-5 animate-flow-fade-in"
                     >
-                      <div
-                        key={activeSection}
-                        className="w-full flex flex-col gap-5 animate-flow-fade-in"
-                      >
-                        {phoneZoomActive && (
+                      {phoneZoomActive && (
+                        <div className="flex items-center justify-between">
+                          <h2 className="text-base font-bold m-0">
+                            {ACTION_TILES.find((t) => t.key === activeSection)
+                              ?.label ||
+                              (activeSection === "send-many"
+                                ? "Send to Many"
+                                : "")}
+                          </h2>
+                          <button
+                            type="button"
+                            className="bg-transparent border-none text-[var(--muted)] hover:text-foreground flex items-center transition-colors duration-200"
+                            onClick={goToDashboard}
+                            aria-label="Close"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      )}
+
+                      {activeSection === "dashboard" && (
+                        <>
                           <div className="flex items-center justify-between">
                             <h2 className="text-base font-bold m-0">
-                              {ACTION_TILES.find((t) => t.key === activeSection)
-                                ?.label ||
-                                (activeSection === "send-many"
-                                  ? "Send to Many"
-                                  : "")}
+                              Quick Send
                             </h2>
                             <button
-                              type="button"
-                              className="bg-transparent border-none text-[var(--muted)] hover:text-foreground flex items-center transition-colors duration-200"
-                              onClick={goToDashboard}
-                              aria-label="Close"
+                              className="bg-transparent border-none text-gold font-medium text-[11px] cursor-pointer transition-colors hover:text-gold-dark"
+                              onClick={() => switchSection("groups")}
                             >
-                              <X size={16} />
+                              See all
                             </button>
                           </div>
-                        )}
 
-                        {activeSection === "dashboard" && (
-                          <>
-                            <div className="flex items-center justify-between">
-                              <h2 className="text-base font-bold m-0">
-                                Quick Send
-                              </h2>
-                              <button
-                                className="bg-transparent border-none text-gold font-medium text-[11px] cursor-pointer transition-colors hover:text-gold-dark"
-                                onClick={() => switchSection("groups")}
-                              >
-                                See all
-                              </button>
-                            </div>
+                          {favourites.length === 0 ? (
+                            <p className="text-[0.85rem] text-muted-foreground">
+                              No saved recipients yet — add one from Send Money.
+                            </p>
+                          ) : (
+                            favourites.length > 0 && (
+                              <div className="pt-4 border-t border-white/[0.04] flex flex-col gap-1">
+                                {favourites.slice(0, 3).map((fav, idx) => {
+                                  const name =
+                                    fav.name ||
+                                    fav.full_name ||
+                                    fav.phone ||
+                                    fav.value ||
+                                    "?";
+                                  const sub = fav.phone || fav.email || "";
+                                  return (
+                                    <button
+                                      key={fav.id || idx}
+                                      type="button"
+                                      onClick={() => {
+                                        switchSection("send");
+                                        handleSelectRecipient(fav);
+                                      }}
+                                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] transition-colors duration-200 hover:border-gold/30 hover:bg-white/[0.05] group"
+                                    >
+                                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-xs shrink-0">
+                                        {name.slice(0, 1).toUpperCase()}
+                                      </div>
+                                      <div className="flex-1 text-left min-w-0">
+                                        <p className="text-xs font-semibold text-foreground truncate m-0">
+                                          {name}
+                                        </p>
+                                        {sub && (
+                                          <p className="text-[11px] text-muted-foreground truncate m-0">
+                                            {sub}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <div className="w-7 h-7 rounded-lg bg-white/[0.04] flex items-center justify-center transition-colors group-hover:bg-gold/10 shrink-0">
+                                        <Send
+                                          size={14}
+                                          className="text-muted-foreground transition-colors group-hover:text-gold"
+                                        />
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )
+                          )}
+                        </>
+                      )}
+                      {activeSection === "add-money" && (
+                        <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
+                          <Label className={formLabelClass}>Amount</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            className={formInputClass}
+                            placeholder="0.00"
+                            value={addAmount}
+                            onChange={(e) => setAddAmount(e.target.value)}
+                          />
 
-                            {favourites.length === 0 ? (
-                              <p className="text-[0.85rem] text-muted-foreground">
-                                No saved recipients yet — add one from Send
-                                Money.
-                              </p>
-                            ) : (
-                              favourites.length > 0 && (
-                            <div className="pt-4 border-t border-white/[0.04] flex flex-col gap-1">
-                              {favourites.slice(0, 3).map((fav, idx) => {
-                                const name =
-                                  fav.name ||
-                                  fav.full_name ||
-                                  fav.phone ||
-                                  fav.value ||
-                                  "?";
-                                const sub = fav.phone || fav.email || "";
-                                return (
+                          <Button
+                            className={primaryBtnClass}
+                            onClick={handleAddMoneyClick}
+                          >
+                            Add {displayCurrency} {addAmount || "0.00"}
+                          </Button>
+                        </div>
+                      )}
+
+                      {activeSection === "withdraw" && (
+                        <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
+                          <Label className={formLabelClass}>Amount</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            className={formInputClass}
+                            placeholder="0.00"
+                            value={withdrawAmount}
+                            onChange={(e) => setWithdrawAmount(e.target.value)}
+                          />
+
+                          <Label className={formLabelClass}>
+                            Transaction PIN
+                          </Label>
+                          <Input
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={4}
+                            className={formInputClass}
+                            placeholder="****"
+                            value={inputPin}
+                            onChange={(e) =>
+                              setInputPin(
+                                e.target.value.replace(/\D/g, "").slice(0, 4),
+                              )
+                            }
+                          />
+
+                          <Button
+                            className={primaryBtnClass}
+                            onClick={handleWithdrawClick}
+                          >
+                            Withdraw
+                          </Button>
+                        </div>
+                      )}
+
+                      {activeSection === "send" && (
+                        <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
+                          <div className="flex items-center justify-between">
+                            {myCountry && (
+                              <span className="flex items-center gap-1.5 text-[0.85rem] font-semibold text-[var(--muted)]">
+                                Sending From {isoToFlagEmoji(myCountry.flag)}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              className="ml-auto text-gold text-[0.8rem] font-semibold hover:opacity-75 transition-opacity"
+                              onClick={goToSendMany}
+                            >
+                              Send to many →
+                            </button>
+                          </div>
+                          <Label className={formLabelClass}>
+                            Recipient
+                            {recipientCountry && (
+                              <span className="font-medium text-muted-foreground">
+                                {isoToFlagEmoji(recipientCountry.flag)}{" "}
+                                {recipientCountry.name}
+                              </span>
+                            )}
+                          </Label>
+                          <Input
+                            className={formInputClass}
+                            placeholder={
+                              myCountry
+                                ? `Search favourites or enter a local number, e.g. 707069007`
+                                : "Search favourites or enter a number"
+                            }
+                            value={recipientSearchTerm}
+                            onChange={(e) => {
+                              setRecipientSearchTerm(e.target.value);
+                              setSelectedRecipient(null);
+                            }}
+                          />
+                          {recipientSearchTerm &&
+                            filteredFavourites.length > 0 && (
+                              <div className="flex flex-wrap gap-2 -mt-[0.6rem]">
+                                {filteredFavourites.map((fav, idx) => (
                                   <button
                                     key={fav.id || idx}
                                     type="button"
-                                    onClick={() => {
-                                      switchSection("send");
-                                      handleSelectRecipient(fav);
-                                    }}
-                                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] transition-colors duration-200 hover:border-gold/30 hover:bg-white/[0.05] group"
+                                    className={favouriteChipClass(false)}
+                                    onClick={() => handleSelectRecipient(fav)}
                                   >
-                                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-xs shrink-0">
-                                      {name.slice(0, 1).toUpperCase()}
-                                    </div>
-                                    <div className="flex-1 text-left min-w-0">
-                                      <p className="text-xs font-semibold text-foreground truncate m-0">
-                                        {name}
-                                      </p>
-                                      {sub && (
-                                        <p className="text-[11px] text-muted-foreground truncate m-0">
-                                          {sub}
-                                        </p>
-                                      )}
-                                    </div>
-                                    <div className="w-7 h-7 rounded-lg bg-white/[0.04] flex items-center justify-center transition-colors group-hover:bg-gold/10 shrink-0">
-                                      <Send
-                                        size={14}
-                                        className="text-muted-foreground transition-colors group-hover:text-gold"
-                                      />
-                                    </div>
+                                    {fav.name ||
+                                      fav.full_name ||
+                                      fav.phone ||
+                                      fav.value}
                                   </button>
-                                );
-                              })}
-                            </div>
-                          )
-                        )}
-                          </>
-                        )}
-                        {activeSection === "add-money" && (
-                          <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
-                            <Label className={formLabelClass}>Amount</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className={formInputClass}
-                  placeholder="0.00"
-                  value={addAmount}
-                  onChange={(e) => setAddAmount(e.target.value)}
-                />
-
-                <Button className={primaryBtnClass} onClick={handleAddMoneyClick}>
-                  Add {displayCurrency} {addAmount || "0.00"}
-                </Button>
-              </div>
-            )}
-
-            {activeSection === "withdraw" && (
-              <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
-                <Label className={formLabelClass}>Amount</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className={formInputClass}
-                  placeholder="0.00"
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                />
-
-                <Label className={formLabelClass}>Transaction PIN</Label>
-                <Input
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={4}
-                  className={formInputClass}
-                  placeholder="****"
-                  value={inputPin}
-                  onChange={(e) =>
-                    setInputPin(e.target.value.replace(/\D/g, "").slice(0, 4))
-                  }
-                />
-
-                <Button className={primaryBtnClass} onClick={handleWithdrawClick}>
-                  Withdraw
-                </Button>
-              </div>
-            )}
-
-            {activeSection === "send" && (
-              <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
-                <div className="flex items-center justify-between">
-                    {myCountry && (
-                      <span className="flex items-center gap-1.5 text-[0.85rem] font-semibold text-[var(--muted)]">
-                        Sending From {isoToFlagEmoji(myCountry.flag)}
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      className="ml-auto text-gold text-[0.8rem] font-semibold hover:opacity-75 transition-opacity"
-                      onClick={goToSendMany}
-                    >
-                      Send to many →
-                    </button>
-                  </div>
-                  <Label className={formLabelClass}>
-                    Recipient
-                    {recipientCountry && (
-                      <span className="font-medium text-muted-foreground">
-                        {isoToFlagEmoji(recipientCountry.flag)}{" "}
-                        {recipientCountry.name}
-                      </span>
-                    )}
-                  </Label>
-                  <Input
-                    className={formInputClass}
-                    placeholder={
-                      myCountry
-                        ? `Search favourites or enter a local number, e.g. 707069007`
-                        : "Search favourites or enter a number"
-                    }
-                    value={recipientSearchTerm}
-                    onChange={(e) => {
-                      setRecipientSearchTerm(e.target.value);
-                      setSelectedRecipient(null);
-                    }}
-                  />
-                  {recipientSearchTerm && filteredFavourites.length > 0 && (
-                    <div className="flex flex-wrap gap-2 -mt-[0.6rem]">
-                      {filteredFavourites.map((fav, idx) => (
-                        <button
-                          key={fav.id || idx}
-                          type="button"
-                          className={favouriteChipClass(false)}
-                          onClick={() => handleSelectRecipient(fav)}
-                        >
-                          {fav.name || fav.full_name || fav.phone || fav.value}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {recipientSearchTerm && !selectedRecipient && (
-                    <button
-                      type="button"
-                      className={addFavouriteBtnClass}
-                      onClick={handleAddRecipientToFavourites}
-                    >
-                      + Add recipient to favourites
-                    </button>
-                  )}
-
-                  <Label className={formLabelClass}>Amount</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    className={formInputClass}
-                    placeholder="0.00"
-                    value={sendAmount}
-                    onChange={(e) => setSendAmount(e.target.value)}
-                  />
-                  <div className="bg-[var(--gold-pale)] border border-dashed border-[var(--gold-border)] rounded-xl px-4 py-[0.85rem] text-center -mt-[0.6rem]">
-                    {availableCurrencies.length > 0 ? (
-                      <>
-                        <div className="flex items-center justify-center gap-2">
-                          <span className="text-[1.2rem] font-bold text-gold tracking-[-0.3px]">
-                            ≈{" "}
-                            {Number(convertedSendAmount || 0).toLocaleString()}
-                          </span>
-                          <select
-                            className="bg-white/[0.06] text-gold border border-[var(--gold-border)] rounded-sm px-2 py-1 text-[0.95rem] font-bold cursor-pointer outline-none disabled:opacity-85 disabled:cursor-default"
-                            value={recipientCurrency}
-                            disabled={!!recipientCountry}
-                            title={
-                              recipientCountry
-                                ? "Detected from recipient's number"
-                                : undefined
-                            }
-                            onChange={(e) =>
-                              setRecipientCurrencyChoice(e.target.value)
-                            }
-                          >
-                            {availableCurrencies.map((ccy) => (
-                              <option key={ccy} value={ccy}>
-                                {ccy}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <span className="block text-xs text-gold/60 mt-1">
-                          1 {senderCurrency} = {conversionRate}{" "}
-                          {recipientCurrency} ·{" "}
-                          {liveRates ? "live rate" : "indicative rate"}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="block text-xs text-gold/60 mt-1">
-                        Conversion unavailable for {senderCurrency}
-                      </span>
-                    )}
-                  </div>
-
-                  {sendAmountNum > 0 && (
-                    <div className="flex flex-col gap-1.5 bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-[0.85rem] -mt-[0.6rem]">
-                      <div className="flex items-center justify-between text-[0.85rem] text-muted-foreground">
-                        <span>Transaction Fee</span>
-                        <span>
-                          {senderCurrency} {sendFee.toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-[0.85rem] text-muted-foreground">
-                        <span>Total to pay</span>
-                        <span className="text-gold font-bold">
-                          {senderCurrency} {sendTotal.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {insufficientBalance ? (
-                    <div className="flex flex-col gap-2 bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3.5">
-                      <span className="text-sm font-semibold text-destructive">
-                        Insufficient balance for this transfer.
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        You need {senderCurrency} {sendTotal.toFixed(2)} but
-                        your balance is {senderCurrency} {formattedBalance}.
-                      </span>
-                      <Button
-                        type="button"
-                        className={primaryBtnClass}
-                        onClick={() => switchSection("add-money")}
-                      >
-                        Add Money
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      className={primaryBtnClass}
-                      onClick={handleSendMoney}
-                    >
-                      Send
-                    </Button>
-                  )}
-                </div>
-            )}
-
-            {activeSection === "send-many" && (
-              <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => switchSection("send")}
-                      className="w-9 h-9 shrink-0 rounded-full bg-white/[0.06] flex items-center justify-center text-foreground hover:bg-white/[0.1] transition-colors"
-                    >
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-                    <span className="flex-1 text-center text-base font-bold pr-9">
-                      Send to Many
-                    </span>
-                  </div>
-
-                  {sendManyStep === "pick" && (
-                    <>
-                      <Label className={formLabelClass}>Recipient</Label>
-                      <Input
-                        className={formInputClass}
-                        placeholder="Enter phone number"
-                        value={sendManyPhoneInput}
-                        onChange={(e) => setSendManyPhoneInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            addSendManyPhone();
-                          }
-                        }}
-                      />
-                      {sendManyPhoneInput.trim() && (
-                        <button
-                          type="button"
-                          className={addFavouriteBtnClass}
-                          onClick={addSendManyPhone}
-                        >
-                          + Add {sendManyPhoneInput.trim()}
-                        </button>
-                      )}
-
-                      <Label className={formLabelClass}>
-                        Send to {sendManyRecipients.length}
-                        {isProUser ? "" : `/${FREE_SEND_MANY_LIMIT}`}
-                      </Label>
-                      {!isProUser &&
-                        sendManyRecipients.length >= FREE_SEND_MANY_LIMIT && (
-                          <button
-                            type="button"
-                            onClick={() => onPageChange("account")}
-                            className="text-xs text-gold -mt-[0.6rem] text-left bg-transparent border-none p-0 cursor-pointer hover:opacity-75 transition-opacity"
-                          >
-                            Free plan limit reached — upgrade to Payzarc Pro
-                            to send to more friends at once.
-                          </button>
-                        )}
-                      {sendManyRecipients.length > 0 && (
-                        <div className="flex flex-wrap gap-3 -mt-[0.4rem]">
-                          {sendManyRecipients.map((r) => (
-                            <div
-                              key={sendManyKey(r)}
-                              className="relative flex flex-col items-center gap-1 w-16"
+                                ))}
+                              </div>
+                            )}
+                          {recipientSearchTerm && !selectedRecipient && (
+                            <button
+                              type="button"
+                              className={addFavouriteBtnClass}
+                              onClick={handleAddRecipientToFavourites}
                             >
-                              <button
-                                type="button"
-                                onClick={() => toggleSendManyRecipient(r)}
-                                className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white/80 text-black flex items-center justify-center z-10"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm">
-                                {(
-                                  r.name ||
-                                  r.full_name ||
-                                  r.phone ||
-                                  r.value ||
-                                  "?"
-                                )
-                                  .slice(0, 1)
-                                  .toUpperCase()}
-                              </div>
-                              <span className="text-[0.7rem] text-center text-muted-foreground truncate w-full">
-                                {r.name || r.full_name || r.phone || r.value}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                              + Add recipient to favourites
+                            </button>
+                          )}
 
-                      <Label className={formLabelClass}>Favourites</Label>
-                      <div className="flex flex-wrap gap-2 -mt-[0.6rem]">
-                        {(Array.isArray(favourites) ? favourites : []).map(
-                          (fav, idx) => {
-                            const active = sendManyRecipients.some(
-                              (r) => sendManyKey(r) === sendManyKey(fav),
-                            );
-                            return (
-                              <button
-                                key={fav.id || idx}
-                                type="button"
-                                className={favouriteChipClass(active)}
-                                onClick={() => toggleSendManyRecipient(fav)}
-                              >
-                                {fav.name ||
-                                  fav.full_name ||
-                                  fav.phone ||
-                                  fav.value}
-                              </button>
-                            );
-                          },
-                        )}
-                      </div>
-
-                      <Button
-                        className={primaryBtnClass}
-                        disabled={sendManyRecipients.length === 0}
-                        onClick={() => setSendManyStep("amount")}
-                      >
-                        Continue
-                      </Button>
-                    </>
-                  )}
-
-                  {sendManyStep === "amount" && (
-                    <>
-                      <div className="flex items-center gap-3 bg-[var(--gold-pale)] border border-dashed border-[var(--gold-border)] rounded-xl px-4 py-4">
-                        <UsersRound className="w-8 h-8 text-gold shrink-0" />
-                        <div>
-                          <div className="text-lg font-bold text-gold">
-                            {senderCurrency} {sendManyAmountTotal.toFixed(2)}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Total amount to be sent
-                          </div>
-                        </div>
-                      </div>
-
-                      <Label className={formLabelClass}>Same amount</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className={formInputClass}
-                        placeholder="0.00"
-                        value={sendManySameAmount}
-                        onChange={(e) =>
-                          applySendManySameAmount(e.target.value)
-                        }
-                      />
-                      <span className="text-xs text-muted-foreground -mt-[0.6rem]">
-                        Balance: {senderCurrency} {formattedBalance}
-                      </span>
-
-                      <div className="flex flex-col gap-3">
-                        {sendManyRecipients.map((r) => {
-                          const conversion = getSendManyConversion(r);
-                          const country = detectRecipientCountry(r);
-                          return (
-                            <div
-                              key={sendManyKey(r)}
-                              className="flex items-center gap-3"
-                            >
-                              <div className="w-11 h-11 shrink-0 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm">
-                                {(
-                                  r.name ||
-                                  r.full_name ||
-                                  r.phone ||
-                                  r.value ||
-                                  "?"
-                                )
-                                  .slice(0, 1)
-                                  .toUpperCase()}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm font-semibold truncate">
-                                  {r.name || r.full_name || r.value}
-                                </div>
-                                <div className="text-xs text-muted-foreground truncate">
-                                  {country ? isoToFlagEmoji(country.flag) : ""}{" "}
-                                  {r.phone || r.value}
-                                </div>
-                              </div>
-                              <div className="flex flex-col items-end gap-1 shrink-0">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  className={cn(
-                                    formInputClass,
-                                    "w-24 px-3 py-2 text-right",
-                                  )}
-                                  value={sendManyAmounts[sendManyKey(r)] ?? ""}
-                                  onChange={(e) =>
-                                    setSendManyAmounts((prev) => ({
-                                      ...prev,
-                                      [sendManyKey(r)]: e.target.value,
-                                    }))
-                                  }
-                                />
-                                {conversion && (
-                                  <span className="text-[0.7rem] text-gold/80 whitespace-nowrap">
+                          <Label className={formLabelClass}>Amount</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            className={formInputClass}
+                            placeholder="0.00"
+                            value={sendAmount}
+                            onChange={(e) => setSendAmount(e.target.value)}
+                          />
+                          <div className="bg-[var(--gold-pale)] border border-dashed border-[var(--gold-border)] rounded-xl px-4 py-[0.85rem] text-center -mt-[0.6rem]">
+                            {availableCurrencies.length > 0 ? (
+                              <>
+                                <div className="flex items-center justify-center gap-2">
+                                  <span className="text-[1.2rem] font-bold text-gold tracking-[-0.3px]">
                                     ≈{" "}
                                     {Number(
-                                      conversion.amount,
-                                    ).toLocaleString()}{" "}
-                                    {conversion.currency}
+                                      convertedSendAmount || 0,
+                                    ).toLocaleString()}
                                   </span>
-                                )}
+                                  <select
+                                    className="bg-white/[0.06] text-gold border border-[var(--gold-border)] rounded-sm px-2 py-1 text-[0.95rem] font-bold cursor-pointer outline-none disabled:opacity-85 disabled:cursor-default"
+                                    value={recipientCurrency}
+                                    disabled={!!recipientCountry}
+                                    title={
+                                      recipientCountry
+                                        ? "Detected from recipient's number"
+                                        : undefined
+                                    }
+                                    onChange={(e) =>
+                                      setRecipientCurrencyChoice(e.target.value)
+                                    }
+                                  >
+                                    {availableCurrencies.map((ccy) => (
+                                      <option key={ccy} value={ccy}>
+                                        {ccy}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <span className="block text-xs text-gold/60 mt-1">
+                                  1 {senderCurrency} = {conversionRate}{" "}
+                                  {recipientCurrency} ·{" "}
+                                  {liveRates ? "live rate" : "indicative rate"}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="block text-xs text-gold/60 mt-1">
+                                Conversion unavailable for {senderCurrency}
+                              </span>
+                            )}
+                          </div>
+
+                          {sendAmountNum > 0 && (
+                            <div className="flex flex-col gap-1.5 bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-[0.85rem] -mt-[0.6rem]">
+                              <div className="flex items-center justify-between text-[0.85rem] text-muted-foreground">
+                                <span>Transaction Fee</span>
+                                <span>
+                                  {senderCurrency} {sendFee.toFixed(2)}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between text-[0.85rem] text-muted-foreground">
+                                <span>Total to pay</span>
+                                <span className="text-gold font-bold">
+                                  {senderCurrency} {sendTotal.toFixed(2)}
+                                </span>
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
+                          )}
 
-                      {sendManyAmountTotal > 0 && (
-                        <div className="flex flex-col gap-1.5 bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-[0.85rem]">
-                          <div className="flex items-center justify-between text-[0.85rem] text-muted-foreground">
-                            <span>Transaction Fee</span>
-                            <span>
-                              {senderCurrency} {sendManyFeeTotal.toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between text-[0.85rem] text-muted-foreground">
-                            <span>Total to pay</span>
-                            <span className="text-gold font-bold">
-                              {senderCurrency} {sendManyTotal.toFixed(2)}
-                            </span>
-                          </div>
+                          {insufficientBalance ? (
+                            <div className="flex flex-col gap-2 bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3.5">
+                              <span className="text-sm font-semibold text-destructive">
+                                Insufficient balance for this transfer.
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                You need {senderCurrency} {sendTotal.toFixed(2)}{" "}
+                                but your balance is {senderCurrency}{" "}
+                                {formattedBalance}.
+                              </span>
+                              <Button
+                                type="button"
+                                className={primaryBtnClass}
+                                onClick={() => switchSection("add-money")}
+                              >
+                                Add Money
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              className={primaryBtnClass}
+                              onClick={handleSendMoney}
+                            >
+                              Send
+                            </Button>
+                          )}
                         </div>
                       )}
 
-                      <Label className={formLabelClass}>
-                        Transaction PIN
-                      </Label>
-                      <Input
-                        type="password"
-                        inputMode="numeric"
-                        maxLength={4}
-                        className={formInputClass}
-                        placeholder="****"
-                        value={inputPin}
-                        onChange={(e) =>
-                          setInputPin(
-                            e.target.value.replace(/\D/g, "").slice(0, 4),
-                          )
-                        }
-                      />
+                      {activeSection === "send-many" && (
+                        <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => switchSection("send")}
+                              className="w-9 h-9 shrink-0 rounded-full bg-white/[0.06] flex items-center justify-center text-foreground hover:bg-white/[0.1] transition-colors"
+                            >
+                              <ChevronLeft className="w-5 h-5" />
+                            </button>
+                            <span className="flex-1 text-center text-base font-bold pr-9">
+                              Send to Many
+                            </span>
+                          </div>
 
-                      {insufficientSendManyBalance ? (
-                        <div className="flex flex-col gap-2 bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3.5">
-                          <span className="text-sm font-semibold text-destructive">
-                            Insufficient balance for this transfer.
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            You need {senderCurrency}{" "}
-                            {sendManyTotal.toFixed(2)} but your balance is{" "}
-                            {senderCurrency} {formattedBalance}.
-                          </span>
-                          <Button
-                            type="button"
-                            className={primaryBtnClass}
-                            onClick={() => switchSection("add-money")}
-                          >
-                            Add Money
-                          </Button>
+                          {sendManyStep === "pick" && (
+                            <>
+                              <Label className={formLabelClass}>
+                                Recipient
+                              </Label>
+                              <Input
+                                className={formInputClass}
+                                placeholder="Enter phone number"
+                                value={sendManyPhoneInput}
+                                onChange={(e) =>
+                                  setSendManyPhoneInput(e.target.value)
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    addSendManyPhone();
+                                  }
+                                }}
+                              />
+                              {sendManyPhoneInput.trim() && (
+                                <button
+                                  type="button"
+                                  className={addFavouriteBtnClass}
+                                  onClick={addSendManyPhone}
+                                >
+                                  + Add {sendManyPhoneInput.trim()}
+                                </button>
+                              )}
+
+                              <Label className={formLabelClass}>
+                                Send to {sendManyRecipients.length}
+                                {isProUser ? "" : `/${FREE_SEND_MANY_LIMIT}`}
+                              </Label>
+                              {!isProUser &&
+                                sendManyRecipients.length >=
+                                  FREE_SEND_MANY_LIMIT && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onPageChange("account")}
+                                    className="text-xs text-gold -mt-[0.6rem] text-left bg-transparent border-none p-0 cursor-pointer hover:opacity-75 transition-opacity"
+                                  >
+                                    Free plan limit reached — upgrade to Payzarc
+                                    Pro to send to more friends at once.
+                                  </button>
+                                )}
+                              {sendManyRecipients.length > 0 && (
+                                <div className="flex flex-wrap gap-3 -mt-[0.4rem]">
+                                  {sendManyRecipients.map((r) => (
+                                    <div
+                                      key={sendManyKey(r)}
+                                      className="relative flex flex-col items-center gap-1 w-16"
+                                    >
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          toggleSendManyRecipient(r)
+                                        }
+                                        className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white/80 text-black flex items-center justify-center z-10"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm">
+                                        {(
+                                          r.name ||
+                                          r.full_name ||
+                                          r.phone ||
+                                          r.value ||
+                                          "?"
+                                        )
+                                          .slice(0, 1)
+                                          .toUpperCase()}
+                                      </div>
+                                      <span className="text-[0.7rem] text-center text-muted-foreground truncate w-full">
+                                        {r.name ||
+                                          r.full_name ||
+                                          r.phone ||
+                                          r.value}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              <Label className={formLabelClass}>
+                                Favourites
+                              </Label>
+                              <div className="flex flex-wrap gap-2 -mt-[0.6rem]">
+                                {(Array.isArray(favourites)
+                                  ? favourites
+                                  : []
+                                ).map((fav, idx) => {
+                                  const active = sendManyRecipients.some(
+                                    (r) => sendManyKey(r) === sendManyKey(fav),
+                                  );
+                                  return (
+                                    <button
+                                      key={fav.id || idx}
+                                      type="button"
+                                      className={favouriteChipClass(active)}
+                                      onClick={() =>
+                                        toggleSendManyRecipient(fav)
+                                      }
+                                    >
+                                      {fav.name ||
+                                        fav.full_name ||
+                                        fav.phone ||
+                                        fav.value}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+
+                              <Button
+                                className={primaryBtnClass}
+                                disabled={sendManyRecipients.length === 0}
+                                onClick={() => setSendManyStep("amount")}
+                              >
+                                Continue
+                              </Button>
+                            </>
+                          )}
+
+                          {sendManyStep === "amount" && (
+                            <>
+                              <div className="flex items-center gap-3 bg-[var(--gold-pale)] border border-dashed border-[var(--gold-border)] rounded-xl px-4 py-4">
+                                <UsersRound className="w-8 h-8 text-gold shrink-0" />
+                                <div>
+                                  <div className="text-lg font-bold text-gold">
+                                    {senderCurrency}{" "}
+                                    {sendManyAmountTotal.toFixed(2)}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    Total amount to be sent
+                                  </div>
+                                </div>
+                              </div>
+
+                              <Label className={formLabelClass}>
+                                Same amount
+                              </Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                className={formInputClass}
+                                placeholder="0.00"
+                                value={sendManySameAmount}
+                                onChange={(e) =>
+                                  applySendManySameAmount(e.target.value)
+                                }
+                              />
+                              <span className="text-xs text-muted-foreground -mt-[0.6rem]">
+                                Balance: {senderCurrency} {formattedBalance}
+                              </span>
+
+                              <div className="flex flex-col gap-3">
+                                {sendManyRecipients.map((r) => {
+                                  const conversion = getSendManyConversion(r);
+                                  const country = detectRecipientCountry(r);
+                                  return (
+                                    <div
+                                      key={sendManyKey(r)}
+                                      className="flex items-center gap-3"
+                                    >
+                                      <div className="w-11 h-11 shrink-0 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm">
+                                        {(
+                                          r.name ||
+                                          r.full_name ||
+                                          r.phone ||
+                                          r.value ||
+                                          "?"
+                                        )
+                                          .slice(0, 1)
+                                          .toUpperCase()}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-semibold truncate">
+                                          {r.name || r.full_name || r.value}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground truncate">
+                                          {country
+                                            ? isoToFlagEmoji(country.flag)
+                                            : ""}{" "}
+                                          {r.phone || r.value}
+                                        </div>
+                                      </div>
+                                      <div className="flex flex-col items-end gap-1 shrink-0">
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          step="0.01"
+                                          className={cn(
+                                            formInputClass,
+                                            "w-24 px-3 py-2 text-right",
+                                          )}
+                                          value={
+                                            sendManyAmounts[sendManyKey(r)] ??
+                                            ""
+                                          }
+                                          onChange={(e) =>
+                                            setSendManyAmounts((prev) => ({
+                                              ...prev,
+                                              [sendManyKey(r)]: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                        {conversion && (
+                                          <span className="text-[0.7rem] text-gold/80 whitespace-nowrap">
+                                            ≈{" "}
+                                            {Number(
+                                              conversion.amount,
+                                            ).toLocaleString()}{" "}
+                                            {conversion.currency}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+
+                              {sendManyAmountTotal > 0 && (
+                                <div className="flex flex-col gap-1.5 bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-[0.85rem]">
+                                  <div className="flex items-center justify-between text-[0.85rem] text-muted-foreground">
+                                    <span>Transaction Fee</span>
+                                    <span>
+                                      {senderCurrency}{" "}
+                                      {sendManyFeeTotal.toFixed(2)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-[0.85rem] text-muted-foreground">
+                                    <span>Total to pay</span>
+                                    <span className="text-gold font-bold">
+                                      {senderCurrency}{" "}
+                                      {sendManyTotal.toFixed(2)}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+
+                              <Label className={formLabelClass}>
+                                Transaction PIN
+                              </Label>
+                              <Input
+                                type="password"
+                                inputMode="numeric"
+                                maxLength={4}
+                                className={formInputClass}
+                                placeholder="****"
+                                value={inputPin}
+                                onChange={(e) =>
+                                  setInputPin(
+                                    e.target.value
+                                      .replace(/\D/g, "")
+                                      .slice(0, 4),
+                                  )
+                                }
+                              />
+
+                              {insufficientSendManyBalance ? (
+                                <div className="flex flex-col gap-2 bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3.5">
+                                  <span className="text-sm font-semibold text-destructive">
+                                    Insufficient balance for this transfer.
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    You need {senderCurrency}{" "}
+                                    {sendManyTotal.toFixed(2)} but your balance
+                                    is {senderCurrency} {formattedBalance}.
+                                  </span>
+                                  <Button
+                                    type="button"
+                                    className={primaryBtnClass}
+                                    onClick={() => switchSection("add-money")}
+                                  >
+                                    Add Money
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Button
+                                  className={primaryBtnClass}
+                                  disabled={sendManySending}
+                                  onClick={handleSendToMany}
+                                >
+                                  {sendManySending ? "Sending..." : "Send"}
+                                </Button>
+                              )}
+                            </>
+                          )}
                         </div>
-                      ) : (
-                        <Button
-                          className={primaryBtnClass}
-                          disabled={sendManySending}
-                          onClick={handleSendToMany}
-                        >
-                          {sendManySending ? "Sending..." : "Send"}
-                        </Button>
                       )}
-                    </>
-                  )}
-                </div>
-            )}
 
-            {/* Groups — shows Friends.js and Groups.js as tabs, sharing the
+                      {/* Groups — shows Friends.js and Groups.js as tabs, sharing the
             same zoomed phone panel the other three flows render into. */}
-            {activeSection === "groups" && (
-              <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
-                <Tabs value={groupsTab} onValueChange={selectGroupsTab}>
-                  <TabsList className="grid grid-cols-2 w-full h-auto p-1 rounded-full bg-white/[0.04] gap-1">
-                    <TabsTrigger
-                      value="friends"
-                      className="rounded-full py-2 text-[0.85rem] font-semibold text-muted-foreground data-[state=active]:bg-gold data-[state=active]:text-black data-[state=active]:shadow-none hover:text-foreground"
-                    >
-                      Friends
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="groups"
-                      className="rounded-full py-2 text-[0.85rem] font-semibold text-muted-foreground data-[state=active]:bg-gold data-[state=active]:text-black data-[state=active]:shadow-none hover:text-foreground"
-                    >
-                      Groups
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
+                      {activeSection === "groups" && (
+                        <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
+                          <Tabs
+                            value={groupsTab}
+                            onValueChange={selectGroupsTab}
+                          >
+                            <TabsList className="grid grid-cols-2 w-full h-auto p-1 rounded-full bg-white/[0.04] gap-1">
+                              <TabsTrigger
+                                value="friends"
+                                className="rounded-full py-2 text-[0.85rem] font-semibold text-muted-foreground data-[state=active]:bg-gold data-[state=active]:text-black data-[state=active]:shadow-none hover:text-foreground"
+                              >
+                                Friends
+                              </TabsTrigger>
+                              <TabsTrigger
+                                value="groups"
+                                className="rounded-full py-2 text-[0.85rem] font-semibold text-muted-foreground data-[state=active]:bg-gold data-[state=active]:text-black data-[state=active]:shadow-none hover:text-foreground"
+                              >
+                                Groups
+                              </TabsTrigger>
+                            </TabsList>
+                          </Tabs>
 
-                {groupsTab === "friends" ? (
-                  <div
-                    key="friends"
-                    className={cn(
-                      "mt-3",
-                      groupsTabDirection === "left"
-                        ? "animate-slide-in-left"
-                        : "animate-slide-in-right",
-                    )}
-                  >
-                    <Friends
-                      onSelectFriend={(fav) => {
-                        switchSection("send");
-                        handleSelectRecipient(fav);
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div
-                    key="groups"
-                    className={cn(
-                      "mt-3",
-                      groupsTabDirection === "left"
-                        ? "animate-slide-in-left"
-                        : "animate-slide-in-right",
-                    )}
-                  >
-                    <Groups
-                      onTotalChange={setGroupFundsTotal}
-                      onWalletChange={fetchBalance}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
+                          {groupsTab === "friends" ? (
+                            <div
+                              key="friends"
+                              className={cn(
+                                "mt-3",
+                                groupsTabDirection === "left"
+                                  ? "animate-slide-in-left"
+                                  : "animate-slide-in-right",
+                              )}
+                            >
+                              <Friends
+                                onSelectFriend={(fav) => {
+                                  switchSection("send");
+                                  handleSelectRecipient(fav);
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <div
+                              key="groups"
+                              className={cn(
+                                "mt-3",
+                                groupsTabDirection === "left"
+                                  ? "animate-slide-in-left"
+                                  : "animate-slide-in-right",
+                              )}
+                            >
+                              <Groups
+                                onTotalChange={setGroupFundsTotal}
+                                onWalletChange={fetchBalance}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
 
-                      </div>
+                      {/* Reports — date-range CSV export plus the compact
+            History list (which has its own search/PDF statement export). */}
+                      {activeSection === "reports" && (
+                        <div className="flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="flex flex-col gap-2.5 min-w-0">
+                              <Label className={formLabelClass}>From</Label>
+                              <Input
+                                type="date"
+                                className={formInputClass}
+                                value={startDate}
+                                max={endDate || undefined}
+                                onChange={(e) => setStartDate(e.target.value)}
+                              />
+                            </div>
+                            <div className="flex flex-col gap-2.5 min-w-0">
+                              <Label className={formLabelClass}>To</Label>
+                              <Input
+                                type="date"
+                                className={formInputClass}
+                                value={endDate}
+                                min={startDate || undefined}
+                                onChange={(e) => setEndDate(e.target.value)}
+                              />
+                            </div>
+                          </div>
+
+                          <Button
+                            className={primaryBtnClass}
+                            disabled={isExporting}
+                            onClick={handleExportCSV}
+                          >
+                            {isExporting ? "Exporting..." : "Download CSV Report"}
+                          </Button>
+
+                          <div className="pt-4 border-t border-white/[0.06]">
+                            <History
+                              selectedTransaction={selectedTransaction}
+                              openDetailsPopup={setSelectedTransaction}
+                              closeDetailsPopup={() =>
+                                setSelectedTransaction(null)
+                              }
+                              compact
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-
           </div>
+        </div>
 
-          {/* Recent Activity — always visible now (matches the sketch, where
+        {/* Recent Activity — always visible now (matches the sketch, where
           the activity list sits below the tab content regardless of which
           tab is selected), not just on a neutral "dashboard" state. */}
-          <div className="flex flex-col items-center">
-            {showHistoryModal ? (
-              <div className="relative w-full flex flex-col gap-4 animate-flow-fade-in">
-                <History
-                  selectedTransaction={selectedTransaction}
-                  openDetailsPopup={setSelectedTransaction}
-                  closeDetailsPopup={() => setSelectedTransaction(null)}
-                  compact
-                />
+        <div className="flex flex-col items-center">
+          {showHistoryModal ? (
+            <div className="relative w-full flex flex-col gap-4 animate-flow-fade-in">
+              <History
+                selectedTransaction={selectedTransaction}
+                openDetailsPopup={setSelectedTransaction}
+                closeDetailsPopup={() => setSelectedTransaction(null)}
+                compact
+              />
+            </div>
+          ) : (
+            <div className="w-full">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[1.05rem] font-bold text-foreground tracking-tight m-0">
+                  Recent Activity
+                </h2>
+                <button
+                  className="bg-transparent border-none text-gold text-xs font-medium cursor-pointer flex items-center gap-1 transition-colors hover:text-gold-dark"
+                  onClick={() => setShowHistoryModal(true)}
+                >
+                  View all <ArrowRight size={14} />
+                </button>
               </div>
-            ) : (
-              <div className="w-full">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-[1.05rem] font-bold text-foreground tracking-tight m-0">
-                    Recent Activity
-                  </h2>
-                  <button
-                    className="bg-transparent border-none text-gold text-xs font-medium cursor-pointer flex items-center gap-1 transition-colors hover:text-gold-dark"
-                    onClick={() => setShowHistoryModal(true)}
-                  >
-                    View all <ArrowRight size={14} />
-                  </button>
-                </div>
 
-                <div className="bg-card rounded-2xl overflow-hidden">
-                  {recentTransactions.length === 0 ? (
-                    <p className="text-center text-[0.9rem] text-muted-foreground py-8">
-                      No recent activity yet.
-                    </p>
-                  ) : (
-                    recentTransactions.map((tx, idx) => {
-                      const credit =
-                        tx.transaction_type === "CREDIT" ||
-                        tx.type === "receive";
-                      return (
+              <div className="bg-card rounded-2xl overflow-hidden">
+                {recentTransactions.length === 0 ? (
+                  <p className="text-center text-[0.9rem] text-muted-foreground py-8">
+                    No recent activity yet.
+                  </p>
+                ) : (
+                  recentTransactions.map((tx, idx) => {
+                    const credit =
+                      tx.transaction_type === "CREDIT" || tx.type === "receive";
+                    return (
+                      <div
+                        key={tx.id || idx}
+                        className="flex items-center gap-4 p-4 md:p-5 border-b border-white/[0.03] last:border-b-0 transition-all duration-200 hover:bg-white/[0.025] cursor-default"
+                      >
                         <div
-                          key={tx.id || idx}
-                          className="flex items-center gap-4 p-4 md:p-5 border-b border-white/[0.03] last:border-b-0 transition-all duration-200 hover:bg-white/[0.025] cursor-default"
+                          className={cn(
+                            "w-11 h-11 rounded-xl flex items-center justify-center shrink-0",
+                            credit
+                              ? "bg-success/[0.08] text-success"
+                              : "bg-destructive/[0.08] text-destructive",
+                          )}
                         >
-                          <div
-                            className={cn(
-                              "w-11 h-11 rounded-xl flex items-center justify-center shrink-0",
-                              credit
-                                ? "bg-success/[0.08] text-success"
-                                : "bg-destructive/[0.08] text-destructive",
-                            )}
-                          >
-                            {credit ? (
-                              <TrendingUp size={18} />
-                            ) : (
-                              <TrendingDown size={18} />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              {/* Fixed width (not just truncate) so the
+                          {credit ? (
+                            <TrendingUp size={18} />
+                          ) : (
+                            <TrendingDown size={18} />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            {/* Fixed width (not just truncate) so the
                               status badge after it lands in the same
                               column on every row, instead of trailing
                               wherever each name happens to end. */}
-                              <p className="w-[104px] shrink-0 text-[0.85rem] font-semibold text-foreground truncate m-0">
-                                {tx.name ||
-                                  tx.description ||
-                                  tx.transaction_type}
-                              </p>
-                              {tx.status && (
-                                <span className={txStatusBadgeClass(tx.status)}>
-                                  <span
-                                    className={txStatusDotClass(tx.status)}
-                                  />
-                                  {tx.status}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[0.72rem] text-muted-foreground mt-0.5 m-0">
-                              {tx.date ||
-                                new Date(tx.created_at).toLocaleDateString()}
+                            <p className="w-[104px] shrink-0 text-[0.85rem] font-semibold text-foreground truncate m-0">
+                              {tx.name || tx.description || tx.transaction_type}
                             </p>
-                          </div>
-                          <p
-                            className={cn(
-                              "text-[0.9rem] font-bold font-mono shrink-0 m-0",
-                              credit ? "text-success" : "text-destructive",
+                            {tx.status && (
+                              <span className={txStatusBadgeClass(tx.status)}>
+                                <span className={txStatusDotClass(tx.status)} />
+                                {tx.status}
+                              </span>
                             )}
-                          >
-                            {tx.amount}
+                          </div>
+                          <p className="text-[0.72rem] text-muted-foreground mt-0.5 m-0">
+                            {tx.date ||
+                              new Date(tx.created_at).toLocaleDateString()}
                           </p>
                         </div>
-                      );
-                    })
-                  )}
-                </div>
+                        <p
+                          className={cn(
+                            "text-[0.9rem] font-bold font-mono shrink-0 m-0",
+                            credit ? "text-success" : "text-destructive",
+                          )}
+                        >
+                          {getFormattedAmount(tx.amount, credit)}
+                        </p>
+                      </div>
+                    );
+                  })
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Floating market ticker — sits to the right, follows scroll, and
@@ -2540,7 +2728,11 @@ function Home({ onPageChange, user, navigateRequest }) {
                 className={methodBtnClass(withdrawDestination === dest)}
                 onClick={() => setWithdrawDestination(dest)}
               >
-                {dest === "mpesa" ? "Mpesa" : dest === "bank" ? "Bank" : "Agent"}
+                {dest === "mpesa"
+                  ? "Mpesa"
+                  : dest === "bank"
+                    ? "Bank"
+                    : "Agent"}
               </button>
             ))}
           </div>
@@ -2553,7 +2745,10 @@ function Home({ onPageChange, user, navigateRequest }) {
                   className={formInputClass}
                   value={newMobileMoney.provider}
                   onChange={(e) =>
-                    setNewMobileMoney({ ...newMobileMoney, provider: e.target.value })
+                    setNewMobileMoney({
+                      ...newMobileMoney,
+                      provider: e.target.value,
+                    })
                   }
                 >
                   <option value="">Select a provider</option>
@@ -2569,7 +2764,10 @@ function Home({ onPageChange, user, navigateRequest }) {
                   placeholder="e.g. 254712345678"
                   value={newMobileMoney.phoneNumber}
                   onChange={(e) =>
-                    setNewMobileMoney({ ...newMobileMoney, phoneNumber: e.target.value })
+                    setNewMobileMoney({
+                      ...newMobileMoney,
+                      phoneNumber: e.target.value,
+                    })
                   }
                 />
                 <button
@@ -2597,7 +2795,9 @@ function Home({ onPageChange, user, navigateRequest }) {
                     <button
                       key={m.id}
                       type="button"
-                      className={favouriteChipClass(selectedMobileMoneyId === m.id)}
+                      className={favouriteChipClass(
+                        selectedMobileMoneyId === m.id,
+                      )}
                       onClick={() => setSelectedMobileMoneyId(m.id)}
                     >
                       {m.provider} •••• {String(m.phoneNumber).slice(-4)}
