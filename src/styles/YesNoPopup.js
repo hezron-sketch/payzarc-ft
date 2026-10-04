@@ -86,7 +86,7 @@ const YesNoPopup = ({
                 onSubmit(input, "no");
                 onClose();
               }}
-              className="h-auto rounded-xl px-[18px] py-2.5 bg-white/[0.06] border border-input text-foreground text-sm font-semibold hover:bg-white/10 shadow-none"
+              className="h-auto rounded-sm px-[18px] py-2 bg-white/[0.06] border border-input text-foreground text-sm font-semibold hover:bg-white/10 shadow-none"
             >
               No (2)
             </Button>
@@ -108,7 +108,7 @@ const YesNoPopup = ({
                 );
               }
             }}
-            className="h-auto rounded-xl px-[18px] py-2.5 bg-primary text-primary-foreground text-sm font-bold hover:bg-gold-dark shadow-none"
+            className="h-auto rounded-sm px-[18px] py-2 bg-primary text-primary-foreground text-sm font-bold hover:bg-gold-dark shadow-none"
           >
             {isNotification ? "OK" : "Yes (1)"}
           </Button>

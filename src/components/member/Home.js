@@ -7,18 +7,18 @@ import YesNoPopup from "../../styles/YesNoPopup";
 import { countries } from "../../utility/countries";
 import { getCurrentCountry } from "../../utility/getCurrentCountry";
 import { getLiveExchangeRates } from "../../utility/getLiveExchangeRates";
-import BalanceCard from "./home/BalanceCard";
-import QuickSend from "./home/QuickSend";
-import AddMoney from "./home/AddMoney";
-import { SendMoney, SendToMany, Withdraw } from "./home/Transfers";
-import GroupsPanel from "./home/GroupsPanel";
-import Reports from "./home/Reports";
-import RecentActivity from "./home/RecentActivity";
-import MarketTicker from "./home/MarketTicker";
+import BalanceCard from "./BalanceCard";
+import QuickSend from "./QuickSend";
+import AddMoney from "./AddMoney";
+import { SendMoney, SendToMany, Withdraw } from "./Transfers";
+import GroupsPanel from "./GroupsPanel";
+import Reports from "./Reports";
+import RecentActivity from "./RecentActivity";
+import MarketTicker from "./MarketTicker";
 
 // Dashboard home: owns the data every panel shares (balance, favourites,
 // linked payment methods, FX rates, the confirm/notify popup) and which
-// panel is showing. Each flow lives in ./home/ and owns its own form state.
+// panel is showing. Each flow lives in its own file alongside this one and owns its own form state.
 function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
   const [activeSection, setActiveSection] = useState("dashboard");
   // Bumped on every section change; the phone screen's content is keyed by

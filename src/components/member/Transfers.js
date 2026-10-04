@@ -13,16 +13,16 @@ import {
   X,
   UsersRound,
 } from "lucide-react";
-import { contactsApi, transactionsApi } from "../../../utility/axiosInstance";
+import { contactsApi, transactionsApi } from "../../utility/axiosInstance";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { countries } from "../../../utility/countries";
-import { EXCHANGE_RATES } from "../../../utility/exchangeRates";
-import { getRegionProviders } from "../../../utility/regionProviders";
-import { isValidEmail, isValidPhone } from "../../../utility/validators";
+import { countries } from "../../utility/countries";
+import { EXCHANGE_RATES } from "../../utility/exchangeRates";
+import { getRegionProviders } from "../../utility/regionProviders";
+import { isValidEmail, isValidPhone } from "../../utility/validators";
 import BankPicker from "./BankPicker";
 import {
   formLabelClass,

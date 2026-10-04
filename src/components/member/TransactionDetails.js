@@ -183,7 +183,7 @@ function TransactionDetails({ transaction, closeDetailsPopup }) {
 
         <div className="flex gap-3 px-7 py-6 border-t border-border bg-white/[0.02] max-[640px]:flex-col">
           <Button
-            className="flex-1 h-auto rounded-md px-5 py-[0.85rem] text-[13px] font-semibold shadow-[0_4px_12px_rgba(var(--gold-rgb),0.25)] hover:-translate-y-0.5"
+            className="flex-1 h-auto rounded-sm px-5 py-[0.6rem] text-[13px] font-semibold shadow-[0_4px_12px_rgba(var(--gold-rgb),0.25)] hover:-translate-y-0.5"
             onClick={handleDownloadReceipt}
             disabled={isDownloading}
             title="Download transaction receipt as PDF"
@@ -193,7 +193,7 @@ function TransactionDetails({ transaction, closeDetailsPopup }) {
           </Button>
           <Button
             variant="secondary"
-            className="flex-1 h-auto rounded-md px-5 py-[0.85rem] text-[13px] font-semibold border border-input"
+            className="flex-1 h-auto rounded-sm px-5 py-[0.6rem] text-[13px] font-semibold border border-input"
             onClick={closeDetailsPopup}
           >
             Close

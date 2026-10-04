@@ -2,14 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Self-hosted via @fontsource/ibm-plex-sans (imported in index.js) instead
-   of a Google Fonts CDN @import, so the app's default font doesn't depend
-   on an external network request. */
+/* Google Sans, loaded via Google's font CDN in public/index.html (no
+   open-license package exists to self-host it, unlike IBM Plex Sans below,
+   which stays as the fallback while the network font loads/if it fails). */
 :root {
   /* Font Family */
   --primary-page-font-family:
-    "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
+    "Google Sans", "IBM Plex Sans", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
   /* Colors */
   --primary-pagebgcolor: #0f1a2e;
@@ -85,6 +85,12 @@
   --blue: #60a5fa;
   --pink: #f472b6;
   --danger: #ef4444;
+  /* Channels for the above, so Tailwind's /<opacity> modifiers work on
+     these tokens (see tailwind.config.js). Keep in sync with the hex. */
+  --green-rgb: 74, 222, 128;
+  --blue-rgb: 96, 165, 250;
+  --pink-rgb: 244, 114, 182;
+  --danger-rgb: 239, 68, 68;
 
   /* Flat/minimal radius scale — sharper than the old 10/16/24 defaults */
   --radius-sm: 8px;

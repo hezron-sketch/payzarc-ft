@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { transactionsApi } from "../../../utility/axiosInstance";
-import { isSafeText } from "../../../utility/validators";
+import { transactionsApi } from "../../utility/axiosInstance";
+import { isSafeText } from "../../utility/validators";
 import {
   formLabelClass,
   formInputClass,

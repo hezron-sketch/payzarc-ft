@@ -11,7 +11,7 @@ const homeButtonClass =
 const inputFieldClass =
   'h-auto w-full rounded-sm bg-secondary border-input px-3 py-3 text-base text-foreground focus-visible:ring-0 focus-visible:border-gold shadow-none';
 const loginButtonClass =
-  'h-auto w-full rounded-sm px-3 py-3 text-base font-bold text-[#1a202c] bg-gold hover:bg-gold-dark shadow-none';
+  'h-auto w-full rounded-sm px-3 py-2 text-base font-bold text-[#1a202c] bg-gold hover:bg-gold-dark shadow-none';
 
 function SetNewPassword() {
   const { state } = useLocation();

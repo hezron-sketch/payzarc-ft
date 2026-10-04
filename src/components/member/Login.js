@@ -44,8 +44,8 @@ const inputFieldClass = (compact) =>
   );
 const submitBtnClass = (compact) =>
   cn(
-    "w-full h-auto bg-gold text-[#111] border-none rounded-[10px] font-bold cursor-pointer transition-all flex items-center justify-center gap-1.5 hover:bg-gold-dark hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed shadow-none",
-    compact ? "py-3 text-sm" : "py-[0.85rem] text-[15px]",
+    "w-full h-auto bg-gold text-[#111] border-none rounded-[6px] font-bold cursor-pointer transition-all flex items-center justify-center gap-1.5 hover:bg-gold-dark hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed shadow-none",
+    compact ? "py-2 text-sm" : "py-[0.6rem] text-[15px]",
   );
 const otpBoxClass = (compact) =>
   cn(
@@ -177,7 +177,7 @@ function ErrorPopup({ title, message, onClose, compact }) {
         <p className="text-[13px] text-[#9ca3af] leading-[1.55]">{message}</p>
         <Button
           onClick={onClose}
-          className="w-full h-auto py-3 rounded-[10px] bg-red-400/[0.12] text-red-400 border border-red-400/30 text-sm font-semibold hover:bg-red-400/20 shadow-none"
+          className="w-full h-auto py-2 rounded-[6px] bg-red-400/[0.12] text-red-400 border border-red-400/30 text-sm font-semibold hover:bg-red-400/20 shadow-none"
         >
           Dismiss
         </Button>
@@ -473,7 +473,7 @@ function Login({ onBack, embedded = false, compact = false }) {
             {/* Back home — hidden when embedded, the Modal already offers a close (×) */}
             <button
               className={cn(
-                "inline-flex items-center gap-1.5 bg-transparent border-[0.5px] border-white/10 rounded-[20px] text-[#9ca3af] text-xs font-medium px-3 py-[5px] cursor-pointer w-fit transition-colors hover:text-[#f9fafb] hover:border-white/20",
+                "inline-flex items-center gap-1.5 bg-transparent border-[0.5px] border-white/10 rounded-md text-[#9ca3af] text-xs font-medium px-3 py-1 cursor-pointer w-fit transition-colors hover:text-[#f9fafb] hover:border-white/20",
                 embedded && "hidden",
               )}
               onClick={onBack}
@@ -660,7 +660,7 @@ function Login({ onBack, embedded = false, compact = false }) {
                       </p>
                       <button
                         onClick={resendOtp}
-                        className="bg-[rgba(var(--gold-rgb),0.1)] text-gold border-[0.5px] border-[rgba(var(--gold-rgb),0.3)] rounded-sm py-[7px] px-5 text-[13px] font-semibold cursor-pointer transition-colors hover:bg-[rgba(var(--gold-rgb),0.18)] disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="bg-[rgba(var(--gold-rgb),0.1)] text-gold border-[0.5px] border-[rgba(var(--gold-rgb),0.3)] rounded-sm py-[5px] px-5 text-[13px] font-semibold cursor-pointer transition-colors hover:bg-[rgba(var(--gold-rgb),0.18)] disabled:opacity-60 disabled:cursor-not-allowed"
                         disabled={isLoading || resendCooldown > 0}
                       >
                         {isLoading

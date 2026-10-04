@@ -360,7 +360,7 @@ export default function Dashboard() {
             </p>
             <button
               onClick={() => setActivePage("home")}
-              className="py-[0.8rem] px-8 bg-gold border-none rounded-[3rem] font-bold cursor-pointer transition-all duration-[250ms] ease-in-out hover:bg-gold-dark hover:-translate-y-0.5"
+              className="py-[0.6rem] px-8 bg-gold border-none rounded-md font-bold cursor-pointer transition-all duration-[250ms] ease-in-out hover:bg-gold-dark hover:-translate-y-0.5"
             >
               Back to Overview
             </button>
@@ -551,7 +551,7 @@ export default function Dashboard() {
                                 <button
                                   key={n.id}
                                   type="button"
-                                  className="flex gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 text-left transition-colors"
+                                  className="flex gap-3 px-3 py-2 rounded-md hover:bg-white/5 text-left transition-colors"
                                   onClick={() => {
                                     markNotificationRead(n);
                                     setIsNotifOpen(false);
@@ -583,7 +583,7 @@ export default function Dashboard() {
                         )}
                         <button
                           type="button"
-                          className="w-full mt-1 py-2 text-xs font-semibold text-gold hover:opacity-80 transition-opacity"
+                          className="w-full mt-1 py-1.5 text-xs font-semibold text-gold hover:opacity-80 transition-opacity"
                           onClick={() => {
                             setIsNotifOpen(false);
                             handleNavClick("notifications");
@@ -598,7 +598,7 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => handleNavClick("account")}
-                    className="group flex items-center gap-2.5 pl-1 pr-2 py-1 rounded-xl cursor-pointer transition-colors duration-200 hover:bg-white/[0.04]"
+                    className="group flex items-center gap-2.5 pl-1 pr-2 py-0.5 rounded-sm cursor-pointer transition-colors duration-200 hover:bg-white/[0.04]"
                   >
                     <img
                       src={
@@ -626,10 +626,13 @@ export default function Dashboard() {
           panels) so it reads as a distinct rounded sheet sitting under the
           flat topbar, instead of content floating directly on the page bg. */}
           <main
-            className="flex-1 pt-12 pb-8 max-[768px]:pt-4 max-[768px]:pb-6 max-[768px]:min-h-0 max-[768px]:overflow-y-auto max-[768px]:overflow-x-hidden bg-white/[0.015] border-t border-white/[0.06] rounded-t-[28px]"
+            // flex-col + flex-1 content: Footer sits flush at the bottom of
+            // the sheet (no padding strip under it), and stays pinned there
+            // when the page is shorter than the screen.
+            className="flex-1 flex flex-col pt-12 max-[768px]:pt-4 max-[768px]:pb-6 max-[768px]:min-h-0 max-[768px]:overflow-y-auto max-[768px]:overflow-x-hidden bg-white/[0.015] border-t border-white/[0.06] rounded-t-[28px]"
             onScroll={(e) => handleScroll(e.currentTarget.scrollTop)}
           >
-            <div className="max-w-[1400px] mx-auto px-[4%]">
+            <div className="flex-1 w-full max-w-[1400px] mx-auto px-[4%]">
               <div key={activePage} className="animate-flow-fade-in">
                 {renderContent()}
               </div>

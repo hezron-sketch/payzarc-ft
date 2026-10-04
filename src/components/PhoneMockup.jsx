@@ -16,6 +16,16 @@ export const psBalanceCardClass =
 export const psBalLabelClass = "text-[8px] text-info";
 export const psBalAmountClass = "text-[15px] font-bold text-foreground mt-px";
 
+/* ─── Shared iPhone look ───
+   Used by every phone frame in the app — PhoneFrame below (landing hero +
+   Dashboard preview), PhoneAuthStage's modal in App.js, and the dashboard's
+   BalanceCard — so they can't drift apart. Bezel = this color with an even
+   padding all round; the notch hangs from the screen's top edge in the same
+   color. Callers add the notch's size (w/h/rounded-b) for their scale. */
+export const phoneBezelColorClass = "bg-[#0d1117]";
+export const phoneNotchBaseClass =
+  "absolute left-1/2 -translate-x-1/2 bg-[#0d1117] pointer-events-none z-[1]";
+
 /* ─── Phone Frame ───
    The phone "card" itself (bezel + notch + screen content), with no
    positioning of its own — callers place/size it via `className`. This is
@@ -58,13 +68,24 @@ export const PhoneFrame = React.forwardRef(function PhoneFrame(
     <div
       ref={ref}
       className={cn(
-        "w-[250px] bg-[#1c2333] rounded-[26px] border-[1.5px] border-[rgba(var(--gold-rgb),0.18)] pt-[10px] px-2 pb-[14px] shadow-[0_45px_90px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.04)_inset]",
+        // iPhone-style: thin even bezel (p-[5px]) all round, screen radius =
+        // outer radius − bezel so the corners stay concentric, and the notch
+        // cut into the top of the screen in the bezel's color.
+        phoneBezelColorClass,
+        // aspect-[9/19.5] = an iPhone's proportions, so height no longer
+        // just follows however much demo content the screen holds.
+        "w-[250px] aspect-[9/19.5] flex flex-col rounded-[30px] border-[1.5px] border-[rgba(var(--gold-rgb),0.18)] p-[5px] shadow-[0_45px_90px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.04)_inset]",
         className,
       )}
       style={hidden ? { visibility: "hidden" } : undefined}
     >
-      <div className="w-[42px] h-2 bg-[#0d1117] rounded mx-auto mb-[9px]" />
-      <div className="bg-card rounded-2xl py-[10px] px-2 min-h-[240px] flex flex-col gap-[7px]">
+      <div className="relative flex-1 min-h-0 overflow-hidden bg-card rounded-[24px] pt-[22px] pb-[12px] px-2 flex flex-col gap-[7px]">
+        <div
+          className={cn(
+            phoneNotchBaseClass,
+            "top-0 w-[40%] h-[14px] rounded-b-[9px]",
+          )}
+        />
         <div className={psHeaderClass}>
           <div className={psLogoClass} />
           <div className={psDotsClass}>
@@ -81,9 +102,7 @@ export const PhoneFrame = React.forwardRef(function PhoneFrame(
         </div>
         {contacts.length > 0 && (
           <>
-            <div className="text-[9px] text-[var(--muted)]">
-              {sendToLabel}
-            </div>
+            <div className="text-[9px] text-[var(--muted)]">{sendToLabel}</div>
             <div className="flex gap-[7px]">
               {contacts.map((r) => (
                 <div
@@ -96,9 +115,7 @@ export const PhoneFrame = React.forwardRef(function PhoneFrame(
                   >
                     {r.initials}
                   </div>
-                  <div className="text-[7px] text-[var(--muted)]">
-                    {r.name}
-                  </div>
+                  <div className="text-[7px] text-[var(--muted)]">{r.name}</div>
                 </div>
               ))}
             </div>
@@ -122,7 +139,9 @@ export const PhoneFrame = React.forwardRef(function PhoneFrame(
                   <span
                     className={cn(
                       "text-[8px] font-bold",
-                      t.positive === false ? "text-destructive" : "text-success",
+                      t.positive === false
+                        ? "text-destructive"
+                        : "text-success",
                     )}
                   >
                     {t.amt}

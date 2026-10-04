@@ -31,7 +31,7 @@ function QuickSend({ favourites, onSeeAll, onSelect }) {
                 key={fav.id || idx}
                 type="button"
                 onClick={() => onSelect(fav)}
-                className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] transition-colors duration-200 hover:border-gold/30 hover:bg-white/[0.05] group"
+                className="w-full flex items-center gap-3 p-3 rounded-sm bg-white/[0.03] border border-white/[0.06] transition-colors duration-200 hover:border-gold/30 hover:bg-white/[0.05] group"
               >
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-xs shrink-0">
                   {name.slice(0, 1).toUpperCase()}

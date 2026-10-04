@@ -3,14 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { transactionsApi } from "../../../utility/axiosInstance";
-import { getRegionProviders } from "../../../utility/regionProviders";
+import { transactionsApi } from "../../utility/axiosInstance";
+import { getRegionProviders } from "../../utility/regionProviders";
 import {
   isValidPhone,
   isValidCardNumber,
   isValidExpiry,
   isSafeText,
-} from "../../../utility/validators";
+} from "../../utility/validators";
 import BankPicker from "./BankPicker";
 import {
   formLabelClass,

@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { transactionsApi } from "../../../utility/axiosInstance";
-import History from "../History";
+import { transactionsApi } from "../../utility/axiosInstance";
+import History from "./History";
 import {
   formLabelClass,
   formInputClass,

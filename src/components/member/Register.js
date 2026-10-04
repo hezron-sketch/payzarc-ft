@@ -236,13 +236,13 @@ const inlineErrorClass =
   "flex items-center gap-1.5 bg-red-400/[0.08] border-[0.5px] border-red-400/25 rounded-sm px-3 py-2 text-xs text-red-400 mt-1";
 const primaryBtnClass = (compact) =>
   cn(
-    "w-full h-auto bg-gold text-[#111] border-none rounded-[10px] font-bold cursor-pointer transition-all flex items-center justify-center gap-1.5 hover:bg-gold-dark hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed shadow-none",
-    compact ? "py-3 text-sm" : "py-[0.85rem] text-[15px]",
+    "w-full h-auto bg-gold text-[#111] border-none rounded-[6px] font-bold cursor-pointer transition-all flex items-center justify-center gap-1.5 hover:bg-gold-dark hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed shadow-none",
+    compact ? "py-2 text-sm" : "py-[0.6rem] text-[15px]",
   );
 const secondaryBtnClass = (compact) =>
   cn(
-    "w-full bg-white/5 text-[#9ca3af] border-[0.5px] border-white/10 rounded-[10px] font-bold cursor-pointer transition-all flex items-center justify-center gap-1.5 hover:bg-white/[0.08] hover:text-[#f9fafb] font-sans",
-    compact ? "py-3 text-sm" : "py-[0.85rem] text-[15px]",
+    "w-full bg-white/5 text-[#9ca3af] border-[0.5px] border-white/10 rounded-[6px] font-bold cursor-pointer transition-all flex items-center justify-center gap-1.5 hover:bg-white/[0.08] hover:text-[#f9fafb] font-sans",
+    compact ? "py-2 text-sm" : "py-[0.6rem] text-[15px]",
   );
 const buttonGroupClass = "flex gap-3 mt-2 [&>*]:flex-1";
 const otpIconWrapClass = "w-[52px] h-[52px] rounded-[14px] flex items-center justify-center";
@@ -253,7 +253,7 @@ const otpBoxClass = (compact) =>
   );
 const timerRowClass = "text-center text-xs text-[var(--muted)]";
 const resendButtonClass =
-  "bg-[rgba(var(--gold-rgb),0.1)] text-gold border-[0.5px] border-[rgba(var(--gold-rgb),0.3)] rounded-sm py-2 px-4 text-[13px] font-semibold cursor-pointer transition-colors hover:bg-[rgba(var(--gold-rgb),0.18)]";
+  "bg-[rgba(var(--gold-rgb),0.1)] text-gold border-[0.5px] border-[rgba(var(--gold-rgb),0.3)] rounded-sm py-1.5 px-4 text-[13px] font-semibold cursor-pointer transition-colors hover:bg-[rgba(var(--gold-rgb),0.18)]";
 const successTableClass = (compact) =>
   cn(
     "w-full border-collapse bg-white/[0.03] border-[0.5px] border-white/[0.07] rounded-[14px] overflow-hidden mb-4",
@@ -783,7 +783,7 @@ function Register({ onBack, embedded = false, compact = false }) {
           >
             <button
               className={cn(
-                "inline-flex items-center gap-1.5 bg-transparent border-[0.5px] border-white/10 rounded-[20px] text-[#9ca3af] text-xs font-medium px-3 py-[5px] cursor-pointer w-fit transition-colors hover:text-[#f9fafb] hover:border-white/20",
+                "inline-flex items-center gap-1.5 bg-transparent border-[0.5px] border-white/10 rounded-md text-[#9ca3af] text-xs font-medium px-3 py-1 cursor-pointer w-fit transition-colors hover:text-[#f9fafb] hover:border-white/20",
                 embedded && "hidden",
               )}
               onClick={onBack}
@@ -1353,7 +1353,7 @@ function Register({ onBack, embedded = false, compact = false }) {
             <p className="text-[13px] text-[#9ca3af] leading-[1.55]">{errorPopup}</p>
             <Button
               onClick={() => setErrorPopup("")}
-              className="w-full h-auto py-3 rounded-[10px] bg-red-400/[0.12] text-red-400 border border-red-400/30 text-sm font-semibold hover:bg-red-400/20 shadow-none"
+              className="w-full h-auto py-2 rounded-[6px] bg-red-400/[0.12] text-red-400 border border-red-400/30 text-sm font-semibold hover:bg-red-400/20 shadow-none"
             >
               OK
             </Button>

@@ -13,11 +13,11 @@ const flowCardClass =
 const flowHeaderClass =
   "absolute left-0 w-full bottom-full mb-3 grid grid-cols-[1fr_auto_1fr] items-center text-white";
 const backBtnClass =
-  "col-start-1 justify-self-start inline-flex items-center gap-1 px-1 py-1.5 bg-transparent border-none text-white text-[0.9rem] font-semibold cursor-pointer transition-opacity duration-200 hover:opacity-75";
+  "col-start-1 justify-self-start inline-flex items-center gap-1 px-1 py-1 bg-transparent border-none text-white text-[0.9rem] font-semibold cursor-pointer transition-opacity duration-200 hover:opacity-75";
 const primaryBtnClass =
-  "w-full h-auto rounded-xl px-5 py-3.5 text-base font-bold text-black transition-all duration-200 hover:bg-gold-dark active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 shadow-lg shadow-gold/10 hover:shadow-gold/20 bg-gold flex items-center justify-center gap-2 cursor-pointer border-none disabled:cursor-not-allowed";
+  "w-full h-auto rounded-sm px-5 py-2.5 text-base font-bold text-black transition-all duration-200 hover:bg-gold-dark active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 shadow-lg shadow-gold/10 hover:shadow-gold/20 bg-gold flex items-center justify-center gap-2 cursor-pointer border-none disabled:cursor-not-allowed";
 const ghostBtnClass =
-  "w-full rounded-xl px-5 py-3.5 text-base font-semibold text-foreground bg-white/[0.03] border border-white/[0.08] transition-all duration-200 hover:bg-white/[0.06] hover:border-gold/20 active:scale-[0.97] flex items-center justify-center gap-2 cursor-pointer";
+  "w-full rounded-sm px-5 py-2.5 text-base font-semibold text-foreground bg-white/[0.03] border border-white/[0.08] transition-all duration-200 hover:bg-white/[0.06] hover:border-gold/20 active:scale-[0.97] flex items-center justify-center gap-2 cursor-pointer";
 
 function ProfileImageCapture({ user, onRefreshUser, onBack }) {
   const [cameraError, setCameraError] = useState('');

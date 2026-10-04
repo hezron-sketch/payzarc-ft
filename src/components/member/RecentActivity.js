@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import History from "../History";
+import History from "./History";
 
 // Per-row status chip — colored by keyword match on the real tx.status
 // string (no fixed enum from the API), default reads as "completed" since
@@ -10,16 +10,16 @@ import History from "../History";
 const txStatusTone = (status) => {
   const s = (status || "").toLowerCase();
   if (s.includes("fail") || s.includes("declin")) return "destructive";
-  if (s.includes("pend")) return "gold";
+  if (s.includes("pend")) return "pending";
   return "success";
 };
 const txStatusBadgeClass = (status) => {
   const tone = txStatusTone(status);
   return cn(
-    "hidden sm:inline-flex items-center px-2 py-0.5 rounded-md border border-gold/30 text-[10px] font-semibold uppercase tracking-wide shrink-0",
-    tone === "destructive" && "bg-destructive/10 text-destructive",
-    tone === "gold" && "bg-gold/10 text-gold",
-    tone === "success" && "bg-success/10 text-success",
+    "hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wide shrink-0",
+    tone === "destructive" && "bg-destructive/15 text-destructive",
+    tone === "pending" && "bg-white/10 text-muted-foreground",
+    tone === "success" && "bg-success/15 text-success",
   );
 };
 const txStatusDotClass = (status) => {
@@ -27,7 +27,7 @@ const txStatusDotClass = (status) => {
   return cn(
     "w-1 h-1 rounded-full mr-1.5",
     tone === "destructive" && "bg-destructive",
-    tone === "gold" && "bg-gold",
+    tone === "pending" && "bg-muted-foreground",
     tone === "success" && "bg-success",
   );
 };

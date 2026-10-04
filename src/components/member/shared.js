@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { EXCHANGE_RATES } from "../../../utility/exchangeRates";
+import { EXCHANGE_RATES } from "../../utility/exchangeRates";
 
 // Shared class strings for the repeated form pieces across Add Money /
 // Withdraw / Send / the service-picker dialogs — kept as plain Tailwind
@@ -13,7 +13,7 @@ export const formLabelClass =
 export const formInputClass =
   "w-full h-auto bg-white/[0.03] border-white/[0.06] rounded-xl px-4 py-3.5 text-foreground text-base md:text-base placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-gold/[0.08] focus-visible:border-gold/30 focus-visible:bg-white/[0.07] shadow-none transition-colors duration-200";
 export const primaryBtnClass =
-  "w-full h-auto rounded-xl px-5 py-3.5 text-base font-bold text-black transition-colors duration-200 hover:bg-primary active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 mt-1";
+  "w-full h-auto rounded-sm px-5 py-2.5 text-base font-bold text-black transition-colors duration-200 hover:bg-primary active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 mt-1";
 // Modal surface — flat bg-card + border, no elevation shadow or 3D tilt;
 // reuses the same popup-in fade/scale every other popover on the dashboard
 // uses instead of its own perspective/rotateX entrance.
@@ -34,7 +34,7 @@ export const modalAddLinkClass =
   "self-start inline-flex items-center gap-1 bg-white/[0.04] border border-white/[0.08] rounded-full px-3.5 py-1.5 text-gold text-[0.78rem] font-semibold cursor-pointer transition-colors hover:bg-white/[0.07] hover:border-gold/30";
 export const methodBtnClass = (active) =>
   cn(
-    "flex-1 bg-white/[0.02] border border-white/[0.05] text-muted-foreground px-2 py-2.5 rounded-xl text-[0.8rem] font-semibold transition-all duration-200 hover:bg-white/[0.05] hover:border-gold/20 hover:text-foreground",
+    "flex-1 bg-white/[0.02] border border-white/[0.05] text-muted-foreground px-2 py-2 rounded-sm text-[0.8rem] font-semibold transition-all duration-200 hover:bg-white/[0.05] hover:border-gold/20 hover:text-foreground",
     active &&
       "bg-gold/10 border-gold/30 text-gold hover:border-gold/40 hover:bg-gold/10 hover:text-gold",
   );

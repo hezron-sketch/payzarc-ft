@@ -14,6 +14,7 @@ import ResetPassword from "./components/member/ResetPassword";
 import SetNewPassword from "./components/member/SetNewPassword";
 import Dashboard from "./components/member/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { NotFound, ErrorBoundary } from "./components/StatusPages";
 import { cn } from "@/lib/utils";
 import {
   ArrowRightIcon,
@@ -44,6 +45,8 @@ import {
   psBalanceCardClass,
   psBalLabelClass,
   psBalAmountClass,
+  phoneBezelColorClass,
+  phoneNotchBaseClass,
 } from "./components/PhoneMockup";
 
 const COUNTRIES = {
@@ -113,26 +116,33 @@ const phoneStagePanelClass =
   // path — without it, translateZ (below, once expanded) makes the browser
   // clip border-radius against the un-transformed layer, leaving a jagged
   // sliver of the square edge visible past the rounded corner.
-  "fixed flex flex-col bg-[#1c2333] border-[1.5px] border-white/10 overflow-hidden rounded-[26px] [mask-image:radial-gradient(white,black)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] z-[1001] [transition:top_0.32s_cubic-bezier(0.16,1,0.3,1),left_0.32s_cubic-bezier(0.16,1,0.3,1),width_0.32s_cubic-bezier(0.16,1,0.3,1),height_0.32s_cubic-bezier(0.16,1,0.3,1),border-radius_0.32s_cubic-bezier(0.16,1,0.3,1),border-width_0.32s_cubic-bezier(0.16,1,0.3,1),transform_0.32s_cubic-bezier(0.16,1,0.3,1),box-shadow_0.32s_ease,background_0.32s_ease,border-color_0.32s_ease]";
+  "fixed flex flex-col p-[8px] border-[1.5px] border-white/10 overflow-hidden rounded-[var(--r)] [mask-image:radial-gradient(white,black)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] z-[1001] [transition:top_0.32s_cubic-bezier(0.16,1,0.3,1),left_0.32s_cubic-bezier(0.16,1,0.3,1),width_0.32s_cubic-bezier(0.16,1,0.3,1),height_0.32s_cubic-bezier(0.16,1,0.3,1),border-radius_0.32s_cubic-bezier(0.16,1,0.3,1),border-width_0.32s_cubic-bezier(0.16,1,0.3,1),transform_0.32s_cubic-bezier(0.16,1,0.3,1),box-shadow_0.32s_ease,background_0.32s_ease,border-color_0.32s_ease]";
 const phoneStagePanelOpenClass =
   // translateZ(48px) (with the backdrop's perspective above) is the "above
   // the screen" 3D lift — it grows in alongside width/height/etc since
   // transform is already in the transition list, so the panel rises toward
   // the viewer as it expands, and sinks back down as it shrinks on close.
-  "top-1/2 left-1/2 [transform:translate(-50%,-50%)_translateZ(48px)] w-[min(420px,92vw)] h-[min(760px,88vh)] rounded-[36px] bg-[radial-gradient(circle_at_30%_0%,#263252,#1c2333_60%)] border-[0.5px] border-[rgba(var(--gold-rgb),0.16)] max-[480px]:w-[94vw] max-[480px]:h-[90vh] max-[480px]:rounded-[28px]";
+  // Height-driven with width = height × 9/19.5 (PhoneFrame's own ratio) so
+  // the modal keeps a phone's proportions at every viewport height, instead
+  // of a fixed 420px width that went squat on shorter screens. The min()
+  // against 92vw keeps it from overflowing narrow-but-tall windows.
+  "top-1/2 left-1/2 [transform:translate(-50%,-50%)_translateZ(48px)] h-[min(820px,88vh)] w-[min(calc(min(820px,88vh)*9/19.5),92vw)] [--r:44px] border-[0.5px] border-[rgba(var(--gold-rgb),0.16)] max-[480px]:w-[94vw] max-[480px]:h-[90vh] max-[480px]:[--r:36px]";
+// Notch hangs from the screen's top edge (top = the panel's 8px bezel) in
+// the bezel's own color, like an iPhone's.
 const phoneStageNotchClass =
-  "w-[42px] h-2 bg-[#0d1117] rounded mx-auto mt-[14px] flex-shrink-0 transition-opacity duration-200 ease-in-out";
+  "top-[8px] w-[40%] h-[22px] rounded-b-[14px]";
+// Screen radius = panel radius (--r) − 8px bezel, keeping corners concentric.
 const phoneStageScreenClass =
-  "relative flex-1 mt-[10px] mx-[9px] mb-3 bg-card rounded-[20px] overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.12)_transparent] [&::-webkit-scrollbar]:w-[5px] [&::-webkit-scrollbar-thumb]:bg-white/[0.12] [&::-webkit-scrollbar-thumb]:rounded";
+  "relative flex-1 bg-card rounded-[calc(var(--r)-8px)] [transition:border-radius_0.32s_cubic-bezier(0.16,1,0.3,1)] overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.12)_transparent] [&::-webkit-scrollbar]:w-[5px] [&::-webkit-scrollbar-thumb]:bg-white/[0.12] [&::-webkit-scrollbar-thumb]:rounded";
 const phoneStagePreviewClass =
   // Matches the panel's own 320ms so the preview finishes fading exactly
   // when the panel finishes growing/shrinking, instead of settling ~100ms
   // early and leaving a moment where the shape is still moving but nothing
   // else on screen is.
-  "absolute inset-0 py-[10px] px-2 flex flex-col gap-[7px] opacity-100 transition-opacity duration-[320ms] ease-in-out pointer-events-none";
+  "absolute inset-0 pt-[30px] pb-[10px] px-2 flex flex-col gap-[7px] opacity-100 transition-opacity duration-[320ms] ease-in-out pointer-events-none";
 const phoneStagePreviewHideClass = "opacity-0";
 const phoneStageContentClass =
-  "px-[1.35rem] pt-[1.6rem] pb-[1.85rem] opacity-0 translate-y-[10px] transition-[opacity,transform] duration-[220ms] ease-in-out";
+  "px-[1.35rem] pt-[2.75rem] pb-[1.85rem] opacity-0 translate-y-[10px] transition-[opacity,transform] duration-[220ms] ease-in-out";
 const phoneStageContentShowClass = "opacity-100 translate-y-0 delay-100";
 
 /* ─── Navbar ─── */
@@ -175,7 +185,7 @@ function Navbar() {
                 type="button"
                 onClick={() => navigate(l.to)}
                 className={cn(
-                  "bg-transparent border-0 rounded-full px-3.5 py-1.5 text-[13px] no-underline transition-colors duration-200 cursor-pointer",
+                  "bg-transparent border-0 rounded-md px-3.5 py-1 text-[13px] no-underline transition-colors duration-200 cursor-pointer",
                   active
                     ? "text-gold bg-gold/10 font-semibold"
                     : "text-[var(--muted)] hover:text-foreground",
@@ -187,7 +197,7 @@ function Navbar() {
           })}
         </div>
         <button
-          className="group inline-flex items-center gap-1.5 bg-gold text-[#111] border-none rounded-[20px] px-[1.3rem] py-[0.55rem] text-[13px] font-bold cursor-pointer shadow-[0_4px_14px_rgba(var(--gold-rgb),0.25)] transition-[background,transform,box-shadow] duration-200 hover:bg-gold-dark hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(var(--gold-rgb),0.4)]"
+          className="group inline-flex items-center gap-1.5 bg-gold text-[#111] border-none rounded-md px-[1.3rem] py-[0.4rem] text-[13px] font-bold cursor-pointer shadow-[0_4px_14px_rgba(var(--gold-rgb),0.25)] transition-[background,transform,box-shadow] duration-200 hover:bg-gold-dark hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(var(--gold-rgb),0.4)]"
           onClick={() => navigate("/login")}
         >
           Login{" "}
@@ -226,8 +236,11 @@ function PhoneAuthStage({ overlay, onClose, mockupRef }) {
   // "opening" so we can render the clone in that exact spot first.
   useLayoutEffect(() => {
     if (overlay && phase === "closed") {
-      const r = anchorRef.current.getBoundingClientRect();
-      setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+      const node = anchorRef.current;
+      const r = node.getBoundingClientRect();
+      // offsetWidth ignores transforms, so this is the mockup's scale().
+      const scale = r.width / node.offsetWidth;
+      setRect({ top: r.top, left: r.left, width: r.width, height: r.height, scale });
       setPhase("opening");
     }
   }, [overlay, phase]);
@@ -247,8 +260,10 @@ function PhoneAuthStage({ overlay, onClose, mockupRef }) {
   useEffect(() => {
     if (overlay) return undefined;
     if (phase !== "open" && phase !== "opening") return undefined;
-    const r = anchorRef.current.getBoundingClientRect();
-    setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+    const node = anchorRef.current;
+    const r = node.getBoundingClientRect();
+    const scale = r.width / node.offsetWidth;
+    setRect({ top: r.top, left: r.left, width: r.width, height: r.height, scale });
     setPhase("closing");
     return undefined;
     // Must only re-run when overlay flips, so it captures phase as of that
@@ -295,7 +310,7 @@ function PhoneAuthStage({ overlay, onClose, mockupRef }) {
           width: rect.width,
           height: rect.height,
           transform: "none",
-          borderRadius: "26px",
+          "--r": `${30 * rect.scale}px`,
         }
       : undefined;
 
@@ -323,6 +338,7 @@ function PhoneAuthStage({ overlay, onClose, mockupRef }) {
             <div
               className={cn(
                 phoneStagePanelClass,
+                phoneBezelColorClass,
                 isExpanded
                   ? cn(phoneStagePanelOpenClass, phoneStagePanelShadowOpenClass)
                   : phoneStagePanelShadowClosedClass,
@@ -332,7 +348,7 @@ function PhoneAuthStage({ overlay, onClose, mockupRef }) {
               <button
                 type="button"
                 className={cn(
-                  "absolute top-[14px] right-[14px] z-[2] w-[30px] h-[30px] flex items-center justify-center bg-white/[0.06] border-[0.5px] border-white/[0.12] rounded-full text-[#9ca3af] cursor-pointer transition-[opacity,background,color,transform] duration-200 hover:bg-white/[0.12] hover:text-[#f9fafb] hover:rotate-90",
+                  "absolute top-[20px] right-[20px] z-[2] w-[30px] h-[30px] flex items-center justify-center bg-white/[0.06] border-[0.5px] border-white/[0.12] rounded-full text-[#9ca3af] cursor-pointer transition-[opacity,background,color,transform] duration-200 hover:bg-white/[0.12] hover:text-[#f9fafb] hover:rotate-90",
                   // Delay only on the way in, so it appears once the panel
                   // has mostly finished growing instead of popping in ~120ms
                   // early; no delay on the way out, so it disappears
@@ -359,23 +375,9 @@ function PhoneAuthStage({ overlay, onClose, mockupRef }) {
                 </svg>
               </button>
 
-              <div
-                className={cn(
-                  phoneStageNotchClass,
-                  isExpanded && "opacity-0 h-0 mt-0",
-                )}
-              />
+              <div className={cn(phoneNotchBaseClass, phoneStageNotchClass)} />
 
-              <div
-                className={cn(
-                  phoneStageScreenClass,
-                  // Bezel shrinks to nothing once expanded — margins to 0 and
-                  // corners squared off so the panel's own overflow-hidden +
-                  // border-radius does the corner clipping instead, giving an
-                  // edge-to-edge screen rather than a small-phone frame.
-                  isExpanded && "mx-0 mt-0 mb-0 rounded-none",
-                )}
-              >
+              <div className={phoneStageScreenClass}>
                 <div
                   className={cn(
                     phoneStagePreviewClass,
@@ -555,12 +557,12 @@ function Hero({ overlay, onCloseAuth }) {
 
       <div className="flex gap-3 mb-14 max-[480px]:flex-col max-[480px]:items-stretch">
         <button
-          className="inline-flex items-center justify-center gap-2 bg-gold text-[#111] border-none rounded-[2rem] py-3 px-7 text-2xl font-semibold cursor-pointer transition-[background,transform] duration-200 hover:bg-gold-dark hover:-translate-y-px max-[768px]:text-lg"
+          className="inline-flex items-center justify-center gap-2 bg-gold text-[#111] border-none rounded-md py-2 px-7 text-2xl font-semibold cursor-pointer transition-[background,transform] duration-200 hover:bg-gold-dark hover:-translate-y-px max-[768px]:text-lg"
           onClick={() => navigate("/register")}
         >
           Get started <ArrowRightIcon />
         </button>
-        {/* <button className="bg-white/5 text-[#d1d5db] border-[0.5px] border-input rounded-[24px] py-3 px-7 text-sm font-medium cursor-pointer transition-colors duration-200 hover:bg-white/[0.09] max-[480px]:text-center">See how it works</button> */}
+        {/* <button className="bg-white/5 text-[#d1d5db] border-[0.5px] border-input rounded-md py-2 px-7 text-sm font-medium cursor-pointer transition-colors duration-200 hover:bg-white/[0.09] max-[480px]:text-center">See how it works</button> */}
       </div>
 
       {/* Lives above the phone/cards group rather than below it — the box
@@ -822,7 +824,7 @@ function Converter() {
 
         {canSend && (
           <button
-            className="w-full py-[0.9rem] bg-gold text-[#111] border-none rounded-md text-[15px] font-bold cursor-pointer transition-[background,transform] duration-200 hover:bg-gold-dark hover:-translate-y-px"
+            className="w-full py-[0.65rem] bg-gold text-[#111] border-none rounded-sm text-[15px] font-bold cursor-pointer transition-[background,transform] duration-200 hover:bg-gold-dark hover:-translate-y-px"
             onClick={() => navigate("/login")}
           >
             Send to {toCountry} →
@@ -838,7 +840,7 @@ function Converter() {
           {QUICK_DESTINATIONS.map((d) => (
             <button
               key={d.name}
-              className="bg-white/[0.04] border-[0.5px] border-border rounded-[10px] text-[var(--soft)] py-[0.7rem] px-1 cursor-pointer flex flex-col items-center gap-[5px] transition-colors duration-200 hover:bg-[var(--gold-pale)] hover:border-[var(--gold-border)] hover:text-gold"
+              className="bg-white/[0.04] border-[0.5px] border-border rounded-[6px] text-[var(--soft)] py-2 px-1 cursor-pointer flex flex-col items-center gap-[5px] transition-colors duration-200 hover:bg-[var(--gold-pale)] hover:border-[var(--gold-border)] hover:text-gold"
               onClick={() => handleQuickDest(d)}
             >
               <span className="text-xl">{d.flag}</span>
@@ -1232,7 +1234,7 @@ function HelpContent() {
       <button
         type="button"
         onClick={() => navigate("/contact")}
-        className="inline-flex items-center gap-1.5 mt-8 bg-gold text-[#111] border-none rounded-[20px] px-[1.3rem] py-[0.7rem] text-[13px] font-bold cursor-pointer transition-all duration-200 hover:bg-gold-dark hover:-translate-y-0.5"
+        className="inline-flex items-center gap-1.5 mt-8 bg-gold text-[#111] border-none rounded-md px-[1.3rem] py-2 text-[13px] font-bold cursor-pointer transition-all duration-200 hover:bg-gold-dark hover:-translate-y-0.5"
       >
         Contact support <ArrowRightIcon size={14} />
       </button>
@@ -1398,7 +1400,7 @@ function ContactContent() {
               <button
                 type="submit"
                 disabled={!canSubmit}
-                className="w-full py-[0.9rem] bg-gold text-[#111] border-none rounded-md text-[15px] font-bold cursor-pointer transition-[background,transform] duration-200 hover:bg-gold-dark hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                className="w-full py-[0.65rem] bg-gold text-[#111] border-none rounded-sm text-[15px] font-bold cursor-pointer transition-[background,transform] duration-200 hover:bg-gold-dark hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
                 Send message
               </button>
@@ -1526,7 +1528,8 @@ function Home({ overlay }) {
 function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
-  const path = location.pathname;
+  // Trailing slash tolerated so "/login/" still resolves.
+  const path = location.pathname.replace(/\/+$/, "") || "/";
 
   const standaloneRoutes = [
     "set-password",
@@ -1576,6 +1579,7 @@ function AppContent() {
     "/contact": "contact",
   };
   const overlay = OVERLAY_PATHS[path] || null;
+  if (path !== "/" && !overlay) return <NotFound />;
 
   return <Home overlay={overlay} />;
 }
@@ -1583,9 +1587,11 @@ function AppContent() {
 /* ─── App Router ─── */
 function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

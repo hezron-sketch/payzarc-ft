@@ -95,7 +95,7 @@ function Friends({ onSelectFriend }) {
                 key={fav.id}
                 type="button"
                 onClick={() => onSelectFriend?.(fav)}
-                className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-left transition-colors duration-200 hover:border-gold/30 hover:bg-white/[0.05]"
+                className="w-full flex items-center gap-3 p-3 rounded-sm bg-white/[0.03] border border-white/[0.06] text-left transition-colors duration-200 hover:border-gold/30 hover:bg-white/[0.05]"
               >
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm shrink-0">
                   {name.slice(0, 1).toUpperCase()}

@@ -10,6 +10,7 @@ import {
   FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { phoneBezelColorClass, phoneNotchBaseClass } from "../PhoneMockup";
 
 // The balance-card action buttons — one config-driven list instead of
 // near-identical JSX blocks. Send/Withdraw render as floating pills beside
@@ -45,7 +46,7 @@ const ICON_ROW_ACTIONS = ACTION_TILES.filter(
 // flows instead of internally scrolling) but keeps its own rounded corners,
 // still reading as a distinct card instead of a flat edge-to-edge block.
 const balanceCardClass =
-  "relative bg-card rounded-[29px] overflow-hidden h-[620px] max-[768px]:h-auto max-[640px]:h-auto flex flex-col shadow-[inset_0_1px_0_rgba(255,255,255,0.1),inset_0_0_0_1px_rgba(255,255,255,0.04),inset_0_28px_46px_-30px_rgba(255,255,255,0.08),inset_0_-20px_40px_-30px_rgba(var(--gold-rgb),0.18),inset_20px_0_36px_-32px_rgba(255,255,255,0.06),inset_-20px_0_36px_-32px_rgba(255,255,255,0.06)]";
+  "relative bg-card rounded-[29px] h-[620px] max-[768px]:h-auto max-[640px]:h-auto flex flex-col shadow-[inset_0_1px_0_rgba(255,255,255,0.1),inset_0_0_0_1px_rgba(255,255,255,0.04),inset_0_28px_46px_-30px_rgba(255,255,255,0.08),inset_0_-20px_40px_-30px_rgba(var(--gold-rgb),0.18),inset_20px_0_36px_-32px_rgba(255,255,255,0.06),inset_-20px_0_36px_-32px_rgba(255,255,255,0.06)]";
 // Phone bezel wrapping the balance card — flat trim, no elevation shadow.
 // Capped width (thinner, more phone-shaped) instead of filling the whole
 // column. origin-top + the scale transition here is the "phone zooms in"
@@ -53,9 +54,11 @@ const balanceCardClass =
 // touch at the same time, reversing automatically when activeSection goes
 // back to "dashboard" since it's just a conditional class.
 const phoneBezelClass =
-  "relative w-full max-w-[400px] mx-auto origin-top transition-transform duration-300 ease-in-out bg-[#1c2333] rounded-[34px] border border-[rgba(var(--gold-rgb),0.18)] p-[5px] max-[768px]:max-w-none max-[768px]:rounded-none max-[768px]:border-none max-[768px]:bg-transparent max-[768px]:p-0";
+  "relative w-full max-w-[400px] mx-auto origin-top transition-transform duration-300 ease-in-out rounded-[34px] border border-[rgba(var(--gold-rgb),0.18)] p-[5px] max-[768px]:max-w-none max-[768px]:rounded-none max-[768px]:border-none max-[768px]:bg-transparent max-[768px]:p-0";
+// Hangs from the screen's top edge (inside balanceCardClass); hidden below
+// 768px where the bezel itself goes away.
 const phoneNotchClass =
-  "w-[56px] h-[7px] bg-[#0d1117] rounded-full mx-auto mb-[10px] max-[768px]:hidden";
+  "top-0 w-[34%] h-[22px] rounded-b-[14px] max-[768px]:hidden";
 // Thin gold-on-transparent scrollbar for the screen's scrollable content
 // area — matches the bezel's gold accent instead of the browser default.
 // Firefox via scrollbar-width/-color, WebKit via the pseudo-element
@@ -67,9 +70,9 @@ const phoneScrollAreaClass =
 // every action button on the card is the same size, not just the same
 // padding. Flat gold pill when active, flat translucent pill otherwise.
 const goldPillBtnClass =
-  "flex items-center justify-center gap-2 w-[140px] h-12 rounded-full text-[0.85rem] font-semibold cursor-pointer text-black bg-gradient-to-b from-gold to-gold-dark transition-colors duration-200 hover:brightness-110";
+  "flex items-center justify-center gap-2 w-[140px] h-10 rounded-md text-[0.85rem] font-semibold cursor-pointer text-black bg-gradient-to-b from-gold to-gold-dark transition-colors duration-200 hover:brightness-110";
 const flatPillBtnClass =
-  "flex items-center justify-center gap-2 w-[140px] h-12 rounded-full text-[0.85rem] font-semibold cursor-pointer text-foreground bg-white/[0.06] border border-white/[0.1] transition-colors duration-200 hover:bg-white/[0.1]";
+  "flex items-center justify-center gap-2 w-[140px] h-10 rounded-md text-[0.85rem] font-semibold cursor-pointer text-foreground bg-white/[0.06] border border-white/[0.1] transition-colors duration-200 hover:bg-white/[0.1]";
 
 // Balance section, phone-bezeled — the dashboard's main component: live
 // balance, group funds, the action buttons, and a fixed-height screen whose
@@ -97,51 +100,16 @@ function BalanceCard({
 
   return (
     <div className="relative w-full max-w-[400px] mx-auto">
-      {/* Same FloatCard shape/positioning as the landing hero's floating
-        cards in App.js — real and clickable here. Always floating, at every
-        width: Send straddles the phone's left edge, Withdraw the right edge
-        lower down, clear of the Add Money/Groups row and Quick Send. */}
-      {BALANCE_CARD_ACTIONS.map(({ key, label, icon: Icon }) => {
-        const active = activeSection === key;
-        const isSend = key === "send";
-        return (
-          <button
-            key={key}
-            type="button"
-            onClick={() => switchSection(key)}
-            aria-label={label}
-            className={cn(
-              "flex absolute z-10 items-center justify-center gap-2 w-[140px] h-12 rounded-lg whitespace-nowrap cursor-pointer text-[0.85rem] font-semibold transition-all duration-200 hover:-translate-y-0.5",
-              // The card's own max-[640px] padding/type-size shrinks this
-              // whole area vertically, so both offsets need a smaller mobile
-              // value too — reusing the same numbers there would land Send
-              // on Add Money and Withdraw on Quick Send.
-              isSend
-                ? "-left-5 top-[156px] max-[640px]:top-[136px]"
-                : "-right-5 top-[271px] max-[640px]:top-[248px]",
-              active
-                ? "bg-gradient-to-b from-gold to-gold-dark border-[0.5px] border-transparent text-black"
-                : "bg-secondary border-[0.5px] border-input hover:border-gold/30 text-foreground",
-            )}
-          >
-            <Icon
-              size={16}
-              className={cn(
-                "shrink-0",
-                active ? "text-black" : isSend ? "text-gold" : "text-[#60a5fa]",
-              )}
-            />
-            <span className="truncate">{label}</span>
-          </button>
-        );
-      })}
-
       <div
         ref={balanceCardRef}
-        className={cn(phoneBezelClass, phoneZoomActive && "scale-[1.02]")}
+        className={cn(
+          phoneBezelClass,
+          phoneBezelColorClass,
+          phoneZoomActive && "scale-[1.02]",
+        )}
       >
-        <div className={phoneNotchClass} />
         <div className={balanceCardClass}>
+          <div className={cn(phoneNotchBaseClass, phoneNotchClass)} />
           <div className="w-full h-full min-h-0 flex flex-col items-center px-8 pt-9 pb-8 max-[640px]:px-6">
             <div className="w-full flex flex-col items-center mb-16">
               <div className="flex flex-col items-center">
@@ -178,7 +146,7 @@ function BalanceCard({
                   <button
                     type="button"
                     onClick={() => onPageChange("groups")}
-                    className="mt-2 inline-flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full px-3 py-1 text-[0.75rem] font-semibold text-muted-foreground cursor-pointer transition-colors hover:bg-white/[0.07] hover:border-gold/20 hover:text-foreground"
+                    className="mt-2 inline-flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-0.5 text-[0.75rem] font-semibold text-muted-foreground cursor-pointer transition-colors hover:bg-white/[0.07] hover:border-gold/20 hover:text-foreground"
                   >
                     <UsersRound size={12} className="text-gold" />
                     <span
@@ -199,7 +167,51 @@ function BalanceCard({
               Withdraw live only in the floating pills above, so they're
               never duplicated in here. Three pills don't fit at the shared
               fixed 140px width, so they share the row instead. */}
-            <div className="w-full flex items-center justify-center gap-2 mb-2">
+            <div className="relative w-full flex items-center justify-center gap-2 mb-2">
+              {/* Floating Send/Withdraw pills — same FloatCard shape as the
+                landing hero's. Rendered inside the Add Money row (positioned off
+                it) and straddle the phone's edges, which is why the screen has no
+                overflow-hidden. */}
+              {BALANCE_CARD_ACTIONS.map(({ key, label, icon: Icon }) => {
+                const active = activeSection === key;
+                const isSend = key === "send";
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => switchSection(key)}
+                    aria-label={label}
+                    className={cn(
+                      "flex absolute z-10 items-center justify-center gap-2 w-[140px] h-10 rounded-md whitespace-nowrap cursor-pointer text-[0.85rem] font-semibold transition-all duration-200 hover:-translate-y-0.5",
+                      // Anchored to this row, mirrored: Send sits 29px above it,
+                      // Withdraw 29px below — so the balance block growing (error
+                      // line, Group Funds chip) moves both with the row instead of
+                      // Send landing on it. Horizontal offsets put each pill 20px
+                      // past the bezel's edge: row inset = bezel border+padding (6px,
+                      // gone below 768px) + the screen's px-8/px-6.
+                      isSend
+                        ? "bottom-[calc(100%+29px)] -left-[58px] max-[768px]:-left-[52px] max-[640px]:-left-[44px]"
+                        : "top-[calc(100%+29px)] -right-[58px] max-[768px]:-right-[52px] max-[640px]:-right-[44px]",
+                      active
+                        ? "bg-gradient-to-b from-gold to-gold-dark border-[0.5px] border-transparent text-black"
+                        : "bg-secondary border-[0.5px] border-input hover:border-gold/30 text-foreground",
+                    )}
+                  >
+                    <Icon
+                      size={16}
+                      className={cn(
+                        "shrink-0",
+                        active
+                          ? "text-black"
+                          : isSend
+                            ? "text-gold"
+                            : "text-[#60a5fa]",
+                      )}
+                    />
+                    <span className="truncate">{label}</span>
+                  </button>
+                );
+              })}
               {ICON_ROW_ACTIONS.map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
