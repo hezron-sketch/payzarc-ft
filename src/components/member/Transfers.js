@@ -181,7 +181,7 @@ function InsufficientBalance({
         {formattedBalance}.
       </span>
       <Button type="button" className={primaryBtnClass} onClick={onAddMoney}>
-        Add Money
+        Deposit
       </Button>
     </div>
   );

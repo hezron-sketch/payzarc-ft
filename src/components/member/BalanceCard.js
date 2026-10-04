@@ -18,7 +18,7 @@ import { phoneBezelColorClass, phoneNotchBaseClass } from "../PhoneMockup";
 // row just below the balance. Same switchSection/activeSection wiring
 // either way — only where each button is drawn differs.
 const ACTION_TILES = [
-  { key: "add-money", label: "Add Money", icon: PlusCircle },
+  { key: "add-money", label: "Deposit", icon: PlusCircle },
   { key: "withdraw", label: "Withdraw", icon: ArrowDownCircle },
   { key: "send", label: "Send", icon: Send },
   { key: "groups", label: "Groups", icon: UsersRound },

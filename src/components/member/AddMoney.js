@@ -134,8 +134,8 @@ function AddMoney({
           : `Visa •••• ${selectedCard?.last4}`;
 
     openConfirmationDialog(
-      "Confirm Add Money",
-      `Add ${displayCurrency}${addAmount} from ${sourceLabel}?\n\nType 1 and click Yes to confirm.`,
+      "Confirm Deposit",
+      `Deposit ${displayCurrency}${addAmount} from ${sourceLabel}?\n\nType 1 and click Yes to confirm.`,
       async (typedValue, buttonChoice) => {
         if (typedValue !== "1" || buttonChoice !== "yes") {
           showNotification("error", "Transaction cancelled");
@@ -161,7 +161,7 @@ function AddMoney({
           const errorMsg =
             error.response?.data?.message ||
             error.response?.data?.error ||
-            "Add money failed";
+            "Deposit failed";
           showNotification("error", errorMsg);
         }
       },
@@ -191,7 +191,7 @@ function AddMoney({
       <Dialog open={showPopup} onOpenChange={setShowPopup}>
         <DialogContent className={pickerDialogClass}>
           <DialogTitle className="text-center text-[1.1rem] font-bold text-foreground m-0">
-            Add money from
+            Deposit from
           </DialogTitle>
 
           <div className="flex gap-2 -mt-[0.6rem]">

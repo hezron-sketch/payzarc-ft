@@ -53,7 +53,7 @@ const DEV_BYPASS_AUTH = process.env.REACT_APP_BYPASS_AUTH === "true";
 // Top-bar search results — static services plus whatever friends match.
 const SEARCH_SERVICES = [
   { id: "send", label: "Send Money", section: "send" },
-  { id: "add-money", label: "Add Money", section: "add-money" },
+  { id: "add-money", label: "Deposit", section: "add-money" },
   { id: "withdraw", label: "Withdraw", section: "withdraw" },
   { id: "groups", label: "Groups", section: "groups" },
   { id: "reports", label: "Reports", section: "reports" },
