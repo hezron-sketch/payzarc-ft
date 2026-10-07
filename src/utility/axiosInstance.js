@@ -43,7 +43,7 @@ const setupSessionInterceptor = (instance) => {
         } catch (refreshError) {
           localStorage.removeItem("accessToken");
           localStorage.removeItem("user");
-          window.location.href = "/components/member/login";
+          window.location.href = "/login";
           return Promise.reject(refreshError);
         }
       }

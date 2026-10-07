@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import axiosInstance, { contactsApi } from "../../utility/axiosInstance";
+import { isSafeText } from "../../utility/validators";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -47,7 +48,7 @@ const fundTypeFor = (key) => FUND_TYPES.find((t) => t.key === key) || FUND_TYPES
 const cardClass =
   "w-full flex flex-col gap-3 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06]";
 const createGroupBtnClass =
-  "w-full flex items-center justify-center gap-2 rounded-full py-3 px-4 text-[0.9rem] font-bold cursor-pointer text-black bg-gradient-to-b from-gold to-gold-dark transition-colors duration-200 hover:brightness-110";
+  "w-full flex items-center justify-center gap-2 rounded-md py-2 px-4 text-[0.9rem] font-bold cursor-pointer text-black bg-gradient-to-b from-gold to-gold-dark transition-colors duration-200 hover:brightness-110";
 const smallPillBtnClass =
   "flex-1 flex items-center justify-center gap-1.5 rounded-full py-2 px-3 text-[0.78rem] font-semibold cursor-pointer whitespace-nowrap transition-colors duration-200 active:scale-[0.97]";
 const contributeBtnClass = cn(
@@ -67,7 +68,7 @@ const formLabelClass =
 const formInputClass =
   "w-full h-auto bg-white/[0.03] border-white/[0.06] rounded-xl px-4 py-3.5 text-foreground text-base placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-gold/[0.08] focus-visible:border-gold/30 focus-visible:bg-white/[0.07] shadow-none transition-colors duration-200";
 const primaryBtnClass =
-  "w-full h-auto rounded-xl px-5 py-3.5 text-base font-bold text-black transition-colors duration-200 hover:bg-primary active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 mt-1";
+  "w-full h-auto rounded-sm px-5 py-2.5 text-base font-bold text-black transition-colors duration-200 hover:bg-primary active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 mt-1";
 const ghostLinkBtnClass =
   "self-start bg-transparent border-none text-gold text-[0.8rem] font-semibold cursor-pointer p-0 transition-opacity hover:opacity-75";
 
@@ -225,7 +226,7 @@ function GroupCard({ group, friends, onContribute, onAddMember, onWithdraw }) {
               type="button"
               onClick={submitContribute}
               disabled={busy || !(Number(amount) > 0) || !contributorId}
-              className="h-auto px-4 py-3.5 rounded-xl bg-gold text-black font-bold hover:bg-gold-dark disabled:opacity-60"
+              className="h-auto px-4 py-2.5 rounded-sm bg-gold text-black font-bold hover:bg-gold-dark disabled:opacity-60"
             >
               <Check size={16} />
             </Button>
@@ -247,7 +248,7 @@ function GroupCard({ group, friends, onContribute, onAddMember, onWithdraw }) {
                 type="button"
                 disabled={busy}
                 onClick={() => submitAddMember(f.id)}
-                className="flex items-center justify-between gap-2 text-left text-sm text-foreground bg-white/[0.03] hover:bg-white/[0.06] rounded-lg px-3 py-2 transition-colors disabled:opacity-60"
+                className="flex items-center justify-between gap-2 text-left text-sm text-foreground bg-white/[0.03] hover:bg-white/[0.06] rounded-md px-3 py-1.5 transition-colors disabled:opacity-60"
               >
                 {f.display_name}
                 <UserPlus size={14} className="text-gold shrink-0" />
@@ -281,7 +282,7 @@ function GroupCard({ group, friends, onContribute, onAddMember, onWithdraw }) {
               type="button"
               onClick={submitWithdraw}
               disabled={busy || !(Number(amount) > 0)}
-              className="h-auto px-4 py-3.5 rounded-xl bg-gold text-black font-bold hover:bg-gold-dark disabled:opacity-60"
+              className="h-auto px-4 py-2.5 rounded-sm bg-gold text-black font-bold hover:bg-gold-dark disabled:opacity-60"
             >
               <Check size={16} />
             </Button>
@@ -381,6 +382,10 @@ function Groups({ onTotalChange, onWalletChange }) {
   const createGroup = async () => {
     if (!newName.trim()) {
       setCreateError("Give the group a name");
+      return;
+    }
+    if (!isSafeText(newName)) {
+      setCreateError("Group name can't contain < or > characters");
       return;
     }
     setCreateError("");
@@ -487,7 +492,7 @@ function Groups({ onTotalChange, onWalletChange }) {
                 type="button"
                 onClick={() => setNewType(t.key)}
                 className={cn(
-                  "flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl border text-xs font-semibold transition-all duration-200",
+                  "flex-1 flex flex-col items-center gap-1.5 py-2 rounded-sm border text-xs font-semibold transition-all duration-200",
                   newType === t.key
                     ? "bg-gold/10 border-gold/40 text-gold"
                     : "bg-white/[0.03] border-white/[0.06] text-muted-foreground hover:border-gold/20",
@@ -511,7 +516,7 @@ function Groups({ onTotalChange, onWalletChange }) {
                       type="button"
                       onClick={() => toggleNewMember(f.id)}
                       className={cn(
-                        "flex items-center justify-between gap-2 text-left text-sm rounded-lg px-3 py-2 transition-colors",
+                        "flex items-center justify-between gap-2 text-left text-sm rounded-md px-3 py-1.5 transition-colors",
                         selected
                           ? "bg-gold/10 text-gold"
                           : "bg-white/[0.03] text-foreground hover:bg-white/[0.06]",

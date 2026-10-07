@@ -17,7 +17,7 @@ const flowCardClass =
 const flowHeaderClass =
   "absolute left-0 w-full bottom-full mb-3 grid grid-cols-[1fr_auto_1fr] items-center text-white";
 const backBtnClass =
-  "col-start-1 justify-self-start h-auto gap-1 px-1 py-1.5 text-white text-[0.9rem] font-semibold transition-opacity duration-200 hover:bg-transparent hover:text-white hover:opacity-75 [&_svg]:size-auto";
+  "col-start-1 justify-self-start h-auto gap-1 px-1 py-1 text-white text-[0.9rem] font-semibold transition-opacity duration-200 hover:bg-transparent hover:text-white hover:opacity-75 [&_svg]:size-auto";
 
 function Notifications({ onBack }) {
   const [notifications, setNotifications] = useState([]);
@@ -63,8 +63,8 @@ function Notifications({ onBack }) {
                 onClick={() => markRead(n)}
                 className={
                   n.read
-                    ? "relative flex gap-3 bg-secondary border border-input rounded-xl px-4 py-[0.85rem] text-left w-full transition-colors duration-300"
-                    : "relative flex gap-3 bg-[var(--gold-pale)] border border-[var(--gold-border)] rounded-xl px-4 py-[0.85rem] text-left w-full cursor-pointer transition-colors duration-300"
+                    ? "relative flex gap-3 bg-secondary border border-input rounded-sm px-4 py-[0.6rem] text-left w-full transition-colors duration-300"
+                    : "relative flex gap-3 bg-[var(--gold-pale)] border border-[var(--gold-border)] rounded-sm px-4 py-[0.6rem] text-left w-full cursor-pointer transition-colors duration-300"
                 }
               >
                 <div className="w-9 h-9 rounded-full bg-white/[0.06] text-gold flex items-center justify-center shrink-0">

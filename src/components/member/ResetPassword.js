@@ -10,12 +10,11 @@ const homeButtonClass =
 const inputFieldClass =
   'h-auto w-full rounded-sm bg-secondary border-input px-3 py-3 text-base text-foreground focus-visible:ring-0 focus-visible:border-gold shadow-none';
 const submitBtnClass =
-  'h-auto w-full rounded-sm px-3 py-3 text-base font-bold text-[#1a202c] bg-gold hover:bg-gold-dark shadow-none';
+  'h-auto w-full rounded-sm px-3 py-2 text-base font-bold text-[#1a202c] bg-gold hover:bg-gold-dark shadow-none';
 
 function ResetPassword({ onBack }) {
   const [step, setStep] = useState('email');
   const [email, setEmail] = useState('');
-  const [fullName, setFullName] = useState('User');
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -53,7 +52,6 @@ function ResetPassword({ onBack }) {
     try {
       const res = await axiosInstance.post('/api/reset-password-email', { email: trimmedEmail });
       if (res.data.success) {
-        setFullName(res.data.fullName || 'User');
         setEmail(trimmedEmail);
         setStep('otp');
         setRemainingTime(120);
@@ -95,7 +93,7 @@ function ResetPassword({ onBack }) {
       });
 
       if (res.data.result === 'valid') {
-        navigate('/components/member/set-new-password', { state: { email } });
+        navigate('/set-new-password', { state: { email } });
       } else if (res.data.result === 'locked') {
         setIsBlocked(true);
         setError('Too many invalid attempts. Account temporarily locked.');

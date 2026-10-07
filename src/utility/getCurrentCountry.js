@@ -25,7 +25,7 @@ export async function getCurrentCountry(countries = []) {
 
     // Step 2: If no name match, match by ISO code
     if (!matchedCountry && countryCodeIso) {
-      matchedCountry = countries.find(country => country.isoCode === countryCodeIso);
+      matchedCountry = countries.find(country => country.flag === countryCodeIso);
     }
 
     // Step 3: Special handling for +1 — prefer United States

@@ -53,9 +53,10 @@ const DEV_BYPASS_AUTH = process.env.REACT_APP_BYPASS_AUTH === "true";
 // Top-bar search results — static services plus whatever friends match.
 const SEARCH_SERVICES = [
   { id: "send", label: "Send Money", section: "send" },
-  { id: "add-money", label: "Add Money", section: "add-money" },
+  { id: "add-money", label: "Deposit", section: "add-money" },
   { id: "withdraw", label: "Withdraw", section: "withdraw" },
   { id: "groups", label: "Groups", section: "groups" },
+  { id: "reports", label: "Reports", section: "reports" },
 ];
 
 const searchResultItemClass =
@@ -64,11 +65,8 @@ const searchResultItemClass =
 /* ─── Footer — copied from App.js's landing-page Footer ─── */
 function Footer() {
   return (
-    <footer className="bg-[rgba(13,17,23,0.85)] backdrop-blur-[12px] border-t-[0.5px] border-t-border">
-      {/* Extra bottom padding on mobile clears the fixed bottom nav bar
-      (70px + safe-area-inset), which would otherwise sit on top of and
-      hide the last bit of footer content when scrolled to the end. */}
-      <div className="flex items-center justify-between max-w-[1280px] mx-auto py-5 px-6 flex-wrap gap-4 max-[768px]:flex-col max-[768px]:items-center max-[768px]:text-center max-[768px]:gap-5 max-[768px]:pt-6 max-[768px]:px-5 max-[768px]:pb-24">
+    <footer className="mt-8 bg-[rgba(13,17,23,0.85)] backdrop-blur-[12px] border-t-[0.5px] border-t-border max-[768px]:mx-[4%] max-[768px]:mb-4 max-[768px]:rounded-2xl max-[768px]:border-t-0 max-[768px]:border max-[768px]:border-white/[0.06] max-[768px]:overflow-hidden">
+      <div className="flex items-center justify-between max-w-[1280px] mx-auto py-5 px-6 flex-wrap gap-4 max-[768px]:flex-col max-[768px]:items-center max-[768px]:text-center max-[768px]:gap-5 max-[768px]:pt-6 max-[768px]:px-5 max-[768px]:pb-6">
         <div className="flex items-center gap-2.5 max-[768px]:flex-col max-[768px]:gap-2">
           <img
             src="/images/payzarc.png"
@@ -117,8 +115,21 @@ export default function Dashboard() {
   const searchRef = useRef(null);
   const notifRef = useRef(null);
   const lastScrollY = useRef(0);
-  const balanceCardElRef = useRef(null);
-  const snapInFlightRef = useRef(false);
+  // Home.js's phone/balance card — scrolled into view when a search result
+  // opens one of its flows, so the flow isn't left off-screen.
+  const balanceCardRef = useRef(null);
+
+  // Runs after Home has committed (child effects/refs land first), so the
+  // ref is already attached even when the search jumped here from another
+  // page.
+  useEffect(() => {
+    if (navigateRequest) {
+      balanceCardRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [navigateRequest]);
 
   // Only the search results and the notification preview need manual
   // outside-click handling — the user dropdown is a Radix DropdownMenu,
@@ -142,62 +153,22 @@ export default function Dashboard() {
   // Hides the topbar while scrolling down (past its own height, so it
   // doesn't flicker right at the top) and brings it back the moment the
   // user scrolls up at all — the standard "proper" hide-on-scroll pattern.
-  //
-  // Also owns the "snap the hero away" behavior: the first (non-trivial)
-  // scroll on the home page jumps straight to the balance card's resting
-  // position instead of stopping mid-hero, landing its top right under the
-  // still-visible sticky header. Both live in one listener (rather than a
-  // second one inside Home) so they can't race — while a snap is in
-  // flight the hide-on-scroll check is skipped entirely, otherwise it'd
-  // hide the header the instant scrollY crosses 96 mid-animation, which
-  // is exactly where we're trying to land it looking untouched.
+  // Below 768px the page itself no longer scrolls (the mobile app shell
+  // pins full-screen and only its <main> scrolls internally), so this is
+  // fed from both the window and <main>'s onScroll — whichever one is
+  // actually the scroll container at the current width fires, the other
+  // stays inert.
+  const handleScroll = (currentY) => {
+    const scrolledPastBar = currentY > 96;
+    const scrollingDown = currentY > lastScrollY.current;
+    setHideTopBar(scrolledPastBar && scrollingDown);
+    lastScrollY.current = currentY;
+  };
   useEffect(() => {
-    // ponytail: matches the header's own h-[68px] below — not pulled into
-    // a shared constant for one number used in two files.
-    const HEADER_HEIGHT = 68;
-    const SLIGHT_SCROLL_PX = 12;
-
-    const handleScroll = () => {
-      const currentY = window.scrollY;
-
-      if (snapInFlightRef.current) {
-        lastScrollY.current = currentY;
-        return;
-      }
-
-      const card = balanceCardElRef.current;
-      if (card) {
-        const target = Math.round(
-          card.getBoundingClientRect().top + currentY - HEADER_HEIGHT,
-        );
-        if (currentY > SLIGHT_SCROLL_PX && currentY < target) {
-          snapInFlightRef.current = true;
-          setHideTopBar(false);
-          window.scrollTo({ top: target, behavior: "smooth" });
-          const finishSnap = () => {
-            snapInFlightRef.current = false;
-            window.removeEventListener("scroll", checkArrived);
-          };
-          const checkArrived = () => {
-            if (Math.abs(window.scrollY - target) < 2) finishSnap();
-          };
-          window.addEventListener("scroll", checkArrived, { passive: true });
-          // Safety net in case the smooth scroll gets interrupted (e.g. the
-          // user grabs the scrollbar mid-animation) and never fires close
-          // enough to `target` for checkArrived to release the guard.
-          setTimeout(finishSnap, 700);
-          lastScrollY.current = currentY;
-          return;
-        }
-      }
-
-      const scrolledPastBar = currentY > 96;
-      const scrollingDown = currentY > lastScrollY.current;
-      setHideTopBar(scrolledPastBar && scrollingDown);
-      lastScrollY.current = currentY;
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    const onWindowScroll = () => handleScroll(window.scrollY);
+    window.addEventListener("scroll", onWindowScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onWindowScroll);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -244,7 +215,7 @@ export default function Dashboard() {
         } else {
           localStorage.removeItem("accessToken");
           localStorage.removeItem("user");
-          navigate("/components/member/login");
+          navigate("/login");
         }
       } finally {
         setLoading(false);
@@ -271,7 +242,7 @@ export default function Dashboard() {
     } finally {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("user");
-      navigate("/components/member/login");
+      navigate("/login");
     }
   };
 
@@ -347,7 +318,7 @@ export default function Dashboard() {
             onPageChange={handleNavClick}
             user={user}
             navigateRequest={navigateRequest}
-            balanceCardRef={balanceCardElRef}
+            balanceCardRef={balanceCardRef}
           />
         );
       case "groups":
@@ -389,7 +360,7 @@ export default function Dashboard() {
             </p>
             <button
               onClick={() => setActivePage("home")}
-              className="py-[0.8rem] px-8 bg-gold border-none rounded-[3rem] font-bold cursor-pointer transition-all duration-[250ms] ease-in-out hover:bg-gold-dark hover:-translate-y-0.5"
+              className="py-[0.6rem] px-8 bg-gold border-none rounded-md font-bold cursor-pointer transition-all duration-[250ms] ease-in-out hover:bg-gold-dark hover:-translate-y-0.5"
             >
               Back to Overview
             </button>
@@ -401,7 +372,7 @@ export default function Dashboard() {
             onPageChange={handleNavClick}
             user={user}
             navigateRequest={navigateRequest}
-            balanceCardRef={balanceCardElRef}
+            balanceCardRef={balanceCardRef}
           />
         );
     }
@@ -425,11 +396,30 @@ export default function Dashboard() {
         <div className="absolute rounded-full border border-[rgba(var(--gold-rgb),0.07)] pointer-events-none w-[600px] h-[600px] -top-[160px] left-1/2 -translate-x-1/2" />
         <div className="absolute rounded-full border border-[rgba(var(--gold-rgb),0.07)] pointer-events-none w-[380px] h-[380px] -top-[60px] left-1/2 -translate-x-1/2" />
 
-        <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+        {/* Below 768px this becomes the persistent mobile "app shell": fixed
+        full-viewport, header/main/nav stacked as flex children instead of
+        flowing in the document. <main> is the only thing that scrolls
+        inside it, so the topbar and bottom nav both stay pinned in place —
+        the nav lives inside this shell (a real flex child) instead of a
+        separately fixed overlay. Desktop is untouched (relative, normal
+        page scroll, no bottom nav). */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-screen max-[768px]:fixed max-[768px]:inset-0 max-[768px]:z-[60] max-[768px]:h-[100dvh] max-[768px]:min-h-0 max-[768px]:bg-[var(--bg)] max-[768px]:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]">
+          {/* Notch — a real device's status-bar cutout has no equivalent in
+          a browser tab, so this fakes one (same pill as PhoneFrame's own
+          notch) to sell "this is a phone" now that the shell fills the
+          whole screen instead of floating as a small mockup. Clears an
+          actual notch/Dynamic Island via env(safe-area-inset-top) so it
+          doesn't collide with one when this runs as an installed PWA. */}
+          <div
+            className="hidden max-[768px]:flex shrink-0 justify-center items-end pb-1 h-[22px] bg-[rgba(13,17,23,0.85)] [backdrop-filter:blur(20px)_saturate(1.2)] [-webkit-backdrop-filter:blur(20px)_saturate(1.2)]"
+            style={{ paddingTop: "env(safe-area-inset-top)" }}
+          >
+            <div className="w-[56px] h-[7px] bg-black/60 border border-white/[0.08] rounded-full" />
+          </div>
           {/* Simplified Top Bar */}
           <header
             className={cn(
-              "h-[68px] bg-[rgba(13,17,23,0.85)] [backdrop-filter:blur(20px)_saturate(1.2)] [-webkit-backdrop-filter:blur(20px)_saturate(1.2)] border-b border-white/[0.04] flex items-center justify-center sticky top-0 z-[100] w-full transition-transform duration-300 ease-in-out",
+              "h-[68px] bg-[rgba(13,17,23,0.85)] [backdrop-filter:blur(20px)_saturate(1.2)] [-webkit-backdrop-filter:blur(20px)_saturate(1.2)] border-b border-white/[0.04] flex items-center justify-center sticky top-0 z-[100] w-full shrink-0 transition-transform duration-300 ease-in-out",
               hideTopBar && "-translate-y-full",
             )}
           >
@@ -561,7 +551,7 @@ export default function Dashboard() {
                                 <button
                                   key={n.id}
                                   type="button"
-                                  className="flex gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 text-left transition-colors"
+                                  className="flex gap-3 px-3 py-2 rounded-md hover:bg-white/5 text-left transition-colors"
                                   onClick={() => {
                                     markNotificationRead(n);
                                     setIsNotifOpen(false);
@@ -593,7 +583,7 @@ export default function Dashboard() {
                         )}
                         <button
                           type="button"
-                          className="w-full mt-1 py-2 text-xs font-semibold text-gold hover:opacity-80 transition-opacity"
+                          className="w-full mt-1 py-1.5 text-xs font-semibold text-gold hover:opacity-80 transition-opacity"
                           onClick={() => {
                             setIsNotifOpen(false);
                             handleNavClick("notifications");
@@ -608,7 +598,7 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => handleNavClick("account")}
-                    className="group flex items-center gap-2.5 pl-1 pr-2 py-1 rounded-xl cursor-pointer transition-colors duration-200 hover:bg-white/[0.04]"
+                    className="group flex items-center gap-2.5 pl-1 pr-2 py-0.5 rounded-sm cursor-pointer transition-colors duration-200 hover:bg-white/[0.04]"
                   >
                     <img
                       src={
@@ -631,72 +621,88 @@ export default function Dashboard() {
             </div>
           </header>
 
-          {/* Content Area */}
-          <main className="flex-1 pt-12 pb-8 max-[768px]:pt-4 max-[768px]:pb-24">
-            <div className="max-w-[1400px] mx-auto px-[4%]">
+          {/* Content Area — rounded top corners + a faint glass surface (same
+          bg-white/[0.0X] + border-white/[0.06] language as the app's other
+          panels) so it reads as a distinct rounded sheet sitting under the
+          flat topbar, instead of content floating directly on the page bg. */}
+          <main
+            // flex-col + flex-1 content: Footer sits flush at the bottom of
+            // the sheet (no padding strip under it), and stays pinned there
+            // when the page is shorter than the screen.
+            className="flex-1 flex flex-col pt-12 max-[768px]:pt-4 max-[768px]:pb-6 max-[768px]:min-h-0 max-[768px]:overflow-y-auto max-[768px]:overflow-x-hidden bg-white/[0.015] border-t border-white/[0.06] rounded-t-[28px]"
+            onScroll={(e) => handleScroll(e.currentTarget.scrollTop)}
+          >
+            <div className="flex-1 w-full max-w-[1400px] mx-auto px-[4%]">
               <div key={activePage} className="animate-flow-fade-in">
                 {renderContent()}
               </div>
             </div>
+
+            <Footer />
           </main>
 
-          <Footer />
+          {/* Mobile bottom tab bar — the only way to reach Groups/History/
+          Account on a phone was previously buried inside Home's own content
+          (its money-flow tabs, or the Recent Activity "View all" link).
+          Desktop keeps relying on the topbar + in-page links, so this only
+          shows under 768px. A shrink-0 flex child of the app shell above
+          (not a fixed overlay), so it's always the last thing in the shell
+          instead of floating over whatever's scrolled to the bottom. Reads
+          as a rounded "dock" inset from the screen edges, flat bg + border
+          (no elevation shadow), with a gold pill behind the active tab
+          instead of just a color change. */}
+          <div className="hidden max-[768px]:block shrink-0 px-4 pt-2 [padding-bottom:calc(0.85rem+env(safe-area-inset-bottom))]">
+            <nav className="flex items-center justify-around gap-1 h-[64px] px-2 rounded-[24px] bg-card/80 border border-white/[0.06] [backdrop-filter:blur(24px)_saturate(1.2)] [-webkit-backdrop-filter:blur(24px)_saturate(1.2)]">
+              {MOBILE_NAV_TABS.map(({ key, label, icon: Icon, fab }) => {
+                // "Send" doesn't have its own activePage — it opens Home's
+                // internal send flow via the same goToSection helper the
+                // topbar search's "Send Money" result uses, so it has no
+                // "active" state of its own; it's drawn as a raised circle
+                // instead of a tab.
+                if (fab) {
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => goToSection("send")}
+                      aria-label={label}
+                      className="flex-1 h-full flex items-center justify-center"
+                    >
+                      <span className="w-12 h-12 rounded-full bg-gradient-to-b from-gold to-gold-dark text-black flex items-center justify-center transition-transform duration-200 active:scale-90">
+                        <Icon size={22} />
+                      </span>
+                    </button>
+                  );
+                }
+                const active = activePage === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => handleNavClick(key)}
+                    className="flex-1 h-full flex items-center justify-center"
+                  >
+                    <span
+                      className={cn(
+                        "flex flex-col items-center justify-center gap-0.5 w-16 py-1.5 rounded-2xl text-[11px] font-medium transition-all duration-200 active:scale-95",
+                        active
+                          ? "text-gold bg-gold/10"
+                          : "text-[var(--muted)]",
+                      )}
+                    >
+                      <Icon size={20} />
+                      {label}
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
+            {/* Home indicator — the other half of the realistic-phone cue
+            (paired with the notch above), sitting in the same safe-area
+            padding as the dock instead of adding its own space. */}
+            <div className="w-[100px] h-[4px] bg-white/25 rounded-full mx-auto mt-2" />
+          </div>
         </div>
-      </div>
-
-      {/* Mobile bottom tab bar — the only way to reach Groups/History/Account
-          on a phone was previously buried inside Home's own content (its
-          money-flow tabs, or the Recent Activity "View all" link). Desktop
-          keeps relying on the topbar + in-page links, so this only shows
-          under 768px. Floats as a rounded "dock" inset from the screen
-          edges, flat bg + border (no elevation shadow) instead of a flat
-          full-width bar, with a gold pill behind the active tab instead of
-          just a color change. */}
-      <div className="hidden max-[768px]:block fixed bottom-0 inset-x-0 z-[100] px-4 [padding-bottom:calc(0.85rem+env(safe-area-inset-bottom))]">
-        <nav className="flex items-center justify-around gap-1 h-[64px] px-2 rounded-[24px] bg-card/80 border border-white/[0.06] [backdrop-filter:blur(24px)_saturate(1.2)] [-webkit-backdrop-filter:blur(24px)_saturate(1.2)]">
-          {MOBILE_NAV_TABS.map(({ key, label, icon: Icon, fab }) => {
-            // "Send" doesn't have its own activePage — it opens Home's
-            // internal send flow via the same goToSection helper the topbar
-            // search's "Send Money" result uses, so it has no "active" state
-            // of its own; it's drawn as a raised circle instead of a tab.
-            if (fab) {
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => goToSection("send")}
-                  aria-label={label}
-                  className="flex-1 h-full flex items-center justify-center"
-                >
-                  <span className="w-12 h-12 rounded-full bg-gradient-to-b from-gold to-gold-dark text-black flex items-center justify-center transition-transform duration-200 active:scale-90">
-                    <Icon size={22} />
-                  </span>
-                </button>
-              );
-            }
-            const active = activePage === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => handleNavClick(key)}
-                className="flex-1 h-full flex items-center justify-center"
-              >
-                <span
-                  className={cn(
-                    "flex flex-col items-center justify-center gap-0.5 w-16 py-1.5 rounded-2xl text-[11px] font-medium transition-all duration-200 active:scale-95",
-                    active
-                      ? "text-gold bg-gold/10"
-                      : "text-[var(--muted)]",
-                  )}
-                >
-                  <Icon size={20} />
-                  {label}
-                </span>
-              </button>
-            );
-          })}
-        </nav>
       </div>
     </div>
   );

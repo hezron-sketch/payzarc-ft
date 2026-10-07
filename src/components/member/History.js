@@ -5,8 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import TransactionDetails from "./TransactionDetails";
 import { transactionsApi } from "../../utility/axiosInstance";
+import { generateStatementPDF } from "../../utility/generateStatement";
 
 const PAGE_SIZE = 25;
+
+const TYPE_OPTIONS = [
+  { value: "", label: "All types" },
+  { value: "DEBIT", label: "Sent" },
+  { value: "CREDIT", label: "Received" },
+];
 
 const cellClass = (compact) =>
   cn(
@@ -38,7 +45,7 @@ const statusPillClass = (status, compact) => {
   );
 };
 const pageBtnClass =
-  "h-auto rounded-md px-4 py-2 text-[0.85rem] font-semibold bg-white/[0.06] border border-border text-foreground hover:bg-white/[0.12]";
+  "h-auto rounded-sm px-4 py-1.5 text-[0.85rem] font-semibold bg-white/[0.06] border border-border text-foreground hover:bg-white/[0.12]";
 
 // `compact` is for callers that only have a narrow column to work with
 // (Home.js's "View all" toggle inside Recent Activity, now a fixed ~420px
@@ -62,6 +69,37 @@ function History({
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [transactionType, setTransactionType] = useState("");
+  const [wallet, setWallet] = useState(null);
+
+  useEffect(() => {
+    transactionsApi
+      .get("/api/balance/")
+      .then((res) => setWallet(res.data))
+      .catch(() => setWallet(null));
+  }, []);
+
+  // Applied client-side on top of whatever the API returns — the real
+  // backend is asked to filter server-side (params below), but the local
+  // mock server (server.js) ignores query params entirely and always
+  // returns every transaction, so this is what actually makes date/type
+  // filtering (and therefore the statement export) work when testing
+  // against it.
+  const applyFilters = (list) => {
+    const from = dateFrom ? new Date(dateFrom) : null;
+    const to = dateTo ? new Date(`${dateTo}T23:59:59.999`) : null;
+    return list.filter((tx) => {
+      if (transactionType && tx.transaction_type !== transactionType) {
+        return false;
+      }
+      if (from || to) {
+        const txDate = new Date(tx.created_at || tx.date || tx.timestamp);
+        if (from && txDate < from) return false;
+        if (to && txDate > to) return false;
+      }
+      return true;
+    });
+  };
 
   const fetchTransactions = async () => {
     setLoading(true);
@@ -72,6 +110,7 @@ function History({
       if (searchTerm.trim()) params.search = searchTerm.trim();
       if (dateFrom) params.date_from = dateFrom;
       if (dateTo) params.date_to = dateTo;
+      if (transactionType) params.type = transactionType;
 
       const response = await transactionsApi.get("/api/transactions/history/", {
         params,
@@ -81,7 +120,7 @@ function History({
       const txArray = Array.isArray(data)
         ? data
         : data.results || data.transactions || [];
-      setTransactions(txArray);
+      setTransactions(applyFilters(txArray));
       setPage(1);
       setError(null);
     } catch (err) {
@@ -99,6 +138,9 @@ function History({
 
   useEffect(() => {
     fetchTransactions();
+    // Load once on mount only — searches/date-filter changes trigger a
+    // fetch via handleSearch instead, not on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSearch = (e) => {
@@ -112,31 +154,41 @@ function History({
     return `${prefix}${amount.toFixed(2)}`;
   };
 
-  // Statement export — CSV of whatever's currently loaded (respects the
-  // active search filter), built client-side so no new dependency is
-  // needed for something this small.
+  // Statement export — branded PDF of whatever's currently loaded (respects
+  // the active search/date/type filters), matching the receipt's Payzarc
+  // palette. Passes the raw transactions through so the PDF can total up
+  // its own summary (sent/received per currency) instead of working off
+  // pre-formatted display strings.
   const exportStatement = () => {
-    const header = ["Date", "Recipient", "Currency", "Amount", "Status"];
-    const rows = transactions.map((tx) => [
-      new Date(tx.created_at || tx.date || tx.timestamp).toLocaleDateString(),
-      tx.name || tx.recipient_name || tx.sender_name || "N/A",
-      tx.currency || "USD",
-      formatAmount(tx),
-      tx.status || (tx.transaction_type === "CREDIT" ? "Received" : "Paid"),
-    ]);
-    const csv = [header, ...rows]
-      .map((row) =>
-        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
-      )
-      .join("\n");
-    const url = URL.createObjectURL(
-      new Blob([csv], { type: "text/csv;charset=utf-8;" }),
-    );
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `Payzarc_Statement_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    // Closing balance is the wallet's current balance (no historical ledger
+    // to look up an exact past-dated balance from). Opening balance is
+    // worked backwards from it using only same-currency transactions in the
+    // filtered set — a cross-currency transaction (e.g. a GHS receipt into
+    // a KES wallet) doesn't move the wallet's own balance by its face
+    // value, and there's no exchange rate here to convert it correctly.
+    let balanceSummary = null;
+    if (wallet?.currency) {
+      const netOwnCurrency = transactions
+        .filter((tx) => (tx.currency || "USD") === wallet.currency)
+        .reduce(
+          (sum, tx) =>
+            sum +
+            (tx.transaction_type === "CREDIT" ? 1 : -1) * Number(tx.amount || 0),
+          0,
+        );
+      balanceSummary = {
+        currency: wallet.currency,
+        closing: Number(wallet.balance || 0),
+        opening: Number(wallet.balance || 0) - netOwnCurrency,
+      };
+    }
+
+    generateStatementPDF(transactions, {
+      periodFrom: dateFrom,
+      periodTo: dateTo,
+      typeLabel: TYPE_OPTIONS.find((t) => t.value === transactionType)?.label,
+      balanceSummary,
+    });
   };
 
   const totalPages = Math.max(1, Math.ceil(transactions.length / PAGE_SIZE));
@@ -188,11 +240,25 @@ function History({
                 onChange={(e) => setDateTo(e.target.value)}
               />
             </div>
+            <div className="flex flex-col max-[640px]:flex-1">
+              <select
+                aria-label="Transaction type"
+                className="w-full h-11 rounded-xl border border-input bg-secondary text-foreground text-[0.85rem] px-3 focus-visible:outline-none focus-visible:border-gold"
+                value={transactionType}
+                onChange={(e) => setTransactionType(e.target.value)}
+              >
+                {TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </>
         )}
         <Button
           className={cn(
-            "h-11 rounded-xl font-bold shrink-0",
+            "h-9 rounded-sm font-bold shrink-0",
             compact
               ? "w-11 px-0 text-base"
               : "px-7 text-[0.9rem] max-[640px]:w-full",
@@ -203,15 +269,18 @@ function History({
         >
           {loading ? "..." : compact ? <Search size={16} /> : "Search"}
         </Button>
-        {!compact && transactions.length > 0 && (
+        {transactions.length > 0 && (
           <Button
             variant="ghost"
-            className={pageBtnClass}
+            className={cn(
+              pageBtnClass,
+              compact && "h-9 w-11 shrink-0 px-0",
+            )}
             onClick={exportStatement}
-            title="Export statement as CSV"
+            title="Download PDF statement"
           >
-            <Download size={16} className="mr-1.5" />
-            Export
+            <Download size={16} className={compact ? "" : "mr-1.5"} />
+            {!compact && "Export"}
           </Button>
         )}
       </div>

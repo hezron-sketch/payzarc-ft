@@ -223,13 +223,25 @@ const server = http.createServer((req, res) => {
       (normalizedPath === "/api/notifications/read" ||
         normalizedPath === "/notifications/read")
     ) {
-      const note = (db.notifications || []).find(
-        (n) => n.id === parsedBody.id,
-      );
+      const note = (db.notifications || []).find((n) => n.id === parsedBody.id);
       if (note) note.read = true;
       saveDb(db);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ success: true }));
+      return;
+    }
+
+    // ponytail: any recipient resolves; mirrors Django's response shape only.
+    if (req.method === "POST" && normalizedPath === "/api/recipient-lookup") {
+      const value = parsedBody.recipient_phone || "";
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: true,
+          recipient_found: true,
+          recipient: { name: `Mock User ${value.slice(-4)}`, phone: value },
+        }),
+      );
       return;
     }
 
@@ -292,7 +304,10 @@ const server = http.createServer((req, res) => {
       members: (g.members || [])
         .map((id) => db.favorites.find((f) => f.id === id))
         .filter(Boolean)
-        .map((f) => ({ ...f, contributed: (g.contributions || {})[f.id] || 0 })),
+        .map((f) => ({
+          ...f,
+          contributed: (g.contributions || {})[f.id] || 0,
+        })),
     });
 
     if (
@@ -396,9 +411,7 @@ const server = http.createServer((req, res) => {
       wallet.balance = Math.round((wallet.balance + amount) * 100) / 100;
       saveDb(db);
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({ group: populateGroup(group), balance: wallet }),
-      );
+      res.end(JSON.stringify({ group: populateGroup(group), balance: wallet }));
       return;
     }
 
@@ -410,6 +423,28 @@ const server = http.createServer((req, res) => {
     ) {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(db.transactions));
+      return;
+    }
+
+    // ponytail: ignores start/end; Reports.js re-filters by date client-side.
+    if (
+      req.method === "GET" &&
+      normalizedPath === "/api/reports/transactions"
+    ) {
+      const me = active(db, db.profile) || {};
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          role: "member",
+          user: {
+            name: [me.firstname, me.surname].filter(Boolean).join(" "),
+            username: me.username,
+            email: me.email,
+          },
+          profile: { phone_number: me.phone, country: me.residenceCountry },
+          transactions: db.transactions,
+        }),
+      );
       return;
     }
 

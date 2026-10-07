@@ -8,12 +8,12 @@ import { RotateCw } from 'lucide-react';
 const inputFieldClass =
   'h-auto w-full rounded-sm bg-secondary border-input px-2.5 py-2.5 text-base text-foreground focus-visible:ring-0 focus-visible:border-gold shadow-none';
 const setpswdButtonClass =
-  'h-auto w-full rounded-sm px-2.5 py-2.5 text-base font-bold text-[#1a202c] bg-gold hover:bg-gold-dark shadow-none flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed';
+  'h-auto w-full rounded-sm px-2.5 py-2 text-base font-bold text-[#1a202c] bg-gold hover:bg-gold-dark shadow-none flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed';
 const popupOverlayClass =
   'fixed inset-0 bg-black/50 flex justify-center items-center z-[1000]';
 const popupContentClass =
   'bg-card border border-border p-6 rounded-md max-w-[400px] w-[90%] text-center';
-const popupButtonClass = 'px-5 py-2.5 rounded-sm text-base h-auto shadow-none';
+const popupButtonClass = 'px-5 py-2 rounded-sm text-base h-auto shadow-none';
 
 function SetPassword({ onBack }) {
   const navigate = useNavigate();
@@ -142,7 +142,7 @@ function SetPassword({ onBack }) {
             </p>
             <div className="flex justify-center">
               <Button
-                onClick={() => navigate('/components/member/login')}
+                onClick={() => navigate('/login')}
                 className={`${popupButtonClass} font-bold bg-gold text-[#1a202c] hover:bg-gold-dark`}
               >
                 Now Login

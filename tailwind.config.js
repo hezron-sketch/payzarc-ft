@@ -36,20 +36,23 @@ module.exports = {
           foreground: "var(--gold)",
         },
         destructive: {
-          DEFAULT: "var(--danger)",
+          DEFAULT: "rgba(var(--danger-rgb), <alpha-value>)",
           foreground: "var(--white)",
         },
         border: "var(--border-subtle)",
         input: "var(--border-mid)",
         ring: "var(--gold)",
         // Extra brand-specific colors not covered by the semantic set above
+        // rgba(channels, <alpha-value>) instead of var(--hex) so modifiers
+        // like bg-gold/10 actually generate CSS — Tailwind can't add
+        // alpha to an opaque var(), it silently drops those classes.
         gold: {
-          DEFAULT: "var(--gold)",
-          dark: "var(--gold-dark)",
+          DEFAULT: "rgba(var(--gold-rgb), <alpha-value>)",
+          dark: "rgba(var(--gold-dark-rgb), <alpha-value>)",
         },
-        success: "var(--green)",
-        info: "var(--blue)",
-        pink: "var(--pink)",
+        success: "rgba(var(--green-rgb), <alpha-value>)",
+        info: "rgba(var(--blue-rgb), <alpha-value>)",
+        pink: "rgba(var(--pink-rgb), <alpha-value>)",
       },
       borderRadius: {
         lg: "var(--radius-lg)",
@@ -57,7 +60,7 @@ module.exports = {
         sm: "var(--radius-sm)",
       },
       fontFamily: {
-        sans: ["IBM Plex Sans", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica", "Arial", "sans-serif"],
+        sans: ["Google Sans", "IBM Plex Sans", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica", "Arial", "sans-serif"],
       },
       // Bespoke motion the app relied on before the shadcn migration —
       // registered here instead of reinvented, so migrated components can
