@@ -49,3 +49,13 @@ export const favouriteChipClass = (active) =>
 // live fetch failed.
 export const getRate = (liveRates, from, to) =>
   to === from ? 1 : (liveRates?.[to] ?? EXCHANGE_RATES[from]?.[to] ?? null);
+
+// Money endpoints can answer 200 yet report the transfer failed in the body
+// (status "failed"/"declined" or success:false). Throw so callers' catch
+// blocks treat it like any other failure.
+export const assertDelivered = (data, fallback) => {
+  const status = (data?.status || "").toLowerCase();
+  if (status === "failed" || status === "declined" || data?.success === false)
+    throw new Error(data?.reason || data?.message || fallback);
+  return data;
+};

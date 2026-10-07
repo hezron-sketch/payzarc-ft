@@ -35,13 +35,21 @@ import {
   methodBtnClass,
   favouriteChipClass,
   getRate,
+  assertDelivered,
 } from "./shared";
 
 // The one place a transaction credential goes out. Today that's the 4-digit
 // PIN; for biometrics, collect the assertion in the caller (or here) and
 // send it in place of / next to `transaction_pin`.
-const postTransfer = (url, body, pin) =>
-  transactionsApi.post(url, { ...body, transaction_pin: pin });
+// Resolves to the response body; rejects if the body says it failed.
+const postTransfer = async (url, body, pin) => {
+  const { data } = await transactionsApi.post(url, {
+    ...body,
+    transaction_pin: pin,
+    authentication_method: "PIN",
+  });
+  return assertDelivered(data, "Transaction could not be delivered.");
+};
 
 // ponytail: flat 1.5% with a $1 minimum — placeholder pricing shared by
 // single Send and Send to Many until a real fees/pricing API replaces it.
@@ -120,7 +128,35 @@ const detectRecipientCountry = (r) =>
   detectCountryFromPhone(r?.phone || r?.value || r?.phone_number);
 
 const errorMessage = (error, fallback) =>
-  error.response?.data?.message || error.response?.data?.error || fallback;
+  error.response
+    ? error.response.data?.message ||
+      error.response.data?.error ||
+      error.response.data?.reason ||
+      fallback
+    : error.message || fallback;
+
+// Resolves a phone/email to the registered account holder's name before any
+// money moves, so the confirm dialog shows who will actually receive it.
+// Throws (with the server's message) when the recipient isn't found.
+const lookupRecipientName = async (value) => {
+  const { data = {} } = await transactionsApi.post("/api/recipient-lookup/", {
+    recipient_phone: value,
+  });
+  if (data.success === false || data.recipient_found === false) {
+    throw new Error(
+      data.error || data.message || `Recipient ${value} could not be found.`,
+    );
+  }
+  const r = data.recipient || data;
+  return r.full_name || r.name || value;
+};
+
+const lookupErrorMessage = (error) =>
+  error.response?.data?.error ||
+  error.response?.data?.message ||
+  error.response?.data?.detail ||
+  error.message ||
+  "Unable to find this recipient.";
 
 function PinInput({ value, onChange }) {
   return (
@@ -206,6 +242,7 @@ export function SendMoney({
   // Step-by-step "money in transit" visual shown while a send is in
   // flight — 0 hides it, 1-3 tracks which leg of the journey is reached.
   const [sendProgressStep, setSendProgressStep] = useState(0);
+  const [lookingUp, setLookingUp] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState(initialRecipient);
   const [recipientSearchTerm, setRecipientSearchTerm] = useState(
     initialRecipient
@@ -346,13 +383,6 @@ export function SendMoney({
           selectedRecipient.phone ||
           selectedRecipient.phone_number)) ||
       withSenderCountryCode(recipientSearchTerm);
-    // Name for display only — recipientValue (a phone number/handle) is
-    // still what's sent to the API below.
-    const recipientDisplayName =
-      (selectedRecipient &&
-        (selectedRecipient.name || selectedRecipient.full_name)) ||
-      recipientValue;
-
     if (!recipientValue || !sendAmount || Number(sendAmount) <= 0) {
       showNotification("error", "Please fill in recipient and a valid amount");
       return;
@@ -368,9 +398,22 @@ export function SendMoney({
       return;
     }
 
+    // Name for display only — recipientValue (a phone number/handle) is
+    // still what's sent to the API below.
+    let recipientDisplayName;
+    setLookingUp(true);
+    try {
+      recipientDisplayName = await lookupRecipientName(recipientValue);
+    } catch (error) {
+      showNotification("error", lookupErrorMessage(error));
+      return;
+    } finally {
+      setLookingUp(false);
+    }
+
     openConfirmationDialog(
       "Confirm Send Money",
-      `Send ${sendAmount} to ${recipientDisplayName}?\nFee: ${senderCurrency} ${sendFee.toFixed(2)} · Total: ${senderCurrency} ${sendTotal.toFixed(2)}\n\nEnter your 4-digit PIN and click Yes to confirm.`,
+      `Send ${sendAmount} to ${recipientDisplayName} (${recipientValue})?\nFee: ${senderCurrency} ${sendFee.toFixed(2)} · Total: ${senderCurrency} ${sendTotal.toFixed(2)}\n\nEnter your 4-digit PIN and click Yes to confirm.`,
       async (pin, buttonChoice) => {
         if (buttonChoice !== "yes" || pin.length !== 4) {
           showNotification("error", "Transaction cancelled");
@@ -392,10 +435,13 @@ export function SendMoney({
           setSendProgressStep(2);
           await wait(700);
           setSendProgressStep(3);
-          await requestPromise;
+          const data = await requestPromise;
           await wait(600);
           setSendProgressStep(0);
-          showNotification("success", "Money sent successfully!");
+          showNotification(
+            "success",
+            data?.message || "Money delivered successfully!",
+          );
           refreshWallet();
           goToDashboard();
         } catch (error) {
@@ -533,8 +579,12 @@ export function SendMoney({
             onAddMoney={() => openSection("add-money")}
           />
         ) : (
-          <Button className={primaryBtnClass} onClick={handleSendMoney}>
-            Send
+          <Button
+            className={primaryBtnClass}
+            disabled={lookingUp}
+            onClick={handleSendMoney}
+          >
+            {lookingUp ? "Checking recipient..." : "Send"}
           </Button>
         )}
       </div>
@@ -732,9 +782,30 @@ export function SendToMany({
       return;
     }
 
+    // Verify every recipient up front so a wrong number can't slip in.
+    let names;
+    setSending(true);
+    try {
+      names = await Promise.all(
+        recipients.map((r) =>
+          lookupRecipientName(r.value || r.phone || r.phone_number),
+        ),
+      );
+    } catch (error) {
+      showNotification("error", lookupErrorMessage(error));
+      return;
+    } finally {
+      setSending(false);
+    }
+    const breakdown = recipients
+      .map(
+        (r, i) => `• ${names[i]}: ${senderCurrency} ${amountOf(r).toFixed(2)}`,
+      )
+      .join("\n");
+
     openConfirmationDialog(
       "Confirm Send to Many",
-      `Send ${senderCurrency} ${amountTotal.toFixed(2)} to ${recipients.length} people?\nFee: ${senderCurrency} ${feeTotal.toFixed(2)} · Total: ${senderCurrency} ${total.toFixed(2)}\n\nType 1 and click Yes to confirm.`,
+      `Send ${senderCurrency} ${amountTotal.toFixed(2)} to ${recipients.length} people?\n${breakdown}\nFee: ${senderCurrency} ${feeTotal.toFixed(2)} · Total: ${senderCurrency} ${total.toFixed(2)}\n\nType 1 and click Yes to confirm.`,
       async (typedValue, buttonChoice) => {
         if (typedValue !== "1" || buttonChoice !== "yes") {
           showNotification("error", "Transaction cancelled");
@@ -743,33 +814,43 @@ export function SendToMany({
         setSending(true);
         try {
           // No batch endpoint exists yet — loop the same single-transfer
-          // endpoint Send uses. ponytail: sequential, not Promise.all, so a
-          // failure partway through stops cleanly instead of firing every
-          // remaining transfer at once; swap for a real batch endpoint if
-          // this list ever needs to be large or atomic.
+          // endpoint Send uses. ponytail: sequential and not atomic — one
+          // recipient failing doesn't stop the rest; the tally below reports
+          // what went through. Swap for a real batch endpoint if this list
+          // ever needs to be large or all-or-nothing.
+          let delivered = 0;
+          let lastError = "";
           for (const r of recipients) {
             const amount = amountOf(r);
-            await postTransfer(
-              "/api/send-money/",
-              {
-                recipient_number: r.value || r.phone || r.phone_number,
-                amount,
-                fee: calcTransferFee(amount),
-              },
-              inputPin,
+            try {
+              await postTransfer(
+                "/api/send-money/",
+                {
+                  recipient_number: r.value || r.phone || r.phone_number,
+                  amount,
+                  fee: calcTransferFee(amount),
+                },
+                inputPin,
+              );
+              delivered++;
+            } catch (error) {
+              lastError = errorMessage(error, "Transfer failed");
+            }
+          }
+          const failed = recipients.length - delivered;
+          if (failed > 0) {
+            showNotification(
+              "error",
+              `${delivered} delivered, ${failed} unsuccessful. Reason: ${lastError}`,
+            );
+          } else {
+            showNotification(
+              "success",
+              `All ${delivered} transactions delivered successfully!`,
             );
           }
-          showNotification(
-            "success",
-            `Sent to ${recipients.length} people successfully!`,
-          );
           refreshWallet();
-          goToDashboard();
-        } catch (error) {
-          showNotification(
-            "error",
-            errorMessage(error, "Some transfers failed"),
-          );
+          if (delivered > 0) goToDashboard();
         } finally {
           setSending(false);
         }
@@ -1120,7 +1201,7 @@ export function Withdraw({
           // of the linked account (mirroring Add Money's bank_id/card_id) —
           // ponytail: guessed field names, fix if the backend uses something
           // else once those rails are implemented.
-          const { data } = await postTransfer(
+          const data = await postTransfer(
             "/api/withdraw/",
             {
               destination,
@@ -1133,7 +1214,10 @@ export function Withdraw({
             },
             inputPin,
           );
-          showNotification("success", "Withdrawal successful!");
+          showNotification(
+            "success",
+            data?.message || "Withdrawal delivered successfully!",
+          );
           setReceipt(data);
           refreshWallet();
         } catch (error) {

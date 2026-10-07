@@ -21,6 +21,7 @@ import {
   modalAddLinkClass,
   methodBtnClass,
   favouriteChipClass,
+  assertDelivered,
 } from "./shared";
 
 const EMPTY_CARD = { cardholderName: "", cardNumber: "", expiry: "" };
@@ -144,7 +145,7 @@ function AddMoney({
         try {
           // NOTE: guessed endpoint, following the /api/send-money/ pattern —
           // point this at your real deposit/top-up endpoint if different.
-          await transactionsApi.post("/api/add-money/", {
+          const { data } = await transactionsApi.post("/api/add-money/", {
             amount: parseFloat(addAmount),
             source: category,
             ...(category === "mobile" && {
@@ -154,13 +155,19 @@ function AddMoney({
             ...(category === "bank" && { bank_id: selectedBankId }),
             ...(category === "card" && { card_id: selectedCardId }),
           });
-          showNotification("success", "Money added successfully!");
+          assertDelivered(data, "Add money request failed.");
+          showNotification(
+            "success",
+            data?.message || "Money added successfully!",
+          );
           refreshWallet();
           goToDashboard();
         } catch (error) {
           const errorMsg =
             error.response?.data?.message ||
             error.response?.data?.error ||
+            error.response?.data?.reason ||
+            (!error.response && error.message) ||
             "Deposit failed";
           showNotification("error", errorMsg);
         }
