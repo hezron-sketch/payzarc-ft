@@ -66,7 +66,9 @@ const YesNoPopup = ({
               setError("");
             }}
             placeholder={
-              requirePin ? "****" : "Type exactly 1, then click Yes"
+              requirePin
+                ? "PIN, or blank for Face ID"
+                : "Type exactly 1, then click Yes"
             }
             className="h-auto w-full rounded-xl bg-secondary border-input px-3.5 py-3 text-base text-foreground placeholder:text-[var(--muted)] focus-visible:ring-0 focus-visible:border-gold shadow-none"
             ref={inputRef}
@@ -97,13 +99,17 @@ const YesNoPopup = ({
             onClick={() => {
               if (isNotification) {
                 onClose(); // Just close for notifications
-              } else if (requirePin ? input.length === 4 : input === "1") {
+              } else if (
+                requirePin
+                  ? input.length === 4 || input === "" // blank → face verification
+                  : input === "1"
+              ) {
                 onSubmit(input, "yes");
                 onClose();
               } else {
                 setError(
                   requirePin
-                    ? "Enter your 4-digit PIN before clicking Yes"
+                    ? "Enter all 4 PIN digits, or clear it to use Face ID"
                     : "You must type exactly 1 before clicking Yes",
                 );
               }

@@ -1,9 +1,8 @@
 // Every money-out flow on the dashboard lives here: Send, Send to Many and
-// Withdraw. They're kept in one file on purpose — they all authorize with
-// the same transaction PIN, and postTransfer() below is the single place
-// that credential is attached to a request, so swapping/adding biometrics
-// (e.g. a WebAuthn assertion instead of, or alongside, the PIN) is a change
-// to that one function plus <PinInput>, not to each flow.
+// Withdraw. They're kept in one file on purpose — they all authorize the
+// same way (transaction PIN, or face verification when the PIN is left
+// blank; see authorize()), and postTransfer() below is the single place
+// that credential is attached to a request.
 import React, { useEffect, useState } from "react";
 import {
   Send,
@@ -24,6 +23,7 @@ import { EXCHANGE_RATES } from "../../utility/exchangeRates";
 import { getRegionProviders } from "../../utility/regionProviders";
 import { isValidEmail, isValidPhone } from "../../utility/validators";
 import BankPicker from "./BankPicker";
+import { useFaceAuth } from "./Face";
 import {
   formLabelClass,
   formInputClass,
@@ -38,18 +38,34 @@ import {
   assertDelivered,
 } from "./shared";
 
-// The one place a transaction credential goes out. Today that's the 4-digit
-// PIN; for biometrics, collect the assertion in the caller (or here) and
-// send it in place of / next to `transaction_pin`.
-// Resolves to the response body; rejects if the body says it failed.
-const postTransfer = async (url, body, pin) => {
-  const { data } = await transactionsApi.post(url, {
-    ...body,
-    transaction_pin: pin,
-    authentication_method: "PIN",
-  });
+// The one place a transaction credential goes out: `{ pin }` as JSON, or
+// `{ faceImage }` (a JPEG data URL from Face.js) as a multipart upload the
+// backend re-verifies. Resolves to the response body; rejects if the body
+// says it failed.
+const postTransfer = async (url, body, { pin, faceImage }) => {
+  let payload;
+  if (pin) {
+    payload = { ...body, transaction_pin: pin, authentication_method: "PIN" };
+  } else {
+    payload = new FormData();
+    Object.entries(body).forEach(([k, v]) => payload.append(k, String(v)));
+    payload.append("authentication_method", "FACE");
+    const blob = await (await fetch(faceImage)).blob();
+    payload.append("face_image", blob, "face_verification.jpg");
+  }
+  const { data } = await transactionsApi.post(url, payload);
   return assertDelivered(data, "Transaction could not be delivered.");
 };
+
+// A full PIN wins; a blank one falls back to face verification. Resolves to
+// postTransfer's credential, or null if the user cancelled the face scan.
+const authorize = async (pin, requestFace) => {
+  if (pin.length === 4) return { pin };
+  const faceImage = await requestFace();
+  return faceImage ? { faceImage } : null;
+};
+// Blank (→ face) or complete; anything in between is a typo.
+const pinIncomplete = (pin) => pin.length > 0 && pin.length < 4;
 
 // ponytail: flat 1.5% with a $1 minimum — placeholder pricing shared by
 // single Send and Send to Many until a real fees/pricing API replaces it.
@@ -161,7 +177,12 @@ const lookupErrorMessage = (error) =>
 function PinInput({ value, onChange }) {
   return (
     <>
-      <Label className={formLabelClass}>Transaction PIN</Label>
+      <Label className={formLabelClass}>
+        Transaction PIN
+        <span className="normal-case tracking-normal">
+          or leave blank for Face ID
+        </span>
+      </Label>
       <Input
         type="password"
         inputMode="numeric"
@@ -237,7 +258,9 @@ export function SendMoney({
   refreshWallet,
   goToDashboard,
   openSection,
+  user,
 }) {
+  const [requestFace, faceModal] = useFaceAuth(user?.email);
   const [sendAmount, setSendAmount] = useState("");
   // Step-by-step "money in transit" visual shown while a send is in
   // flight — 0 hides it, 1-3 tracks which leg of the journey is reached.
@@ -413,9 +436,11 @@ export function SendMoney({
 
     openConfirmationDialog(
       "Confirm Send Money",
-      `Send ${sendAmount} to ${recipientDisplayName} (${recipientValue})?\nFee: ${senderCurrency} ${sendFee.toFixed(2)} · Total: ${senderCurrency} ${sendTotal.toFixed(2)}\n\nEnter your 4-digit PIN and click Yes to confirm.`,
+      `Send ${sendAmount} to ${recipientDisplayName} (${recipientValue})?\nFee: ${senderCurrency} ${sendFee.toFixed(2)} · Total: ${senderCurrency} ${sendTotal.toFixed(2)}\n\nEnter your 4-digit PIN, or leave it blank to verify with your face, then click Yes.`,
       async (pin, buttonChoice) => {
-        if (buttonChoice !== "yes" || pin.length !== 4) {
+        const auth =
+          buttonChoice === "yes" ? await authorize(pin, requestFace) : null;
+        if (!auth) {
           showNotification("error", "Transaction cancelled");
           return;
         }
@@ -429,7 +454,7 @@ export function SendMoney({
               amount: parseFloat(sendAmount),
               fee: sendFee,
             },
-            pin,
+            auth,
           );
           await wait(700);
           setSendProgressStep(2);
@@ -666,6 +691,7 @@ export function SendMoney({
           </DialogContent>
         </Dialog>
       )}
+      {faceModal}
     </>
   );
 }
@@ -694,6 +720,7 @@ export function SendToMany({
   const [amounts, setAmounts] = useState({}); // key -> amount string
   const [inputPin, setInputPin] = useState("");
   const [sending, setSending] = useState(false);
+  const [requestFace, faceModal] = useFaceAuth(user?.email);
 
   // Stable identity for a recipient — favourites have an id, ad-hoc typed
   // numbers don't, so fall back to whatever value identifies them.
@@ -772,12 +799,12 @@ export function SendToMany({
     if (
       recipients.length === 0 ||
       recipients.some((r) => amountOf(r) <= 0) ||
-      inputPin.length !== 4 ||
+      pinIncomplete(inputPin) ||
       insufficientBalance
     ) {
       showNotification(
         "error",
-        "Enter an amount for every recipient and your 4-digit PIN",
+        "Enter an amount for every recipient, and a 4-digit PIN or leave it blank for Face ID",
       );
       return;
     }
@@ -807,7 +834,11 @@ export function SendToMany({
       "Confirm Send to Many",
       `Send ${senderCurrency} ${amountTotal.toFixed(2)} to ${recipients.length} people?\n${breakdown}\nFee: ${senderCurrency} ${feeTotal.toFixed(2)} · Total: ${senderCurrency} ${total.toFixed(2)}\n\nType 1 and click Yes to confirm.`,
       async (typedValue, buttonChoice) => {
-        if (typedValue !== "1" || buttonChoice !== "yes") {
+        const auth =
+          typedValue === "1" && buttonChoice === "yes"
+            ? await authorize(inputPin, requestFace)
+            : null;
+        if (!auth) {
           showNotification("error", "Transaction cancelled");
           return;
         }
@@ -830,7 +861,7 @@ export function SendToMany({
                   amount,
                   fee: calcTransferFee(amount),
                 },
-                inputPin,
+                auth,
               );
               delivered++;
             } catch (error) {
@@ -1066,6 +1097,7 @@ export function SendToMany({
           )}
         </>
       )}
+      {faceModal}
     </div>
   );
 }
@@ -1083,7 +1115,9 @@ export function Withdraw({
   openConfirmationDialog,
   refreshWallet,
   goToDashboard,
+  user,
 }) {
+  const [requestFace, faceModal] = useFaceAuth(user?.email);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [inputPin, setInputPin] = useState("");
   const [showPopup, setShowPopup] = useState(false);
@@ -1125,9 +1159,12 @@ export function Withdraw({
     if (
       !withdrawAmount ||
       Number(withdrawAmount) <= 0 ||
-      inputPin.length !== 4
+      pinIncomplete(inputPin)
     ) {
-      showNotification("error", "Enter an amount and 4-digit PIN");
+      showNotification(
+        "error",
+        "Enter an amount, and a 4-digit PIN or leave it blank for Face ID",
+      );
       return;
     }
     // Mpesa is only a real withdrawal rail in Kenya — default elsewhere to
@@ -1172,7 +1209,7 @@ export function Withdraw({
       !withdrawAmount ||
       Number(withdrawAmount) <= 0 ||
       !validDestination ||
-      inputPin.length !== 4
+      pinIncomplete(inputPin)
     ) {
       const destinationName =
         destination === "mpesa"
@@ -1182,7 +1219,7 @@ export function Withdraw({
             : "a valid agent number";
       showNotification(
         "error",
-        `Enter an amount, select ${destinationName}, and a 4-digit PIN`,
+        `Enter an amount and select ${destinationName}`,
       );
       return;
     }
@@ -1191,7 +1228,11 @@ export function Withdraw({
       "Confirm Withdrawal",
       `Withdraw ${displayCurrency}${withdrawAmount} to ${destinationLabel}?\n\nType 1 and click Yes to confirm.`,
       async (typedValue, buttonChoice) => {
-        if (typedValue !== "1" || buttonChoice !== "yes") {
+        const auth =
+          typedValue === "1" && buttonChoice === "yes"
+            ? await authorize(inputPin, requestFace)
+            : null;
+        if (!auth) {
           showNotification("error", "Transaction cancelled");
           return;
         }
@@ -1212,7 +1253,7 @@ export function Withdraw({
                   : { merchant_code: agentNumber }),
               amount: parseFloat(withdrawAmount),
             },
-            inputPin,
+            auth,
           );
           showNotification(
             "success",
@@ -1460,6 +1501,7 @@ export function Withdraw({
           </Button>
         </DialogContent>
       </Dialog>
+      {faceModal}
     </>
   );
 }
