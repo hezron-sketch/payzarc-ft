@@ -22,7 +22,7 @@ const ACTION_TILES = [
   { key: "withdraw", label: "Withdraw", icon: ArrowDownCircle },
   { key: "send", label: "Send", icon: Send },
   { key: "groups", label: "Groups", icon: UsersRound },
-  { key: "reports", label: "Reports", icon: FileText },
+  { key: "reports", label: "Transactions", icon: FileText },
 ];
 const BALANCE_CARD_ACTIONS = ["send", "withdraw"].map((key) =>
   ACTION_TILES.find((t) => t.key === key),
@@ -61,10 +61,11 @@ const phoneNotchClass =
   "top-0 w-[34%] h-[22px] rounded-b-[14px] max-[768px]:hidden";
 // Thin gold-on-transparent scrollbar for the screen's scrollable content
 // area — matches the bezel's gold accent instead of the browser default.
-// Firefox via scrollbar-width/-color, WebKit via the pseudo-element
-// arbitrary variants (no plugin needed, Tailwind supports both natively).
+// WebKit via the pseudo-element variants. Firefox via scrollbar-width/-color,
+// scoped to Firefox only: Chrome 121+ ignores ::-webkit-scrollbar entirely
+// once scrollbar-width/-color is set, falling back to its fat "thin" bar.
 const phoneScrollAreaClass =
-  "[scrollbar-width:thin] [scrollbar-color:rgba(var(--gold-rgb),0.35)_transparent] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[rgba(var(--gold-rgb),0.35)] [&::-webkit-scrollbar-thumb:hover]:bg-[rgba(var(--gold-rgb),0.55)]";
+  "supports-[-moz-appearance:none]:[scrollbar-width:thin] supports-[-moz-appearance:none]:[scrollbar-color:rgba(var(--gold-rgb),0.35)_transparent] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[rgba(var(--gold-rgb),0.35)] [&::-webkit-scrollbar-thumb:hover]:bg-[rgba(var(--gold-rgb),0.55)]";
 
 // Fixed w-[140px] h-12 — shared with the floating Send/Withdraw pills so
 // every action button on the card is the same size, not just the same

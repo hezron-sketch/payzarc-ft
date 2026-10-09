@@ -78,15 +78,13 @@ const statusTone = (status) => {
   return "completed";
 };
 
-const statusPillClass = (status) => {
-  const tone = statusTone(status);
-  return cn(
-    "text-[0.7rem] font-semibold rounded-full px-2 py-0.5 whitespace-nowrap",
-    tone === "completed" && "bg-gold text-black",
-    tone === "pending" && "bg-white/20 text-foreground",
-    tone === "failed" && "bg-destructive text-white",
-  );
-};
+// Plain colored text, not a pill: keeps each row to two short lines.
+const statusTextClass = (status) =>
+  ({
+    completed: "text-muted-foreground",
+    pending: "text-gold",
+    failed: "text-destructive",
+  })[statusTone(status)];
 
 const money = (value) =>
   Number(value || 0).toLocaleString(undefined, {
@@ -161,6 +159,15 @@ function StatTile({ label, value, sub, className }) {
   );
 }
 
+function LedgerRow({ label, value, className }) {
+  return (
+    <div className="flex justify-between gap-3">
+      <span className="text-muted-foreground truncate">{label}</span>
+      <span className={cn("whitespace-nowrap", className)}>{value}</span>
+    </div>
+  );
+}
+
 // Transaction report for a date range, from Django's /api/reports/
 // endpoints: summary totals, search/type/status filters, a paged list
 // (tap a row for details), full-column CSV, and server PDF/email statements.
@@ -169,6 +176,7 @@ function Reports({ showNotification }) {
   const [endDate, setEndDate] = useState("");
   const [transactions, setTransactions] = useState([]);
   const [account, setAccount] = useState(null);
+  const [wallet, setWallet] = useState(null); // { balance, currency }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -226,6 +234,13 @@ function Reports({ showNotification }) {
     };
   }, [rangeParams]);
 
+  useEffect(() => {
+    transactionsApi
+      .get("/api/balance/")
+      .then(({ data }) => setWallet(data))
+      .catch(() => setWallet(null));
+  }, []);
+
   // Options come from the data itself — the backend has no fixed enum.
   const typeOptions = useMemo(
     () => [...new Set(transactions.map(txType))].sort(),
@@ -238,14 +253,18 @@ function Reports({ showNotification }) {
 
   // Date range is re-applied client-side too, in case the backend (or the
   // local mock server) ignores start/end.
-  const filtered = useMemo(() => {
+  const inRange = useMemo(() => {
     const from = startDate ? new Date(startDate) : null;
     const to = endDate ? new Date(`${endDate}T23:59:59.999`) : null;
-    const term = searchTerm.trim().toLowerCase();
     return transactions.filter((tx) => {
       const d = new Date(txDate(tx));
-      if (from && d < from) return false;
-      if (to && d > to) return false;
+      return !(from && d < from) && !(to && d > to);
+    });
+  }, [transactions, startDate, endDate]);
+
+  const filtered = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    return inRange.filter((tx) => {
       if (typeFilter && txType(tx) !== typeFilter) return false;
       if (statusFilter && txStatus(tx) !== statusFilter) return false;
       if (!term) return true;
@@ -266,27 +285,50 @@ function Reports({ showNotification }) {
         .toLowerCase()
         .includes(term);
     });
-  }, [transactions, startDate, endDate, searchTerm, typeFilter, statusFilter]);
+  }, [inRange, searchTerm, typeFilter, statusFilter]);
 
   const summary = useMemo(() => {
-    const s = {
-      completed: 0,
-      pending: 0,
-      failed: 0,
-      credits: 0,
-      debits: 0,
-      fees: 0,
-    };
-    for (const tx of filtered) {
-      s[statusTone(txStatus(tx))]++;
-      s[isCredit(tx) ? "credits" : "debits"] += txAmount(tx);
-      s.fees += txFee(tx);
-    }
+    const s = { completed: 0, pending: 0, failed: 0 };
+    for (const tx of filtered) s[statusTone(txStatus(tx))]++;
     return s;
   }, [filtered]);
-  // Single-currency summary label; mixed-currency reports show no symbol.
-  const currencies = new Set(filtered.map(txCurrency).filter(Boolean));
-  const summaryCurrency = currencies.size === 1 ? [...currencies][0] : "";
+
+  // Statement that ties out: opening + in - out = closing. Only completed
+  // transactions in the wallet's currency move the balance (pending/failed
+  // don't, and other currencies can't be added to it). Uses the date range
+  // only, never search/type/status, or it would stop balancing.
+  // Closing = current balance minus whatever completed after the range.
+  // ponytail: assumes the list includes post-range transactions (the mock
+  // ignores start/end); if Django filters them out, past ranges' closing
+  // will read as today's balance. Upgrade: have the API return
+  // opening/closing balances.
+  const ledger = useMemo(() => {
+    if (!wallet) return null;
+    const currency = wallet.currency;
+    const counts = (tx) =>
+      statusTone(txStatus(tx)) === "completed" && txCurrency(tx) === currency;
+    const net = (tx) =>
+      (isCredit(tx) ? txAmount(tx) : -txAmount(tx)) - txFee(tx);
+    const to = endDate ? new Date(`${endDate}T23:59:59.999`) : null;
+    const after = to
+      ? transactions.filter((tx) => counts(tx) && new Date(txDate(tx)) > to)
+      : [];
+    const l = { currency, moneyIn: 0, moneyOut: 0, fees: 0, skipped: 0 };
+    for (const tx of inRange) {
+      if (!counts(tx)) {
+        l.skipped++;
+        continue;
+      }
+      if (isCredit(tx)) l.moneyIn += txAmount(tx);
+      else l.moneyOut += txAmount(tx);
+      l.fees += txFee(tx);
+    }
+    l.moneyOut += l.fees;
+    l.closing =
+      num(wallet.balance) - after.reduce((sum, tx) => sum + net(tx), 0);
+    l.opening = l.closing - l.moneyIn + l.moneyOut;
+    return l;
+  }, [wallet, transactions, inRange, endDate]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -410,19 +452,41 @@ function Reports({ showNotification }) {
         <StatTile
           label="Successful / Failed"
           value={`${summary.completed} / ${summary.failed}`}
-          sub={`Fees ${summaryCurrency} ${money(summary.fees)}`}
-        />
-        <StatTile
-          label="Money in"
-          value={`${summaryCurrency} ${money(summary.credits)}`}
-          className="text-success"
-        />
-        <StatTile
-          label="Money out"
-          value={`${summaryCurrency} ${money(summary.debits)}`}
-          className="text-destructive"
         />
       </div>
+
+      {ledger && (
+        <div className={cn(statTileClass, "flex flex-col gap-1.5 text-sm")}>
+          <LedgerRow
+            label="Opening balance"
+            value={`${ledger.currency} ${money(ledger.opening)}`}
+          />
+          <LedgerRow
+            label="Money in"
+            value={`+${money(ledger.moneyIn)}`}
+            className="text-success"
+          />
+          <LedgerRow
+            label={`Money out${ledger.fees ? ` (incl. ${money(ledger.fees)} fees)` : ""}`}
+            value={`-${money(ledger.moneyOut)}`}
+            className="text-destructive"
+          />
+          <div className="border-t border-white/[0.06] pt-1.5">
+            <LedgerRow
+              label="Closing balance"
+              value={`${ledger.currency} ${money(ledger.closing)}`}
+              className="font-bold"
+            />
+          </div>
+          {ledger.skipped > 0 && (
+            <p className="text-[0.7rem] text-muted-foreground m-0">
+              {ledger.skipped} pending, failed or non-{ledger.currency}{" "}
+              {ledger.skipped === 1 ? "transaction" : "transactions"} not
+              counted.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="relative">
         <Search
@@ -524,29 +588,36 @@ function Reports({ showNotification }) {
                 key={tx.id ?? `${txCode(tx)}-${idx}`}
                 type="button"
                 onClick={() => setSelectedTransaction(tx)}
-                className="flex items-center gap-3 w-full text-left rounded-xl px-2.5 py-2.5 hover:bg-white/[0.04] transition-colors"
+                className="flex w-full text-left rounded-xl px-2.5 py-2 hover:bg-white/[0.04] transition-colors"
               >
+                {/* Name + amount, then date + status. Code, fee, etc. live in
+                    the details popup (and the code is still searchable). */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate m-0">
-                    {txCounterparty(tx) || txType(tx).replaceAll("_", " ")}
-                  </p>
-                  <p className="text-[0.72rem] text-muted-foreground truncate m-0">
-                    {new Date(txDate(tx)).toLocaleDateString()} · {txCode(tx)}
-                  </p>
-                </div>
-                <div className="flex flex-col items-end gap-1 shrink-0">
-                  <span
-                    className={cn(
-                      "text-sm font-bold whitespace-nowrap",
-                      credit ? "text-success" : "text-destructive",
-                    )}
-                  >
-                    {credit ? "+" : "-"}
-                    {txCurrency(tx)} {money(txAmount(tx))}
-                  </span>
-                  <span className={statusPillClass(txStatus(tx))}>
-                    {txStatus(tx)}
-                  </span>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="text-sm font-semibold truncate m-0">
+                      {txCounterparty(tx) || txType(tx).replaceAll("_", " ")}
+                    </p>
+                    <span
+                      className={cn(
+                        "text-sm font-bold whitespace-nowrap shrink-0",
+                        credit ? "text-success" : "text-destructive",
+                      )}
+                    >
+                      {credit ? "+" : "-"}
+                      {txCurrency(tx)} {money(txAmount(tx))}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-3 text-[0.72rem]">
+                    <span className="text-muted-foreground">
+                      {new Date(txDate(tx)).toLocaleDateString(undefined, {
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </span>
+                    <span className={statusTextClass(txStatus(tx))}>
+                      {txStatus(tx)}
+                    </span>
+                  </div>
                 </div>
               </button>
             );

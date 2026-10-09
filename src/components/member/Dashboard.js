@@ -9,7 +9,6 @@ import { API_URL } from "../../utility/constants";
 import Home from "./Home";
 import Groups from "./Groups";
 import Friends from "./Friends";
-import History from "./History";
 import PaymentMethods from "./PaymentMethods";
 import Notifications from "./Notifications";
 
@@ -36,7 +35,9 @@ const MOBILE_NAV_TABS = [
   { key: "home", label: "Home", icon: LayoutDashboard },
   { key: "groups", label: "Groups", icon: UsersRound },
   { key: "send", label: "Send", icon: Send, fab: true },
-  { key: "history", label: "History", icon: HistoryIcon },
+  // Opens Home's combined Transactions screen (list + statements) in the
+  // phone, same as the topbar search result, instead of a separate page.
+  { key: "history", label: "History", icon: HistoryIcon, section: "reports" },
   { key: "account", label: "Account", icon: UserRound },
 ];
 
@@ -56,7 +57,7 @@ const SEARCH_SERVICES = [
   { id: "add-money", label: "Deposit", section: "add-money" },
   { id: "withdraw", label: "Withdraw", section: "withdraw" },
   { id: "groups", label: "Groups", section: "groups" },
-  { id: "reports", label: "Reports", section: "reports" },
+  { id: "reports", label: "Transactions", section: "reports" },
 ];
 
 const searchResultItemClass =
@@ -100,7 +101,6 @@ export default function Dashboard() {
   const [activePage, setActivePage] = useState("home");
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [friends, setFriends] = useState([]);
   // A one-off "go here" instruction for Home.js, set when a top-bar search
@@ -327,14 +327,6 @@ export default function Dashboard() {
             <Friends onSelectFriend={goToFriend} />
             <Groups />
           </div>
-        );
-      case "history":
-        return (
-          <History
-            selectedTransaction={selectedTransaction}
-            openDetailsPopup={(tx) => setSelectedTransaction(tx)}
-            closeDetailsPopup={() => setSelectedTransaction(null)}
-          />
         );
       case "account":
         return (
@@ -653,7 +645,7 @@ export default function Dashboard() {
           instead of just a color change. */}
           <div className="hidden max-[768px]:block shrink-0 px-4 pt-2 [padding-bottom:calc(0.85rem+env(safe-area-inset-bottom))]">
             <nav className="flex items-center justify-around gap-1 h-[64px] px-2 rounded-[24px] bg-card/80 border border-white/[0.06] [backdrop-filter:blur(24px)_saturate(1.2)] [-webkit-backdrop-filter:blur(24px)_saturate(1.2)]">
-              {MOBILE_NAV_TABS.map(({ key, label, icon: Icon, fab }) => {
+              {MOBILE_NAV_TABS.map(({ key, label, icon: Icon, fab, section }) => {
                 // "Send" doesn't have its own activePage — it opens Home's
                 // internal send flow via the same goToSection helper the
                 // topbar search's "Send Money" result uses, so it has no
@@ -679,7 +671,9 @@ export default function Dashboard() {
                   <button
                     key={key}
                     type="button"
-                    onClick={() => handleNavClick(key)}
+                    onClick={() =>
+                      section ? goToSection(section) : handleNavClick(key)
+                    }
                     className="flex-1 h-full flex items-center justify-center"
                   >
                     <span

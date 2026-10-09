@@ -129,34 +129,12 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
         "/api/transactions/history/?limit=5",
       );
       const txs = res.data.results || res.data.transactions || res.data || [];
-      setRecentTransactions(txs.slice(0, 3));
+      // Newest first: backend (and the mock) don't guarantee order.
+      const time = (tx) => new Date(tx.created_at || tx.date).getTime() || 0;
+      setRecentTransactions([...txs].sort((a, b) => time(b) - time(a)).slice(0, 5));
     } catch (err) {
-      setRecentTransactions([
-        {
-          id: 1,
-          type: "receive",
-          name: "John Doe",
-          amount: "+$250.00",
-          date: "Today, 2:30 PM",
-          status: "Completed",
-        },
-        {
-          id: 2,
-          type: "send",
-          name: "Netflix Subscription",
-          amount: "-$15.99",
-          date: "Yesterday",
-          status: "Completed",
-        },
-        {
-          id: 3,
-          type: "receive",
-          name: "Salary Deposit",
-          amount: "+$3,200.00",
-          date: "Oct 1, 2023",
-          status: "Completed",
-        },
-      ]);
+      console.error("Failed to fetch recent transactions", err);
+      setRecentTransactions([]);
     }
   };
 
@@ -329,7 +307,10 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
           </BalanceCard>
         </div>
 
-        <RecentActivity transactions={recentTransactions} />
+        <RecentActivity
+          transactions={recentTransactions}
+          onViewAll={() => openSection("reports")}
+        />
       </div>
 
       {activeSection === "dashboard" && (

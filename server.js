@@ -426,6 +426,45 @@ const server = http.createServer((req, res) => {
       return;
     }
 
+    // Statement: plain jsPDF table of the active range. ponytail: the real
+    // backend password-protects it; the mock doesn't.
+    if (
+      req.method === "GET" &&
+      normalizedPath === "/api/reports/statement/pdf"
+    ) {
+      const { start = "", end = "" } = parsedUrl.query;
+      const day = (tx) => String(tx.created_at).slice(0, 10);
+      const txs = db.transactions.filter(
+        (tx) => (!start || day(tx) >= start) && (!end || day(tx) <= end),
+      );
+      const { jsPDF } = require("jspdf");
+      const doc = new jsPDF();
+      doc.setFontSize(16).text("PayZarc Statement", 14, 18);
+      doc.setFontSize(9).text(`${start || "Start"} to ${end || "today"}`, 14, 25);
+      let y = 36;
+      txs.forEach((tx) => {
+        if (y > 280) (doc.addPage(), (y = 20));
+        const sign = tx.transaction_type === "CREDIT" ? "+" : "-";
+        doc.text(day(tx), 14, y);
+        doc.text(String(tx.name || "").slice(0, 30), 40, y);
+        doc.text(String(tx.status || ""), 120, y);
+        doc.text(`${sign}${tx.currency} ${Number(tx.amount).toFixed(2)}`, 196, y, { align: "right" });
+        y += 7;
+      });
+      res.writeHead(200, { "Content-Type": "application/pdf" });
+      res.end(Buffer.from(doc.output("arraybuffer")));
+      return;
+    }
+
+    if (
+      req.method === "POST" &&
+      normalizedPath === "/api/reports/statement/email"
+    ) {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ message: "Statement emailed (mock)." }));
+      return;
+    }
+
     // ponytail: ignores start/end; Reports.js re-filters by date client-side.
     if (
       req.method === "GET" &&
