@@ -1,0 +1,15 @@
+Payzarc — Verify your email
+
+Hi {{ first_name|default:"there" }},
+
+Use the code below to confirm {{ email }} and finish setting up your Payzarc account:
+
+  {{ code }}
+
+This code expires in {{ expires_in|default:"10 minutes" }}.
+
+Didn't request this? You can safely ignore this email — no account changes will be made.
+
+--
+This is an automated message from Payzarc. Need help? Contact {{ support_email|default:"support@payzarc.com" }}
+© {{ year }} Payzarc. All rights reserved.

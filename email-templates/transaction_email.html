@@ -1,0 +1,96 @@
+{% extends "emails/base_email.html" %}
+{% comment %}
+Transaction notification — field names match the transaction objects in
+dummy_db.json / History.js exactly, so this can be fed straight from a
+serialized Transaction model: transaction_code, name, country, amount,
+currency, transaction_type ("CREDIT" or "DEBIT"), status, fee, recipient,
+created_at.
+
+Context: first_name, transaction_code, name, country, amount, currency,
+         transaction_type, status, fee, recipient, created_at, app_url,
+         year, support_email, logo_url, icon_trending_up_url, icon_trending_down_url
+{% endcomment %}
+
+{% block title %}{% if transaction_type == "CREDIT" %}Money received{% else %}Payment sent{% endif %} — Payzarc{% endblock %}
+{% block preheader %}{% if transaction_type == "CREDIT" %}You received {{ currency }} {{ amount }} from {{ name }}.{% else %}You sent {{ currency }} {{ amount }} to {{ name }}.{% endif %}{% endblock %}
+
+{% block content %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+  <tr>
+    <td align="center" style="padding-bottom:16px;">
+      <table role="presentation" cellpadding="0" cellspacing="0">
+        <tr>
+          <td width="52" height="52" align="center" valign="middle" style="background-color:{% if transaction_type == "CREDIT" %}rgba(74,222,128,0.12){% else %}rgba(239,68,68,0.12){% endif %}; border-radius:14px;">
+            {% if transaction_type == "CREDIT" %}<img src="{{ icon_trending_up_url|default:'https://payzarc.com/static/email/icons/trending-up.png' }}" width="24" height="24" alt="" style="display:block;">{% else %}<img src="{{ icon_trending_down_url|default:'https://payzarc.com/static/email/icons/trending-down.png' }}" width="24" height="24" alt="" style="display:block;">{% endif %}
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="padding-bottom:4px; font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; color:#9ca3af;">
+      {% if transaction_type == "CREDIT" %}Money received from {{ name }}{% else %}Payment sent to {{ name }}{% endif %}
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="padding-bottom:24px; font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:34px; font-weight:700; color:{% if transaction_type == "CREDIT" %}#4ade80{% else %}#ef4444{% endif %};">
+      {% if transaction_type == "CREDIT" %}+{% else %}-{% endif %}{{ currency }} {{ amount }}
+    </td>
+  </tr>
+
+  <!-- Detail panel -->
+  <tr>
+    <td style="background-color:#314566; border-radius:12px; padding:0 20px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.07); font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:13px; color:#9ca3af;">Status</td>
+          <td align="right" style="padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.07); font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:13px; font-weight:600; color:{% if status == "Completed" %}#4ade80{% elif status == "Failed" %}#ef4444{% else %}#f9fafb{% endif %};">{{ status }}</td>
+        </tr>
+        <tr>
+          <td style="padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.07); font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:13px; color:#9ca3af;">Reference</td>
+          <td align="right" style="padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.07); font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:13px; font-weight:600; color:#f9fafb;">{{ transaction_code }}</td>
+        </tr>
+        <tr>
+          <td style="padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.07); font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:13px; color:#9ca3af;">{% if transaction_type == "CREDIT" %}From{% else %}To{% endif %}</td>
+          <td align="right" style="padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.07); font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:13px; font-weight:600; color:#f9fafb;">{{ name }}{% if recipient %} &middot; {{ recipient }}{% endif %}</td>
+        </tr>
+        {% if country %}
+        <tr>
+          <td style="padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.07); font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:13px; color:#9ca3af;">Country</td>
+          <td align="right" style="padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.07); font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:13px; font-weight:600; color:#f9fafb;">{{ country }}</td>
+        </tr>
+        {% endif %}
+        {% if fee %}
+        <tr>
+          <td style="padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.07); font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:13px; color:#9ca3af;">Fee</td>
+          <td align="right" style="padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.07); font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:13px; font-weight:600; color:#f9fafb;">{{ currency }} {{ fee }}</td>
+        </tr>
+        {% endif %}
+        <tr>
+          <td style="padding:14px 0; font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:13px; color:#9ca3af;">Date</td>
+          <td align="right" style="padding:14px 0; font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:13px; font-weight:600; color:#f9fafb;">{{ created_at }}</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- CTA -->
+  <tr>
+    <td align="center" style="padding-top:28px;">
+      <table role="presentation" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="background-color:#ecc94b; border-radius:8px;">
+            <a href="{{ app_url|default:'https://app.payzarc.com' }}/history" style="display:inline-block; padding:13px 28px; font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:700; color:#1a202c; text-decoration:none;">View Transaction</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr>
+    <td align="center" style="padding-top:24px; font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:12px; line-height:20px; color:#6b7280;">
+      Didn't recognize this transaction? Contact support immediately.
+    </td>
+  </tr>
+</table>
+{% endblock %}

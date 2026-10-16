@@ -455,7 +455,13 @@
       }
     ],
     "cards": [],
-    "mobileMoney": []
+    "mobileMoney": [
+      {
+        "id": 1792161644159,
+        "provider": "Safaricom M-Pesa",
+        "phoneNumber": "0707069007"
+      }
+    ]
   },
   "groups": [
     {
@@ -503,6 +509,19 @@
       "contributions": {
         "1": 1000
       }
+    },
+    {
+      "id": 1792059562124,
+      "owner_id": 1,
+      "name": "Hezron's Wedding",
+      "type": "emergency",
+      "balance": 0,
+      "currency": "KES",
+      "members": [
+        3,
+        5,
+        1
+      ]
     }
   ]
 }

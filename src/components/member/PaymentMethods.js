@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { ArrowLeft, BadgeCheck, Camera, LogOut } from "lucide-react";
+import { ChevronLeft, BadgeCheck, Camera, LogOut } from "lucide-react";
 import axiosInstance, { transactionsApi } from "../../utility/axiosInstance";
 import { API_URL, PRO_PLAN_PRICE } from "../../utility/constants";
 import { countries } from "../../utility/countries";
@@ -55,30 +55,37 @@ const formLabelClass =
 const formInputClass =
   "w-full h-auto bg-white/[0.03] border-white/[0.06] rounded-xl px-4 py-3.5 text-foreground text-base md:text-base placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-gold/[0.08] focus-visible:border-gold/30 focus-visible:bg-white/[0.07] shadow-none transition-colors duration-200";
 const primaryBtnClass =
-  "w-full h-auto rounded-sm px-5 py-2.5 text-base font-bold text-black transition-all duration-200 hover:bg-primary active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 mt-1 shadow-lg shadow-gold/10 hover:shadow-gold/20";
+  "w-full h-auto rounded-sm px-5 py-2.5 text-base font-bold text-black transition-ui duration-200 hover:bg-primary active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 mt-1 shadow-lg shadow-gold/10 hover:shadow-gold/20";
 const addFavouriteBtnClass =
   "self-start bg-transparent border-none text-gold text-[0.8rem] font-semibold cursor-pointer p-0 -mt-[0.6rem] transition-opacity hover:opacity-75";
 const flowFormClass =
   "flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full";
-const sectionHeaderClass = "flex justify-between items-center mb-8";
-const groupClass = "flex flex-col gap-[0.6rem] mb-6";
-const groupTitleClass = "m-0 text-[0.95rem] text-foreground";
+// Sections: one rhythm everywhere — a hairline + 24px above each section,
+// 10px from its heading to its content. Header actions (Edit / View list)
+// sit on the heading's own line, never nudged above it.
+const sectionHeaderClass = "flex justify-between items-center gap-3 min-h-8";
+const groupClass =
+  "flex flex-col gap-2.5 pt-6 border-t border-white/[0.06]";
+const groupTitleClass =
+  "m-0 text-[0.95rem] font-semibold tracking-[-0.01em] text-foreground";
+const headerActionClass =
+  "shrink-0 bg-transparent border-none text-gold text-[0.8rem] font-semibold cursor-pointer px-2 py-1.5 -mr-2 rounded-md transition-[opacity,background-color] duration-200 hover:bg-[var(--gold-pale)]";
 const methodCardClass =
   "flex justify-between items-center bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-[0.85rem] text-sm font-semibold text-foreground";
-const mutedClass = "text-[var(--muted)] font-medium text-xs";
+const mutedClass = "text-[var(--soft)] font-medium text-xs";
 const logoutBtnClass =
   "self-start inline-flex items-center gap-2 bg-transparent border-none text-destructive text-[0.85rem] font-semibold cursor-pointer p-0 transition-opacity hover:opacity-75";
 
 function ProfileRow({ label, value, verified }) {
   return (
     <div className="flex justify-between items-center gap-3 py-[0.65rem] border-b border-white/[0.06] text-[0.85rem] last:border-b-0">
-      <span className="text-[var(--muted)] font-medium shrink-0">{label}</span>
+      <span className="text-[var(--soft)] font-medium shrink-0">{label}</span>
       <span className="text-foreground font-semibold text-right flex items-center gap-[5px]">
         {value || "—"}
         {verified !== undefined && (
           <BadgeCheck
             size={14}
-            className={verified ? "text-success shrink-0" : "text-[var(--muted)] shrink-0"}
+            className={verified ? "text-success shrink-0" : "text-[var(--soft)] shrink-0"}
           />
         )}
       </span>
@@ -656,7 +663,7 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
     <section className={flowCardClass}>
       <div className={flowHeaderClass}>
         <Button variant="ghost" onClick={onBack} className={backBtnClass}>
-          <ArrowLeft size={18} /> Back
+          <ChevronLeft size={18} /> Back
         </Button>
       </div>
       <h2 className="text-[1.6rem] font-bold text-foreground mb-2">Account</h2>
@@ -687,7 +694,7 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
         <div className={sectionHeaderClass}>
           <h3 className={groupTitleClass}>Profile</h3>
           {!editingProfile && profile && (
-            <button className={addFavouriteBtnClass} onClick={startEditProfile}>
+            <button className={headerActionClass} onClick={startEditProfile}>
               Edit
             </button>
           )}
@@ -1065,7 +1072,7 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
         <div className={sectionHeaderClass}>
           <h3 className={groupTitleClass}>Secondary contacts</h3>
           <button
-            className={addFavouriteBtnClass}
+            className={headerActionClass}
             onClick={() => {
               setShowContactsList((v) => !v);
               if (!showContactsList) fetchSecondaryContacts();
@@ -1091,7 +1098,7 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
                   <span>
                     {contact.type}: {contact.value}
                   </span>
-                  <span className={contact.isVerified ? "text-success text-xs" : "text-[var(--muted)] text-xs"}>
+                  <span className={contact.isVerified ? "text-success text-xs" : "text-[var(--soft)] text-xs"}>
                     {contact.isVerified ? "Verified" : "Not verified"}
                   </span>
                 </div>
@@ -1164,7 +1171,7 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
         <div className={sectionHeaderClass}>
           <h3 className={groupTitleClass}>Secondary IDs</h3>
           <button
-            className={addFavouriteBtnClass}
+            className={headerActionClass}
             onClick={() => {
               setShowIdsList((v) => !v);
               if (!showIdsList) fetchSecondaryIds();

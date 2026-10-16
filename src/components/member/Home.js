@@ -1,33 +1,65 @@
 import React, { useState, useEffect, useRef } from "react";
+import { CircleCheck, CircleAlert, X } from "lucide-react";
 import axiosInstance, {
   transactionsApi,
   contactsApi,
 } from "../../utility/axiosInstance";
-import YesNoPopup from "../../styles/YesNoPopup";
 import { countries } from "../../utility/countries";
 import { getCurrentCountry } from "../../utility/getCurrentCountry";
 import { getLiveExchangeRates } from "../../utility/getLiveExchangeRates";
 import BalanceCard from "./BalanceCard";
 import QuickSend from "./QuickSend";
 import AddMoney from "./AddMoney";
-import { SendMoney, SendToMany, Withdraw } from "./Transfers";
+import { SendMoney } from "./SendMoney";
+import { SendToMany } from "./SendToMany";
+import { Withdraw } from "./Withdraw";
 import GroupsPanel from "./GroupsPanel";
 import Reports from "./Reports";
 import RecentActivity from "./RecentActivity";
-import MarketTicker from "./MarketTicker";
+import ReviewSheet from "./ReviewSheet";
 
 // Dashboard home: owns the data every panel shares (balance, favourites,
-// linked payment methods, FX rates, the confirm/notify popup) and which
+// linked payment methods, FX rates, the review sheet and toast) and which
 // panel is showing. Each flow lives in its own file alongside this one and owns its own form state.
-function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
-  const [activeSection, setActiveSection] = useState("dashboard");
-  // Bumped on every section change; the phone screen's content is keyed by
-  // it, so the outgoing flow unmounts and the next one starts with fresh
-  // state — a half-typed amount or PIN never leaks between flows.
-  const [flowKey, setFlowKey] = useState(0);
+function Home({
+  onPageChange,
+  user,
+  navigateRequest,
+  balanceCardRef,
+  // Which panel is showing comes from the URL (Dashboard owns it), so
+  // Back/Forward and refresh land on the same panel.
+  section: activeSection = "dashboard",
+  groupsTab = "friends",
+  onNavigate,
+}) {
+  // The phone screen's content is keyed by section + this nonce, so the
+  // outgoing flow unmounts and the next starts with fresh state — a
+  // half-typed amount or PIN never leaks between flows. The nonce only
+  // bumps when the *same* section is reopened (e.g. a new Quick Send
+  // recipient while Send is already open); a section change re-keys on its own.
+  const [flowNonce, setFlowNonce] = useState(0);
+  const flowKey = `${activeSection}:${flowNonce}`;
   // Recipient to pre-fill when opening Send (Quick Send, Friends, search).
   const [sendRecipient, setSendRecipient] = useState(null);
-  const [groupsTab, setGroupsTab] = useState("friends");
+  const setGroupsTab = (tab) =>
+    onNavigate?.({ section: "groups", tab }, { replace: true });
+
+  // Spatial direction for the phone screen's content swap: flows sit one
+  // level "in" from the dashboard, so opening one slides in from the right
+  // and returning slides back from the left (the same path in reverse);
+  // flow-to-flow is a sideways peer swap, so it crossfades instead.
+  const prevSectionRef = useRef(activeSection);
+  const contentAnimationRef = useRef("animate-flow-fade-in");
+  if (prevSectionRef.current !== activeSection) {
+    const from = prevSectionRef.current;
+    contentAnimationRef.current =
+      from === "dashboard"
+        ? "animate-slide-in-right"
+        : activeSection === "dashboard"
+          ? "animate-slide-in-left"
+          : "animate-flow-fade-in";
+    prevSectionRef.current = activeSection;
+  }
 
   const [balanceData, setBalanceData] = useState(null);
   const [loadingBalance, setLoadingBalance] = useState(true);
@@ -50,12 +82,10 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
   const [liveRates, setLiveRates] = useState(null);
   const [recentTransactions, setRecentTransactions] = useState([]);
 
-  const [openDialog, setOpenDialog] = useState(false);
-  const [dialogTitle, setDialogTitle] = useState("");
-  const [dialogMessage, setDialogMessage] = useState("");
-  const [dialogAction, setDialogAction] = useState(null);
-  const [notificationOnly, setNotificationOnly] = useState(false);
-  const [dialogRequirePin, setDialogRequirePin] = useState(false);
+  // The pending money-flow review (see ReviewSheet.js), or null.
+  const [review, setReview] = useState(null);
+  // Non-blocking status message: { id, type, message } or null.
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     fetchBalance();
@@ -168,38 +198,45 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
       })
     : "0.00";
 
-  const openConfirmationDialog = (title, message, action, options = {}) => {
-    setDialogTitle(title);
-    setDialogMessage(message);
-    setDialogAction(() => action);
-    setNotificationOnly(false);
-    setDialogRequirePin(!!options.requirePin);
-    setOpenDialog(true);
-  };
+  const openConfirmationDialog = (request) => setReview(request);
 
-  const showNotification = (type, message) => {
-    setDialogTitle(type === "success" ? "Success" : "Error");
-    setDialogMessage(message);
-    setNotificationOnly(true);
-    setOpenDialog(true);
-  };
-
-  const handleDialogConfirm = (typedValue, buttonChoice) => {
-    setOpenDialog(false);
-    if (dialogAction) dialogAction(typedValue, buttonChoice);
-  };
+  // A toast, not a modal: feedback shouldn't cost the user another tap or
+  // wipe their place in the flow.
+  const showNotification = (type, message) =>
+    setToast({ id: Date.now(), type, message });
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(
+      () => setToast(null),
+      toast.type === "error" ? 7000 : 4500,
+    );
+    return () => clearTimeout(id);
+  }, [toast]);
 
   // Shows `section` in the phone screen with fresh flow state (see flowKey).
   const openSection = (section, recipient = null) => {
     setSendRecipient(recipient);
-    setFlowKey((k) => k + 1);
-    setActiveSection(section);
+    if (section === activeSection) setFlowNonce((n) => n + 1);
+    onNavigate?.({ section, tab: section === "groups" ? groupsTab : undefined });
   };
-  // Action-button clicks: clicking the already-active one toggles back to
-  // the dashboard instead of doing nothing.
-  const switchSection = (section) =>
-    openSection(activeSection === section ? "dashboard" : section);
+  // A recipient only applies to the Send flow it was picked for — don't let
+  // it pre-fill a later Send reached through Back/Forward or the tab bar.
+  useEffect(() => {
+    if (activeSection !== "send") setSendRecipient(null);
+  }, [activeSection]);
+  // Action-button clicks. Tapping the action that's already open does
+  // nothing (it used to close the flow and throw away what was typed); the
+  // flow's own Close button is the way out.
+  const switchSection = (section) => {
+    if (activeSection !== section) openSection(section);
+  };
   const goToDashboard = () => openSection("dashboard");
+  // Group funds live in the Groups panel's "groups" tab — the one place the
+  // balance card's group-funds chip and the Groups action both lead.
+  const openGroupFunds = () => {
+    setGroupsTab("groups");
+    openSection("groups");
+  };
 
   // The scrollable area's scrollTop otherwise persists across content swaps
   // (same DOM node, only its child remounts) — snap back to the top whenever
@@ -214,9 +251,6 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
   // switchSection's same-section "toggle back to dashboard" behavior.
   useEffect(() => {
     if (!navigateRequest?.section) return;
-    if (navigateRequest.section === "groups" && navigateRequest.groupsTab) {
-      setGroupsTab(navigateRequest.groupsTab);
-    }
     openSection(navigateRequest.section, navigateRequest.recipient || null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigateRequest]);
@@ -243,23 +277,6 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
 
   return (
     <>
-      <section className="w-full max-w-[960px] mx-auto flex flex-col items-start gap-3 pb-8">
-        <button
-          type="button"
-          onClick={() => onPageChange("home")}
-          className="text-[0.8rem] font-bold tracking-[3px] text-gold uppercase bg-transparent border-none p-0 cursor-pointer hover:opacity-75 transition-opacity"
-        >
-          Payzarc
-        </button>
-        <h1 className="text-[clamp(1.65rem,3vw,2.5rem)] font-bold leading-[1.15] tracking-[-1px] text-foreground m-0">
-          Send money at <span className="text-gold">Lower Rates</span>
-        </h1>
-        <p className="text-[0.95rem] text-muted-foreground max-w-[480px] leading-[1.6] m-0">
-          We offer industry-leading exchange rates with no hidden fees. Save
-          more for every transaction you make.
-        </p>
-      </section>
-
       {/* Phone mockup (fixed-width) beside Recent Activity (takes whatever's
         left) — Quick Send/the flow forms all live inside the phone's own
         screen, so this is just those two top-level pieces side by side. */}
@@ -270,21 +287,34 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
             scrollRef={phoneScrollRef}
             activeSection={activeSection}
             contentKey={flowKey}
+            contentAnimation={contentAnimationRef.current}
             switchSection={switchSection}
             goToDashboard={goToDashboard}
-            onPageChange={onPageChange}
             displayCurrency={displayCurrency}
             formattedBalance={formattedBalance}
             loadingBalance={loadingBalance}
             balanceError={balanceError}
             groupFundsTotal={groupFundsTotal}
+            onOpenGroupFunds={openGroupFunds}
           >
             {activeSection === "dashboard" && (
-              <QuickSend
-                favourites={favourites}
-                onSeeAll={() => switchSection("groups")}
-                onSelect={(fav) => openSection("send", fav)}
-              />
+              <>
+                <QuickSend
+                  favourites={favourites}
+                  onSeeAll={() => switchSection("groups")}
+                  onSelect={(fav) => openSection("send", fav)}
+                />
+                {/* Small screens: Recent Activity lives inside the phone,
+                    under Quick Send; the copy beside the phone is hidden. */}
+                <div className="hidden max-[768px]:block">
+                  <RecentActivity
+                    embedded
+                    transactions={recentTransactions}
+                    currency={displayCurrency}
+                    onViewAll={() => openSection("reports")}
+                  />
+                </div>
+              </>
             )}
             {activeSection === "add-money" && <AddMoney {...flowProps} />}
             {activeSection === "withdraw" && <Withdraw {...flowProps} />}
@@ -307,30 +337,59 @@ function Home({ onPageChange, user, navigateRequest, balanceCardRef }) {
           </BalanceCard>
         </div>
 
-        <RecentActivity
-          transactions={recentTransactions}
-          onViewAll={() => openSection("reports")}
-        />
+        {/* Medium widths stack this under the phone — kept phone-width
+            instead of stretching across the whole 960px row. */}
+        <div className="w-full max-lg:max-w-[400px] max-lg:mx-auto max-[768px]:hidden">
+          <RecentActivity
+            transactions={recentTransactions}
+            currency={displayCurrency}
+            onViewAll={() => openSection("reports")}
+          />
+        </div>
       </div>
 
-      {activeSection === "dashboard" && (
-        <MarketTicker
-          myCountry={myCountry}
-          senderCurrency={displayCurrency}
-          liveRates={liveRates}
-        />
-      )}
+      <ReviewSheet request={review} onClose={() => setReview(null)} />
 
-      {/* Confirmation Popup */}
-      <YesNoPopup
-        isOpen={openDialog}
-        title={dialogTitle}
-        message={dialogMessage}
-        onSubmit={handleDialogConfirm}
-        onClose={() => setOpenDialog(false)}
-        isNotification={notificationOnly}
-        requirePin={dialogRequirePin}
-      />
+      {/* Always-mounted live regions: a region that mounts together with
+          its text isn't reliably announced, so the message is swapped into
+          regions that already exist. */}
+      <div aria-live="polite" className="sr-only">
+        {toast?.type !== "error" ? toast?.message : ""}
+      </div>
+      <div aria-live="assertive" className="sr-only">
+        {toast?.type === "error" ? toast?.message : ""}
+      </div>
+      {toast && (
+        <div
+          key={toast.id}
+          className="fixed left-1/2 -translate-x-1/2 bottom-[calc(96px+env(safe-area-inset-bottom))] lg:bottom-8 z-[60] w-[min(440px,calc(100%-32px))] flex items-start gap-3 rounded-[18px] material-thin border border-white/[0.08] shadow-[0_16px_40px_-12px_rgba(0,0,0,0.6)] px-4 py-3.5 toast-rise"
+        >
+          {toast.type === "error" ? (
+            <CircleAlert
+              size={18}
+              className="text-destructive shrink-0 mt-0.5"
+              aria-hidden="true"
+            />
+          ) : (
+            <CircleCheck
+              size={18}
+              className="text-success shrink-0 mt-0.5"
+              aria-hidden="true"
+            />
+          )}
+          <p className="flex-1 text-[0.9rem] leading-snug text-foreground m-0">
+            {toast.message}
+          </p>
+          <button
+            type="button"
+            aria-label="Dismiss"
+            onClick={() => setToast(null)}
+            className="-m-2 p-2 rounded-full text-[var(--soft)] hover:text-foreground"
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
+        </div>
+      )}
     </>
   );
 }

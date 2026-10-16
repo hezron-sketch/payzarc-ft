@@ -26,6 +26,21 @@ export const phoneBezelColorClass = "bg-[#0d1117]";
 export const phoneNotchBaseClass =
   "absolute left-1/2 -translate-x-1/2 bg-[#0d1117] pointer-events-none z-[1]";
 
+/* ─── Expanded phone modal ─── shared by PhoneAuthStage (App.js) once
+   grown, and Dashboard's mobile shell, so both phones are the same size. */
+export const phoneModalShadowClass =
+  "shadow-[0_55px_100px_rgba(0,0,0,0.5),0_100px_180px_-40px_rgba(0,0,0,0.6)]";
+export const phoneModalOpenClass =
+  // translateZ(48px) (with the backdrop's perspective above) is the "above
+  // the screen" 3D lift — it grows in alongside width/height/etc since
+  // transform is already in the transition list, so the panel rises toward
+  // the viewer as it expands, and sinks back down as it shrinks on close.
+  // Height-driven with width = height × 9/19.5 (PhoneFrame's own ratio) so
+  // the modal keeps a phone's proportions at every viewport height, instead
+  // of a fixed 420px width that went squat on shorter screens. The min()
+  // against 92vw keeps it from overflowing narrow-but-tall windows.
+  "top-1/2 left-1/2 [transform:translate(-50%,-50%)_translateZ(48px)] h-[min(820px,88vh)] w-[min(calc(min(820px,88vh)*9/19.5),92vw)] [--r:44px] border-[0.5px] border-[rgba(var(--gold-rgb),0.16)] max-[480px]:w-[94vw] max-[480px]:h-[90vh] max-[480px]:[--r:36px]";
+
 /* ─── Phone Frame ───
    The phone "card" itself (bezel + notch + screen content), with no
    positioning of its own — callers place/size it via `className`. This is

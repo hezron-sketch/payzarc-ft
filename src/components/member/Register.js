@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Check, Camera, RotateCw, Mail, FileText, ScanLine } from "lucide-react";
+import {
+  ChevronLeft,
+  Check,
+  Camera,
+  RotateCw,
+  Mail,
+  ReceiptText,
+  ScanLine,
+} from "lucide-react";
 import axios from "axios";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -236,12 +244,12 @@ const inlineErrorClass =
   "flex items-center gap-1.5 bg-red-400/[0.08] border-[0.5px] border-red-400/25 rounded-sm px-3 py-2 text-xs text-red-400 mt-1";
 const primaryBtnClass = (compact) =>
   cn(
-    "w-full h-auto bg-gold text-[#111] border-none rounded-[6px] font-bold cursor-pointer transition-all flex items-center justify-center gap-1.5 hover:bg-gold-dark hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed shadow-none",
+    "w-full h-auto bg-gold text-[#111] border-none rounded-[6px] font-bold cursor-pointer transition-ui flex items-center justify-center gap-1.5 hover:bg-gold-dark hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed shadow-none",
     compact ? "py-2 text-sm" : "py-[0.6rem] text-[15px]",
   );
 const secondaryBtnClass = (compact) =>
   cn(
-    "w-full bg-white/5 text-[#9ca3af] border-[0.5px] border-white/10 rounded-[6px] font-bold cursor-pointer transition-all flex items-center justify-center gap-1.5 hover:bg-white/[0.08] hover:text-[#f9fafb] font-sans",
+    "w-full bg-white/5 text-[#9ca3af] border-[0.5px] border-white/10 rounded-[6px] font-bold cursor-pointer transition-ui flex items-center justify-center gap-1.5 hover:bg-white/[0.08] hover:text-[#f9fafb] font-sans",
     compact ? "py-2 text-sm" : "py-[0.6rem] text-[15px]",
   );
 const buttonGroupClass = "flex gap-3 mt-2 [&>*]:flex-1";
@@ -788,7 +796,7 @@ function Register({ onBack, embedded = false, compact = false }) {
               )}
               onClick={onBack}
             >
-              <ArrowLeft size={16} />
+              <ChevronLeft size={16} />
               Home
             </button>
 
@@ -809,7 +817,7 @@ function Register({ onBack, embedded = false, compact = false }) {
                 <>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-[10px] bg-[rgba(var(--gold-rgb),0.1)] border border-[rgba(var(--gold-rgb),0.25)] flex items-center justify-center">
-                      <FileText size={20} className="text-gold" />
+                      <ReceiptText size={20} className="text-gold" />
                     </div>
                     <div>
                       <h2 className="text-[17px] font-extrabold text-[#f9fafb]">
@@ -860,7 +868,7 @@ function Register({ onBack, embedded = false, compact = false }) {
                       </div>
                       <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-gold transition-all duration-200"
+                          className="h-full bg-gold transition-[width] duration-200 ease-apple"
                           style={{ width: `${ocrProgress}%` }}
                         />
                       </div>

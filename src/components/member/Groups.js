@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import {
-  AlertTriangle,
+  TriangleAlert,
   Flower2,
   Heart,
   Plus,
-  UserPlus,
+  UserRoundPlus,
   Wallet,
   ArrowRightLeft,
   X,
@@ -22,7 +22,7 @@ const FUND_TYPES = [
   {
     key: "emergency",
     label: "Emergency",
-    icon: AlertTriangle,
+    icon: TriangleAlert,
     iconBg: "bg-destructive/15",
     iconColor: "text-destructive",
   },
@@ -251,7 +251,7 @@ function GroupCard({ group, friends, onContribute, onAddMember, onWithdraw }) {
                 className="flex items-center justify-between gap-2 text-left text-sm text-foreground bg-white/[0.03] hover:bg-white/[0.06] rounded-md px-3 py-1.5 transition-colors disabled:opacity-60"
               >
                 {f.display_name}
-                <UserPlus size={14} className="text-gold shrink-0" />
+                <UserRoundPlus size={14} className="text-gold shrink-0" />
               </button>
             ))
           )}
@@ -315,7 +315,7 @@ function GroupCard({ group, friends, onContribute, onAddMember, onWithdraw }) {
             aria-label="Add friend"
             title="Add friend"
           >
-            <UserPlus size={16} />
+            <UserRoundPlus size={16} />
           </button>
           {group.balance > 0 && (
             <button
@@ -455,7 +455,7 @@ function Groups({ onTotalChange, onWalletChange }) {
       {loading ? (
         <p className="text-center text-muted-foreground text-sm py-6">Loading groups…</p>
       ) : (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2.5 stagger">
           {groups.map((g) => (
             <GroupCard
               key={g.id}
@@ -492,7 +492,7 @@ function Groups({ onTotalChange, onWalletChange }) {
                 type="button"
                 onClick={() => setNewType(t.key)}
                 className={cn(
-                  "flex-1 flex flex-col items-center gap-1.5 py-2 rounded-sm border text-xs font-semibold transition-all duration-200",
+                  "flex-1 flex flex-col items-center gap-1.5 py-2 rounded-sm border text-xs font-semibold transition-ui duration-200",
                   newType === t.key
                     ? "bg-gold/10 border-gold/40 text-gold"
                     : "bg-white/[0.03] border-white/[0.06] text-muted-foreground hover:border-gold/20",

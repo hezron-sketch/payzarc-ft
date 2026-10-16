@@ -1,0 +1,93 @@
+{% comment %}
+Payzarc transactional email shell. Every other template in this folder
+extends this file and fills in `title`, `preheader`, and `content`.
+
+Table-based layout with inline styles on purpose — email clients (Outlook,
+older Gmail) don't reliably support external stylesheets, flexbox, or CSS
+custom properties, so the brand tokens from src/styles/Global.css are
+hardcoded here as literal hex values instead of var(--gold) etc.
+
+Brand tokens used across this folder:
+  bg / body ......... #0f1a2e
+  card .............. #1c2a46 (outer card), #314566 (nested panel, e.g. OTP box)
+  border ............ rgba(255,255,255,0.07)
+  gold (brand/CTA) .. #ecc94b, dark #d6b02e
+  text .............. #f9fafb (primary), #9ca3af (soft), #6b7280 (muted)
+  success ........... #4ade80   danger ........... #ef4444   info .... #60a5fa
+  radius ............ 18px (card), 12px (panel), 8px (button)
+  font .............. 'Google Sans', 'Segoe UI', Helvetica, Arial, sans-serif
+{% endcomment %}<!DOCTYPE html>
+<html lang="en" style="margin:0; padding:0;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="color-scheme" content="dark light">
+<meta name="supported-color-schemes" content="dark light">
+<title>{% block title %}Payzarc{% endblock %}</title>
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+</head>
+<body style="margin:0; padding:0; background-color:#0f1a2e; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
+  <!-- Preheader: hidden preview text shown next to the subject line in the inbox list -->
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; mso-hide:all; font-size:1px; line-height:1px; color:#0f1a2e;">
+    {% block preheader %}{% endblock %}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f1a2e;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
+
+          <!-- Wordmark -->
+          <tr>
+            <td align="center" style="padding-bottom:24px;">
+              <table role="presentation" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:middle; padding-right:10px;">
+                    <img src="{{ logo_url|default:'https://payzarc.com/static/email/logo.png' }}" width="32" height="32" alt="Payzarc" style="display:block; border-radius:8px;">
+                  </td>
+                  <td style="vertical-align:middle;">
+                    <span style="font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:20px; font-weight:700; color:#f9fafb; letter-spacing:0.2px;">Payzarc</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Card -->
+          <tr>
+            <td style="background-color:#1c2a46; border:1px solid rgba(255,255,255,0.07); border-radius:18px; padding:40px 36px;">
+              {% block content %}{% endblock %}
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding:28px 20px 8px;">
+              <p style="margin:0 0 8px; font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:12px; line-height:18px; color:#6b7280;">
+                This is an automated message from Payzarc — please don't reply directly to this email.
+              </p>
+              <p style="margin:0 0 8px; font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:12px; line-height:18px; color:#6b7280;">
+                Need help? Contact us at
+                <a href="mailto:{{ support_email|default:'support@payzarc.com' }}" style="color:#ecc94b; text-decoration:none;">{{ support_email|default:'support@payzarc.com' }}</a>
+              </p>
+              <p style="margin:0; font-family:'Google Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:12px; color:#4b5563;">
+                &copy; {{ year }} Payzarc. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

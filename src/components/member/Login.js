@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
-  ArrowLeft,
-  User,
+  ChevronLeft,
+  UserRound,
   Mail,
   Lock,
   Eye,
   EyeOff,
-  AlertCircle,
+  CircleAlert,
   KeyRound,
 } from "lucide-react";
 import axiosInstance from "../../utility/axiosInstance";
@@ -44,7 +44,7 @@ const inputFieldClass = (compact) =>
   );
 const submitBtnClass = (compact) =>
   cn(
-    "w-full h-auto bg-gold text-[#111] border-none rounded-[6px] font-bold cursor-pointer transition-all flex items-center justify-center gap-1.5 hover:bg-gold-dark hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed shadow-none",
+    "w-full h-auto bg-gold text-[#111] border-none rounded-[6px] font-bold cursor-pointer transition-ui flex items-center justify-center gap-1.5 hover:bg-gold-dark hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed shadow-none",
     compact ? "py-2 text-sm" : "py-[0.6rem] text-[15px]",
   );
 const otpBoxClass = (compact) =>
@@ -169,7 +169,7 @@ function ErrorPopup({ title, message, onClose, compact }) {
         )}
       >
         <div className="w-[52px] h-[52px] bg-red-400/10 border border-red-400/25 rounded-[14px] flex items-center justify-center">
-          <AlertCircle size={28} color="#f87171" strokeWidth={2} />
+          <CircleAlert size={28} color="#f87171" strokeWidth={2} />
         </div>
         <DialogTitle className="text-[17px] font-bold text-[#f9fafb]">
           {title}
@@ -479,7 +479,7 @@ function Login({ onBack, embedded = false, compact = false }) {
               onClick={onBack}
               title="Back to home"
             >
-              <ArrowLeft size={16} />
+              <ChevronLeft size={16} />
               Home
             </button>
 
@@ -518,7 +518,7 @@ function Login({ onBack, embedded = false, compact = false }) {
                     </label>
                     <div className="relative flex items-center">
                       {useUsername ? (
-                        <User className="absolute left-[13px] text-[#4b5563] pointer-events-none flex-shrink-0" size={16} />
+                        <UserRound className="absolute left-[13px] text-[#4b5563] pointer-events-none flex-shrink-0" size={16} />
                       ) : (
                         <Mail className="absolute left-[13px] text-[#4b5563] pointer-events-none flex-shrink-0" size={16} />
                       )}
@@ -572,7 +572,7 @@ function Login({ onBack, embedded = false, compact = false }) {
 
                   {error && (
                     <div className={inlineErrorClass}>
-                      <AlertCircle size={14} color="#f87171" strokeWidth={2} />
+                      <CircleAlert size={14} color="#f87171" strokeWidth={2} />
                       {error}
                     </div>
                   )}
@@ -627,7 +627,7 @@ function Login({ onBack, embedded = false, compact = false }) {
 
                 {error && (
                   <div className={inlineErrorClass}>
-                    <AlertCircle size={14} color="#f87171" strokeWidth={2} />
+                    <CircleAlert size={14} color="#f87171" strokeWidth={2} />
                     {error}
                   </div>
                 )}

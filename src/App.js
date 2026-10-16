@@ -17,18 +17,18 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { NotFound, ErrorBoundary } from "./components/StatusPages";
 import { cn } from "@/lib/utils";
 import {
-  ArrowRightIcon,
+  ChevronRight,
   Send,
   Globe,
   ShieldCheck,
   UsersRound,
   Zap,
   Percent,
-  HelpCircle,
+  CircleHelp,
   Mail,
   Phone,
   MapPin,
-  CheckCircle2,
+  CircleCheck,
   ChevronDown,
 } from "lucide-react";
 import { EXCHANGE_RATES } from "./utility/exchangeRates";
@@ -47,6 +47,8 @@ import {
   psBalAmountClass,
   phoneBezelColorClass,
   phoneNotchBaseClass,
+  phoneModalOpenClass,
+  phoneModalShadowClass,
 } from "./components/PhoneMockup";
 
 const COUNTRIES = {
@@ -108,8 +110,6 @@ const phoneStageBackdropOpenClass =
 // diffuse, selling the "lifted toward the viewer" 3D effect below).
 const phoneStagePanelShadowClosedClass =
   "shadow-[0_30px_80px_rgba(0,0,0,0.55)]";
-const phoneStagePanelShadowOpenClass =
-  "shadow-[0_55px_100px_rgba(0,0,0,0.5),0_100px_180px_-40px_rgba(0,0,0,0.6)]";
 const phoneStagePanelClass =
   // mask-image forces Chrome to clip this element's rounded corners on its
   // own masking layer instead of the default overflow-hidden+3D-transform
@@ -117,16 +117,6 @@ const phoneStagePanelClass =
   // clip border-radius against the un-transformed layer, leaving a jagged
   // sliver of the square edge visible past the rounded corner.
   "fixed flex flex-col p-[8px] border-[1.5px] border-white/10 overflow-hidden rounded-[var(--r)] [mask-image:radial-gradient(white,black)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] z-[1001] [transition:top_0.32s_cubic-bezier(0.16,1,0.3,1),left_0.32s_cubic-bezier(0.16,1,0.3,1),width_0.32s_cubic-bezier(0.16,1,0.3,1),height_0.32s_cubic-bezier(0.16,1,0.3,1),border-radius_0.32s_cubic-bezier(0.16,1,0.3,1),border-width_0.32s_cubic-bezier(0.16,1,0.3,1),transform_0.32s_cubic-bezier(0.16,1,0.3,1),box-shadow_0.32s_ease,background_0.32s_ease,border-color_0.32s_ease]";
-const phoneStagePanelOpenClass =
-  // translateZ(48px) (with the backdrop's perspective above) is the "above
-  // the screen" 3D lift — it grows in alongside width/height/etc since
-  // transform is already in the transition list, so the panel rises toward
-  // the viewer as it expands, and sinks back down as it shrinks on close.
-  // Height-driven with width = height × 9/19.5 (PhoneFrame's own ratio) so
-  // the modal keeps a phone's proportions at every viewport height, instead
-  // of a fixed 420px width that went squat on shorter screens. The min()
-  // against 92vw keeps it from overflowing narrow-but-tall windows.
-  "top-1/2 left-1/2 [transform:translate(-50%,-50%)_translateZ(48px)] h-[min(820px,88vh)] w-[min(calc(min(820px,88vh)*9/19.5),92vw)] [--r:44px] border-[0.5px] border-[rgba(var(--gold-rgb),0.16)] max-[480px]:w-[94vw] max-[480px]:h-[90vh] max-[480px]:[--r:36px]";
 // Notch hangs from the screen's top edge (top = the panel's 8px bezel) in
 // the bezel's own color, like an iPhone's.
 const phoneStageNotchClass =
@@ -159,7 +149,7 @@ function Navbar() {
   const { pathname } = useLocation();
 
   return (
-    <nav className="border-b-[0.5px] border-border sticky top-0 bg-[rgba(13,17,23,0.85)] z-[100]">
+    <nav className="border-b-[0.5px] border-border sticky top-0 bg-[rgba(13,17,23,0.72)] [backdrop-filter:blur(20px)_saturate(1.8)] [-webkit-backdrop-filter:blur(20px)_saturate(1.8)] z-[100]">
       <div className="relative flex items-center justify-between max-w-[1120px] mx-auto px-8 py-4 max-[768px]:px-5">
         <div className="flex items-center gap-9">
           <div className="flex items-center gap-2">
@@ -197,11 +187,11 @@ function Navbar() {
           })}
         </div>
         <button
-          className="group inline-flex items-center gap-1.5 bg-gold text-[#111] border-none rounded-md px-[1.3rem] py-[0.4rem] text-[13px] font-bold cursor-pointer shadow-[0_4px_14px_rgba(var(--gold-rgb),0.25)] transition-[background,transform,box-shadow] duration-200 hover:bg-gold-dark hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(var(--gold-rgb),0.4)]"
+          className="group inline-flex items-center gap-1.5 bg-gold text-[#111] border-none rounded-md px-[1.3rem] py-[0.4rem] text-[13px] font-bold cursor-pointer transition-[background,transform] duration-200 hover:bg-gold-dark hover:-translate-y-0.5"
           onClick={() => navigate("/login")}
         >
           Login{" "}
-          <ArrowRightIcon
+          <ChevronRight
             size={14}
             className="transition-transform duration-200 group-hover:translate-x-0.5"
           />
@@ -340,7 +330,7 @@ function PhoneAuthStage({ overlay, onClose, mockupRef }) {
                 phoneStagePanelClass,
                 phoneBezelColorClass,
                 isExpanded
-                  ? cn(phoneStagePanelOpenClass, phoneStagePanelShadowOpenClass)
+                  ? cn(phoneModalOpenClass, phoneModalShadowClass)
                   : phoneStagePanelShadowClosedClass,
               )}
               style={panelStyle}
@@ -560,7 +550,7 @@ function Hero({ overlay, onCloseAuth }) {
           className="inline-flex items-center justify-center gap-2 bg-gold text-[#111] border-none rounded-md py-2 px-7 text-2xl font-semibold cursor-pointer transition-[background,transform] duration-200 hover:bg-gold-dark hover:-translate-y-px max-[768px]:text-lg"
           onClick={() => navigate("/register")}
         >
-          Get started <ArrowRightIcon />
+          Get started <ChevronRight />
         </button>
         {/* <button className="bg-white/5 text-[#d1d5db] border-[0.5px] border-input rounded-md py-2 px-7 text-sm font-medium cursor-pointer transition-colors duration-200 hover:bg-white/[0.09] max-[480px]:text-center">See how it works</button> */}
       </div>
@@ -657,7 +647,7 @@ const FEATURES = [
 // eslint-disable-next-line no-unused-vars -- kept for when FeaturesStrip is re-enabled in Home()
 function FeaturesStrip() {
   return (
-    <div className="flex flex-col gap-3 w-full px-10 py-8 border-t-[0.5px] border-border items-center flex-1 max-[768px]:py-6 max-[768px]:px-5">
+    <div className="stagger flex flex-col gap-3 w-full px-10 py-8 border-t-[0.5px] border-border items-center flex-1 max-[768px]:py-6 max-[768px]:px-5">
       {FEATURES.map((f) => (
         <div
           key={f.title}
@@ -1051,7 +1041,7 @@ function FeaturesContent() {
           Each card keeps the same expand-for-detail interaction (same
           grid-template-rows 0fr->1fr trick), just triggered by its own
           "Learn more" instead of the whole row being a giant button. */}
-      <div className="grid grid-cols-3 gap-5 max-[1024px]:grid-cols-2 max-[640px]:grid-cols-1">
+      <div className="stagger grid grid-cols-3 gap-5 max-[1024px]:grid-cols-2 max-[640px]:grid-cols-1">
         {FEATURES_LIST.map(({ icon: Icon, title, description, details }) => {
           const isOpen = openTitle === title;
           return (
@@ -1120,7 +1110,7 @@ function RatesContent() {
         title="Simple, transparent pricing"
         subtitle="One flat sending fee, live market rates, and no surprise charges buried in the exchange rate."
       />
-      <div className="grid grid-cols-3 gap-5 mb-4 max-[768px]:grid-cols-1">
+      <div className="stagger grid grid-cols-3 gap-5 mb-4 max-[768px]:grid-cols-1">
         <div className="bg-white/[0.03] backdrop-blur-[8px] border-[0.5px] border-border rounded-[20px] p-6">
           <Percent size={20} className="text-gold mb-3" />
           <h3 className="text-[15px] font-bold text-foreground m-0 mb-1.5">
@@ -1210,7 +1200,7 @@ function HelpContent() {
                 aria-expanded={isOpen}
                 className="w-full flex items-center gap-2.5 bg-transparent border-none p-0 cursor-pointer text-left"
               >
-                <HelpCircle size={16} className="text-gold shrink-0" />
+                <CircleHelp size={16} className="text-gold shrink-0" />
                 <h3 className="flex-1 text-[14.5px] font-bold text-foreground m-0">
                   {q}
                 </h3>
@@ -1234,9 +1224,9 @@ function HelpContent() {
       <button
         type="button"
         onClick={() => navigate("/contact")}
-        className="inline-flex items-center gap-1.5 mt-8 bg-gold text-[#111] border-none rounded-md px-[1.3rem] py-2 text-[13px] font-bold cursor-pointer transition-all duration-200 hover:bg-gold-dark hover:-translate-y-0.5"
+        className="inline-flex items-center gap-1.5 mt-8 bg-gold text-[#111] border-none rounded-md px-[1.3rem] py-2 text-[13px] font-bold cursor-pointer transition-ui duration-200 hover:bg-gold-dark hover:-translate-y-0.5"
       >
-        Contact support <ArrowRightIcon size={14} />
+        Contact support <ChevronRight size={14} />
       </button>
     </>
   );
@@ -1325,7 +1315,7 @@ function ContactContent() {
           {sent ? (
             <div className="flex flex-col items-center text-center gap-3 py-10">
               <div className="w-14 h-14 rounded-full bg-success/10 flex items-center justify-center">
-                <CheckCircle2 size={28} className="text-success" />
+                <CircleCheck size={28} className="text-success" />
               </div>
               <h3 className="text-[17px] font-bold text-foreground m-0">
                 Message sent

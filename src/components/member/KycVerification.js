@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft, IdCard, ScanFace, Check, RotateCcw, CheckCircle2, Loader2 } from 'lucide-react';
+import { ChevronLeft, IdCard, ScanFace, Check, RotateCcw, CircleCheck, LoaderCircle } from "lucide-react";
 import axiosInstance from '../../utility/axiosInstance';
 import { useStopCameraWhenHidden } from '../../utility/useStopCameraWhenHidden';
 import { cn } from '@/lib/utils';
@@ -14,9 +14,9 @@ const flowHeaderClass =
 const backBtnClass =
   "col-start-1 justify-self-start inline-flex items-center gap-1 px-1 py-1 bg-transparent border-none text-white text-[0.9rem] font-semibold cursor-pointer transition-opacity duration-200 hover:opacity-75";
 const primaryBtnClass =
-  "w-full h-auto rounded-sm px-5 py-2.5 text-base font-bold text-black transition-all duration-200 hover:bg-gold-dark active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 shadow-lg shadow-gold/10 hover:shadow-gold/20 bg-gold flex items-center justify-center gap-2 cursor-pointer border-none disabled:cursor-not-allowed";
+  "w-full h-auto rounded-sm px-5 py-2.5 text-base font-bold text-black transition-ui duration-200 hover:bg-gold-dark active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 shadow-lg shadow-gold/10 hover:shadow-gold/20 bg-gold flex items-center justify-center gap-2 cursor-pointer border-none disabled:cursor-not-allowed";
 const ghostBtnClass =
-  "w-full rounded-sm px-5 py-2.5 text-base font-semibold text-foreground bg-white/[0.03] border border-white/[0.08] transition-all duration-200 hover:bg-white/[0.06] hover:border-gold/20 active:scale-[0.97] flex items-center justify-center gap-2 cursor-pointer";
+  "w-full rounded-sm px-5 py-2.5 text-base font-semibold text-foreground bg-white/[0.03] border border-white/[0.08] transition-ui duration-200 hover:bg-white/[0.06] hover:border-gold/20 active:scale-[0.97] flex items-center justify-center gap-2 cursor-pointer";
 
 // Two fixed steps — a document shot, then a selfie — each using the same
 // capture mechanic, so this stays one small state machine instead of a
@@ -135,7 +135,7 @@ function KycVerification({ onRefreshUser, onBack }) {
     return (
       <div className="flex justify-center items-center p-4 box-border">
         <div className={cn(flowCardClass, "items-center justify-center text-center")}>
-          <CheckCircle2 size={64} className="text-success animate-flow-fade-in" />
+          <CircleCheck size={64} className="text-success animate-flow-fade-in" />
           <h2 className="text-[1.6rem] font-bold text-foreground m-0">Identity verified!</h2>
           <p className="text-[var(--muted)] text-sm">
             Your account is now fully verified. Taking you back…
@@ -159,7 +159,7 @@ function KycVerification({ onRefreshUser, onBack }) {
       <div className={flowCardClass}>
         <div className={flowHeaderClass}>
           <button onClick={onBack} className={backBtnClass}>
-            <ArrowLeft size={18} /> Back
+            <ChevronLeft size={18} /> Back
           </button>
         </div>
 
@@ -168,7 +168,7 @@ function KycVerification({ onRefreshUser, onBack }) {
             <span
               key={s.key}
               className={cn(
-                "h-1.5 rounded-full transition-all duration-300",
+                "h-1.5 rounded-full transition-[width,background-color] duration-300 ease-apple",
                 i === stepIndex ? "w-8 bg-gold" : i < stepIndex ? "w-4 bg-gold/50" : "w-4 bg-white/[0.1]",
               )}
             />
@@ -226,7 +226,7 @@ function KycVerification({ onRefreshUser, onBack }) {
                 <button onClick={goNext} disabled={submitting} className={primaryBtnClass}>
                   {submitting ? (
                     <>
-                      <Loader2 size={18} className="animate-spin" /> Verifying…
+                      <LoaderCircle size={18} className="animate-spin" /> Verifying…
                     </>
                   ) : (
                     <>

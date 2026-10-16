@@ -21,25 +21,26 @@ function BankPicker({
   selectedId,
   onSelect,
   setPaymentMethods,
-  showNotification,
 }) {
   const [showForm, setShowForm] = useState(banks.length === 0);
   const [newBank, setNewBank] = useState(EMPTY_BANK);
+  // Shown inline: this picker lives inside a dialog, where a toast can't be
+  // seen, reached or announced.
+  const [error, setError] = useState("");
 
   const handleAddBank = async () => {
+    setError("");
     if (!newBank.bankName || !newBank.accountNumber || !newBank.accountName) {
-      showNotification(
-        "error",
-        "Fill in bank, account number, and account name",
+      setError("Fill in bank, account number, and account name",
       );
       return;
     }
     if (!/^\d{6,20}$/.test(newBank.accountNumber.trim())) {
-      showNotification("error", "Enter a valid account number");
+      setError("Enter a valid account number");
       return;
     }
     if (!isSafeText(newBank.accountName)) {
-      showNotification("error", "Account name can't contain < or > characters");
+      setError("Account name can't contain < or > characters");
       return;
     }
     try {
@@ -53,7 +54,7 @@ function BankPicker({
       setShowForm(false);
       setNewBank(EMPTY_BANK);
     } catch (error) {
-      showNotification("error", "Failed to save bank account");
+      setError("Failed to save bank account");
     }
   };
 
@@ -66,6 +67,7 @@ function BankPicker({
             <button
               key={b.id}
               type="button"
+              aria-pressed={selectedId === b.id}
               className={favouriteChipClass(selectedId === b.id)}
               onClick={() => onSelect(b.id)}
             >
@@ -86,8 +88,11 @@ function BankPicker({
 
   return (
     <>
-      <Label className={formLabelClass}>Bank</Label>
+      <Label htmlFor="bank-name" className={formLabelClass}>
+        Bank
+      </Label>
       <select
+        id="bank-name"
         className={formInputClass}
         value={newBank.bankName}
         onChange={(e) => setNewBank({ ...newBank, bankName: e.target.value })}
@@ -99,22 +104,38 @@ function BankPicker({
           </option>
         ))}
       </select>
-      <Label className={formLabelClass}>Account number</Label>
+      <Label htmlFor="bank-account-number" className={formLabelClass}>
+        Account number
+      </Label>
       <Input
+        id="bank-account-number"
+        inputMode="numeric"
         className={formInputClass}
         value={newBank.accountNumber}
         onChange={(e) =>
           setNewBank({ ...newBank, accountNumber: e.target.value })
         }
       />
-      <Label className={formLabelClass}>Account name</Label>
+      <Label htmlFor="bank-account-name" className={formLabelClass}>
+        Account name
+      </Label>
       <Input
+        id="bank-account-name"
         className={formInputClass}
         value={newBank.accountName}
         onChange={(e) =>
           setNewBank({ ...newBank, accountName: e.target.value })
         }
       />
+{error && (
+      <p
+        id="bank-form-error"
+        role="alert"
+        className="-mt-1 text-[0.85rem] text-destructive m-0"
+      >
+        {error}
+      </p>
+      )}
       <button
         type="button"
         className={modalAddLinkClass}

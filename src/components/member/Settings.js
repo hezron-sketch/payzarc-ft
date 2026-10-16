@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, RefreshCw, Lock, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, RefreshCw, Lock, ShieldCheck, CircleCheck } from "lucide-react";
 import axiosInstance from "../../utility/axiosInstance";
 import styles from "./Settings.module.css";
 
@@ -148,7 +148,7 @@ function Settings({ user, onSuccess }) {
       <div className={styles.container}>
         <div className={styles.card}>
           <div className={styles.successContent}>
-            <CheckCircle2 size={64} className={styles.successIcon} />
+            <CircleCheck size={64} className={styles.successIcon} />
             <h2 className={styles.title}>Password Updated!</h2>
             <p className={styles.infoText}>
               Your password has been changed successfully. Redirecting you
@@ -169,7 +169,7 @@ function Settings({ user, onSuccess }) {
             className={styles.backButton}
             aria-label="Go back"
           >
-            <ArrowLeft size={18} />
+            <ChevronLeft size={18} />
           </button>
           <h2 className={styles.title}>
             {step === "init" ? "Security Settings" : "Verify Identity"}

@@ -1,0 +1,18 @@
+Payzarc — {% if transaction_type == "CREDIT" %}Money received{% else %}Payment sent{% endif %}
+
+{% if transaction_type == "CREDIT" %}You received {{ currency }} {{ amount }} from {{ name }}.{% else %}You sent {{ currency }} {{ amount }} to {{ name }}.{% endif %}
+
+Status:      {{ status }}
+Reference:   {{ transaction_code }}
+{% if transaction_type == "CREDIT" %}From:        {{ name }}{% if recipient %} ({{ recipient }}){% endif %}{% else %}To:          {{ name }}{% if recipient %} ({{ recipient }}){% endif %}{% endif %}
+{% if country %}Country:     {{ country }}
+{% endif %}{% if fee %}Fee:         {{ currency }} {{ fee }}
+{% endif %}Date:        {{ created_at }}
+
+View this transaction: {{ app_url|default:"https://app.payzarc.com" }}/history
+
+Didn't recognize this transaction? Contact support immediately.
+
+--
+This is an automated message from Payzarc. Need help? Contact {{ support_email|default:"support@payzarc.com" }}
+© {{ year }} Payzarc. All rights reserved.

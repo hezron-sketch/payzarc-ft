@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Bell, ArrowDownCircle, ShieldAlert, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, Bell, CircleArrowDown, ShieldAlert, CircleCheck } from "lucide-react";
 import { transactionsApi } from "../../utility/axiosInstance";
 import { Button } from "@/components/ui/button";
 
 const ICONS = {
-  receive: ArrowDownCircle,
+  receive: CircleArrowDown,
   security: ShieldAlert,
-  transaction: CheckCircle2,
+  transaction: CircleCheck,
 };
 
 // Same outer card/header class strings PaymentMethods.js (and, before it,
@@ -43,17 +43,17 @@ function Notifications({ onBack }) {
     <section className={flowCardClass}>
       <div className={flowHeaderClass}>
         <Button variant="ghost" onClick={onBack} className={backBtnClass}>
-          <ArrowLeft size={18} /> Back
+          <ChevronLeft size={18} /> Back
         </Button>
       </div>
       <h2 className="text-[1.6rem] font-bold text-foreground mb-2">Notifications</h2>
 
       {notifications.length === 0 ? (
-        <p className="text-center text-[var(--muted)] text-sm py-8">
+        <p className="text-center text-[var(--soft)] text-sm py-8">
           You're all caught up — no notifications yet.
         </p>
       ) : (
-        <div className="flex flex-col gap-[0.6rem]">
+        <div className="flex flex-col gap-[0.6rem] stagger">
           {notifications.map((n) => {
             const Icon = ICONS[n.type] || Bell;
             return (
@@ -73,7 +73,7 @@ function Notifications({ onBack }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline gap-2">
                     <span className="text-sm font-bold text-foreground">{n.title}</span>
-                    <span className="text-[0.7rem] text-[var(--muted)] whitespace-nowrap">
+                    <span className="text-[0.7rem] text-[var(--soft)] whitespace-nowrap">
                       {new Date(n.created_at).toLocaleString()}
                     </span>
                   </div>

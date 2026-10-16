@@ -4,3 +4,6 @@ build/
 .env
 .env-old
 .env.local
+
+# graphify
+/graphify-out/

@@ -1,14 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { CalendarDays, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { transactionsApi } from "../../utility/axiosInstance";
 import TransactionDetails from "./TransactionDetails";
+import RangeCalendar from "./RangeCalendar";
 import {
-  formLabelClass,
-  formInputClass,
   primaryBtnClass,
   flowPanelClass,
 } from "./shared";
@@ -135,29 +139,13 @@ const CSV_COLUMNS = [
 ];
 
 const selectClass =
-  "h-11 min-w-0 flex-1 rounded-xl border border-white/[0.06] bg-white/[0.03] text-foreground text-[0.85rem] px-3 focus-visible:outline-none focus-visible:border-gold/30";
+  "h-11 min-w-0 flex-1 rounded-xl border-white/[0.06] bg-white/[0.03] text-foreground text-[0.85rem] px-3 shadow-none focus:ring-0 focus:border-gold/30";
+// "No filter" value for the Radix Selects (their items can't be "").
+const ALL = "__all";
 const statTileClass =
   "rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5 min-w-0";
 const pageBtnClass =
   "h-auto rounded-sm px-4 py-1.5 text-[0.85rem] font-semibold bg-white/[0.06] border border-border text-foreground hover:bg-white/[0.12]";
-
-function StatTile({ label, value, sub, className }) {
-  return (
-    <div className={statTileClass}>
-      <p className="text-[10px] uppercase tracking-wider text-muted-foreground m-0">
-        {label}
-      </p>
-      <p className={cn("text-base font-bold m-0 truncate", className)}>
-        {value}
-      </p>
-      {sub && (
-        <p className="text-[0.7rem] text-muted-foreground m-0 truncate">
-          {sub}
-        </p>
-      )}
-    </div>
-  );
-}
 
 function LedgerRow({ label, value, className }) {
   return (
@@ -169,11 +157,12 @@ function LedgerRow({ label, value, className }) {
 }
 
 // Transaction report for a date range, from Django's /api/reports/
-// endpoints: summary totals, search/type/status filters, a paged list
+// endpoints: search/type/status filters, a paged list
 // (tap a row for details), full-column CSV, and server PDF/email statements.
 function Reports({ showNotification }) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [showDates, setShowDates] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [account, setAccount] = useState(null);
   const [wallet, setWallet] = useState(null); // { balance, currency }
@@ -286,12 +275,6 @@ function Reports({ showNotification }) {
         .includes(term);
     });
   }, [inRange, searchTerm, typeFilter, statusFilter]);
-
-  const summary = useMemo(() => {
-    const s = { completed: 0, pending: 0, failed: 0 };
-    for (const tx of filtered) s[statusTone(txStatus(tx))]++;
-    return s;
-  }, [filtered]);
 
   // Statement that ties out: opening + in - out = closing. Only completed
   // transactions in the wallet's currency move the balance (pending/failed
@@ -420,39 +403,55 @@ function Reports({ showNotification }) {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-2.5 min-w-0">
-          <Label className={formLabelClass}>From</Label>
-          <Input
-            type="date"
-            className={formInputClass}
-            value={startDate}
-            max={endDate || undefined}
-            onChange={(e) => setStartDate(e.target.value)}
+      {/* One compact bar: search, with the date range as a tool inside
+          it. The calendar button expands the same bar (no second box) into
+          an inline range calendar — in-page DOM, so it opens inside the
+          phone frame. While closed, an active range shows as a gold dot. */}
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] transition-colors duration-200 focus-within:border-gold/30">
+        <div className="flex items-center h-11">
+          <Search
+            size={16}
+            aria-hidden="true"
+            className="ml-3.5 shrink-0 text-muted-foreground"
           />
-        </div>
-        <div className="flex flex-col gap-2.5 min-w-0">
-          <Label className={formLabelClass}>To</Label>
-          <Input
-            type="date"
-            className={formInputClass}
-            value={endDate}
-            min={startDate || undefined}
-            onChange={(e) => setEndDate(e.target.value)}
+          <input
+            type="search"
+            aria-label="Search transactions"
+            placeholder="Search transactions"
+            className="flex-1 min-w-0 h-full bg-transparent px-2.5 text-[0.9rem] text-foreground placeholder:text-muted-foreground outline-none [&::-webkit-search-cancel-button]:hidden"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setPage(1);
+            }}
           />
+          <span aria-hidden="true" className="w-px h-5 bg-white/[0.08]" />
+          <button
+            type="button"
+            aria-label="Filter by date"
+            aria-expanded={showDates}
+            onClick={() => setShowDates((v) => !v)}
+            className="relative mx-1 w-9 h-9 shrink-0 rounded-lg flex items-center justify-center text-muted-foreground transition-colors outline-none hover:text-foreground hover:bg-white/[0.06] focus-visible:ring-2 focus-visible:ring-gold/40 aria-expanded:text-gold aria-expanded:bg-gold/10"
+          >
+            <CalendarDays size={17} aria-hidden="true" />
+            {(startDate || endDate) && !showDates && (
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-gold" />
+            )}
+          </button>
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <StatTile
-          label="Transactions"
-          value={filtered.length.toLocaleString()}
-          sub={`${summary.pending} pending`}
-        />
-        <StatTile
-          label="Successful / Failed"
-          value={`${summary.completed} / ${summary.failed}`}
-        />
+        {showDates && (
+          <div className="border-t border-white/[0.06] p-3 animate-in fade-in slide-in-from-top-1 duration-200 ease-out">
+            <RangeCalendar
+              start={startDate}
+              end={endDate}
+              onChange={(from, to) => {
+                setStartDate(from);
+                setEndDate(to);
+              }}
+              onDone={() => setShowDates(false)}
+            />
+          </div>
+        )}
       </div>
 
       {ledger && (
@@ -488,54 +487,50 @@ function Reports({ showNotification }) {
         </div>
       )}
 
-      <div className="relative">
-        <Search
-          size={16}
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-        />
-        <Input
-          className={cn(formInputClass, "pl-10")}
-          placeholder="Search code, reference, name..."
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setPage(1);
-          }}
-        />
-      </div>
+      {/* Radix Select instead of native <select>: the native list is drawn
+          by the browser and landed outside the phone frame; this one is
+          positioned from the trigger and themed like the rest of the app.
+          z above the phone bezel (z-60). Radix items can't be "", hence
+          ALL as the "no filter" value. */}
       <div className="flex gap-2 -mt-1">
-        <select
-          aria-label="Transaction type"
-          className={selectClass}
-          value={typeFilter}
-          onChange={(e) => {
-            setTypeFilter(e.target.value);
+        <Select
+          value={typeFilter || ALL}
+          onValueChange={(v) => {
+            setTypeFilter(v === ALL ? "" : v);
             setPage(1);
           }}
         >
-          <option value="">All types</option>
-          {typeOptions.map((t) => (
-            <option key={t} value={t}>
-              {t.replaceAll("_", " ")}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Status"
-          className={selectClass}
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
+          <SelectTrigger aria-label="Transaction type" className={selectClass}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="z-[1100]">
+            <SelectItem value={ALL}>All types</SelectItem>
+            {typeOptions.map((t) => (
+              <SelectItem key={t} value={t}>
+                {t.replaceAll("_", " ")}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={statusFilter || ALL}
+          onValueChange={(v) => {
+            setStatusFilter(v === ALL ? "" : v);
             setPage(1);
           }}
         >
-          <option value="">All statuses</option>
-          {statusOptions.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger aria-label="Status" className={selectClass}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="z-[1100]">
+            <SelectItem value={ALL}>All statuses</SelectItem>
+            {statusOptions.map((st) => (
+              <SelectItem key={st} value={st}>
+                {st}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <Button
@@ -564,7 +559,7 @@ function Reports({ showNotification }) {
         </Button>
       </div>
 
-      <div className="pt-4 border-t border-white/[0.06] flex flex-col gap-1">
+      <div className="pt-4 border-t border-white/[0.06] flex flex-col gap-1 stagger">
         {loading && (
           <p className="text-muted-foreground text-sm text-center py-6">
             Loading report...

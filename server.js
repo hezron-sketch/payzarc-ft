@@ -32,7 +32,7 @@ const server = http.createServer((req, res) => {
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, Bypass-Tunnel-Reminder",
+    "Content-Type, Authorization, Bypass-Tunnel-Reminder, Idempotency-Key",
   );
 
   if (req.method === "OPTIONS") {

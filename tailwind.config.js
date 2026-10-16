@@ -1,6 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: ["class"],
+  // hover: variants only apply on devices that can actually hover — a tap on
+  // a phone otherwise leaves the hover lift/colour stuck until the next tap.
+  future: { hoverOnlyWhenSupported: true },
   content: ["./src/**/*.{js,jsx}"],
   theme: {
     extend: {
@@ -87,45 +90,50 @@ module.exports = {
           from: { opacity: 0, transform: "translateY(28px)" },
           to: { opacity: 1, transform: "translateY(0)" },
         },
+        // Materialize rather than fade: scale + blur settle together so a
+        // translucent surface reads as arriving, not just appearing.
         "popup-in": {
-          from: { opacity: 0, transform: "translateY(12px) scale(0.98)" },
-          to: { opacity: 1, transform: "translateY(0) scale(1)" },
+          from: { opacity: 0, transform: "scale(0.96)", filter: "blur(6px)" },
+          to: { opacity: 1, transform: "scale(1)", filter: "blur(0)" },
         },
-        // Dialogs open by tipping up out of the screen instead of just
-        // sliding/fading — perspective + rotateX baked into the transform
-        // itself (rather than relying on an ancestor's `perspective`
-        // property) so it works regardless of what wraps DialogContent.
-        "modal-3d-in": {
-          "0%": {
-            opacity: 0,
-            transform:
-              "perspective(1200px) rotateX(-65deg) translateY(-30px) scale(0.85)",
-          },
-          "60%": { opacity: 1 },
-          "100%": {
-            opacity: 1,
-            transform: "perspective(1200px) rotateX(0deg) translateY(0) scale(1)",
-          },
-        },
-        "ticker-fade": {
-          from: { opacity: 0, transform: "translateY(4px)" },
-          to: { opacity: 1, transform: "translateY(0)" },
+        // Value swaps (balance shown/hidden/loaded): a short blur settle
+        // masks the old→new change instead of the digits snapping.
+        "reveal-in": {
+          from: { opacity: 0, filter: "blur(4px)" },
+          to: { opacity: 1, filter: "blur(0)" },
         },
         "progress-pulse": {
           "0%, 100%": { boxShadow: "0 0 0 0 rgba(var(--gold-rgb), 0.45)" },
           "50%": { boxShadow: "0 0 0 6px rgba(var(--gold-rgb), 0)" },
         },
       },
+      // Apple's no-overshoot settle curve; same value as --ease-standard.
+      transitionTimingFunction: {
+        apple: "cubic-bezier(0.32, 0.72, 0, 1)",
+      },
+      // The UI's transition property list: everything a control animates on
+      // hover/press/state, and never layout (width/height/margins) — the
+      // explicit replacement for `transition-all`.
+      transitionProperty: {
+        ui: "color, background-color, border-color, outline-color, box-shadow, opacity, transform, scale, filter",
+      },
+      transitionDuration: {
+        250: "250ms",
+        400: "400ms",
+      },
       animation: {
-        "slide-in-right": "slide-in-right 0.3s cubic-bezier(0.4,0,0.2,1)",
-        "slide-in-left": "slide-in-left 0.3s cubic-bezier(0.4,0,0.2,1)",
-        "flow-fade-in": "flow-fade-in 0.35s cubic-bezier(0.4,0,0.2,1)",
+        "slide-in-right": "slide-in-right 0.3s cubic-bezier(0.32,0.72,0,1)",
+        "slide-in-left": "slide-in-left 0.3s cubic-bezier(0.32,0.72,0,1)",
+        "flow-fade-in": "flow-fade-in 0.35s cubic-bezier(0.32,0.72,0,1)",
         // Same easing the old strip-slide used for panel motion — a smooth
         // decelerate-into-place curve, fitting for a full page settling in.
         "page-swap-in": "page-swap-in 0.45s cubic-bezier(0.22,1,0.36,1)",
-        "popup-in": "popup-in 0.25s cubic-bezier(0.22,1,0.36,1)",
-        "modal-3d-in": "modal-3d-in 0.6s cubic-bezier(0.22,1.4,0.36,1)",
-        "ticker-fade": "ticker-fade 0.35s ease",
+        "popup-in": "popup-in 0.3s cubic-bezier(0.32,0.72,0,1)",
+        // Trigger-anchored popovers (search results, notifications): the same
+        // materialize, inside the 150–250ms dropdown budget, on the strong
+        // ease-out. Pair with an origin-* class pointing at the trigger.
+        "popover-in": "popup-in 0.2s cubic-bezier(0.23,1,0.32,1)",
+        "reveal-in": "reveal-in 0.25s cubic-bezier(0.23,1,0.32,1)",
         "progress-pulse": "progress-pulse 1.6s ease-in-out infinite",
       },
     },

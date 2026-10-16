@@ -54,8 +54,9 @@
   --spacing-half: 0.5rem;
   --spacing-quarter: 0.25rem;
 
-  /* Motion */
-  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Motion — Apple's critically-damped "settle" curve (iOS sheet easing):
+     fast response, no overshoot. */
+  --ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
   --transition-fast: 0.15s var(--ease-standard);
   --transition: 0.25s var(--ease-standard);
 
@@ -80,7 +81,9 @@
   --border-mid: rgba(255, 255, 255, 0.12);
   --white: #f9fafb;
   --muted: #6b7280;
-  --soft: #9ca3af;
+  /* Secondary text. #b4bcc8 clears 4.5:1 on --card (5.05:1) and every
+     darker surface; the old #9ca3af was 3.8:1 on cards. */
+  --soft: #b4bcc8;
   --green: #4ade80;
   --blue: #60a5fa;
   --pink: #f472b6;
@@ -92,10 +95,11 @@
   --pink-rgb: 244, 114, 182;
   --danger-rgb: 239, 68, 68;
 
-  /* Flat/minimal radius scale — sharper than the old 10/16/24 defaults */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
+  /* Apple-style radius scale — soft, continuous-feeling corners:
+     controls 10, fields/popovers 14, cards/sheets 22. */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
 }
 
 * {
@@ -111,6 +115,211 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
+}
+
+/* ── Apple-style foundations ──
+   Size-specific tracking (tighter as type grows, body stays at 0),
+   balanced heading wraps, no grey tap flash, gold focus/selection. */
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-optical-sizing: auto;
+  text-rendering: optimizeLegibility;
+}
+
+h1 { letter-spacing: -0.022em; line-height: 1.1; }
+h2 { letter-spacing: -0.016em; line-height: 1.2; }
+h3 { letter-spacing: -0.01em; }
+h1, h2, h3 { text-wrap: balance; }
+
+::selection {
+  background: rgba(var(--gold-rgb), 0.3);
+}
+
+/* Keyboard focus: one gold ring everywhere. Components that draw their own
+   ring opt out with focus-visible:outline-none (Tailwind utilities win). */
+:focus-visible {
+  outline: 2px solid rgba(var(--gold-rgb), 0.75);
+  outline-offset: 2px;
+}
+
+/* Icons: one SF Symbols–like weight everywhere. lucide renders a
+   stroke-width attribute; CSS beats presentation attributes, so this wins
+   over per-icon defaults without touching every call site. */
+.lucide {
+  stroke-width: 1.75;
+}
+
+/* Translucent materials (see apple-design §12). Thick = sheets/dialogs,
+   thin = popovers/menus. Tinted from --card2 (#1c2a46) so the palette
+   stays the same; the blur is what's new. */
+@layer components {
+  .material-thick {
+    background-color: rgba(28, 42, 70, 0.82);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    backdrop-filter: blur(28px) saturate(180%);
+  }
+  .material-thin {
+    background-color: rgba(28, 42, 70, 0.72);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+}
+
+/* ── Motion ──
+   Press feedback for every button, on press (not release). Uses the
+   standalone `scale` property so it composes with any Tailwind transform
+   (translate/positioning) instead of overwriting it; buttons that already
+   declare their own active: state are left alone. 0.98 rather than 0.97
+   because many buttons here are full-width rows, where 0.97 reads as a lurch. */
+:where(button:not(:disabled)):not([class*="active:"]):active {
+  scale: 0.98;
+}
+
+/* Toast: rises from the bottom edge it's anchored to. A transition with
+   @starting-style (not a keyframe) so a toast replacing a toast retargets
+   from wherever it is instead of restarting. */
+@layer components {
+  .toast-rise {
+    transition:
+      opacity 0.25s cubic-bezier(0.23, 1, 0.32, 1),
+      translate 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+}
+@starting-style {
+  .toast-rise {
+    opacity: 0;
+    translate: 0 16px;
+  }
+}
+
+/* Native <select> lists, drawn by the page instead of the OS/browser
+   (customizable select, Chrome 135+). The classic list is a separate
+   browser window positioned from screen coordinates, and inside the
+   dashboard's transformed phone frame it landed off the phone. base-select
+   renders it in the top layer, anchored to the select itself, so it opens
+   right under it wherever it is, and themed like the app's popovers.
+   Selects styled with `appearance-none` (landing converter, Register) keep
+   their own look — the class out-specifies this. Other browsers ignore the
+   block and keep their native picker (the OS sheet on phones). */
+@supports (appearance: base-select) {
+  select,
+  ::picker(select) {
+    appearance: base-select;
+  }
+  select {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  select::picker-icon {
+    color: var(--soft);
+    transition: rotate 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  select:open::picker-icon {
+    rotate: 180deg;
+  }
+  ::picker(select) {
+    margin-block: 6px;
+    padding: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    background: var(--card2);
+    color: inherit;
+    box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.6);
+    transform-origin: top;
+    transition:
+      opacity 0.2s cubic-bezier(0.23, 1, 0.32, 1),
+      scale 0.2s cubic-bezier(0.23, 1, 0.32, 1),
+      overlay 0.2s allow-discrete,
+      display 0.2s allow-discrete;
+  }
+  @starting-style {
+    ::picker(select):popover-open {
+      opacity: 0;
+      scale: 0.96;
+    }
+  }
+  select option {
+    padding: 0.6rem 0.75rem;
+    border-radius: 9px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  select option:hover,
+  select option:focus-visible {
+    background: rgba(255, 255, 255, 0.06);
+    outline: none;
+  }
+  select option:checked {
+    color: var(--gold);
+    font-weight: 600;
+  }
+  select option::checkmark {
+    color: var(--gold);
+  }
+  select option:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+}
+
+/* Send/Withdraw pills hang outside the phone screen, so a dialog's overlay
+   (clipped to the screen) can't reach them. While anything is open in the
+   phone's dialog layer, they get the same treatment as the overlay —
+   blur(4px) like backdrop-blur-sm, darkened like bg-black/50. The pill's
+   transition-ui already includes filter, so it eases in and out. */
+[data-phone-bezel]:has([data-phone-screen] > *) [data-edge-pill] {
+  filter: blur(4px) brightness(0.5);
+  pointer-events: none;
+}
+
+/* List entrance: children rise in one after another (40ms apart, capped at
+   the 8th so a long list never makes the user wait — later rows arrive with
+   the 8th). Only runs when a row mounts, so re-renders don't replay it.
+   Purely decorative: rows are clickable from the first frame. */
+@keyframes stagger-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+@layer components {
+  .stagger > * {
+    animation: stagger-in 0.3s cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+  .stagger > :nth-child(2) { animation-delay: 40ms; }
+  .stagger > :nth-child(3) { animation-delay: 80ms; }
+  .stagger > :nth-child(4) { animation-delay: 120ms; }
+  .stagger > :nth-child(5) { animation-delay: 160ms; }
+  .stagger > :nth-child(6) { animation-delay: 200ms; }
+  .stagger > :nth-child(7) { animation-delay: 240ms; }
+  .stagger > :nth-child(n + 8) { animation-delay: 280ms; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button:not(:disabled)):not([class*="active:"]):active { scale: none; }
+  /* The global 0.01ms override doesn't touch delays, so staggered rows
+     would sit invisible until theirs elapsed — drop it entirely. */
+  .stagger > * { animation: none !important; }
+  .toast-rise { translate: none !important; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .material-thick,
+  .material-thin {
+    background-color: var(--card2);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .material-thick,
+  .material-thin {
+    background-color: var(--card2);
+    border-color: var(--border-mid);
+  }
 }
 
 code {
