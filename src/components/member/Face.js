@@ -1,8 +1,3 @@
-// Face authentication for money-out flows — the fallback when no PIN is
-// entered. Talks to the standalone face service: checks whether this
-// account has a face enrolled, enrolls it on first use or verifies it
-// otherwise, then hands the captured frame back so the transfer request can
-// carry it as `face_image` (the backend re-checks it; this is not the gate).
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -55,9 +50,6 @@ function Face({ open, email, onSuccess, onClose }) {
 
   const normalizedEmail = (email || "").trim().toLowerCase();
 
-  // One linear run per open/retry: status → camera → countdown → capture →
-  // enroll/verify. Every await re-checks `cancelled` so closing the dialog
-  // mid-flow stops the camera and never fires onSuccess.
   useEffect(() => {
     if (!open) return undefined;
     let cancelled = false;
@@ -88,8 +80,6 @@ function Face({ open, email, onSuccess, onClose }) {
         return;
       }
 
-      // A failed status check falls through to enrollment rather than
-      // blocking — the enroll call's own 409 sends us to verify if needed.
       let status = {};
       try {
         const res = await fetch(
@@ -233,8 +223,6 @@ function Face({ open, email, onSuccess, onClose }) {
       clearTimeout(timer);
       stopCamera();
     };
-    // onSuccess is read once at the end of a run; re-running on its identity
-    // would restart the camera on every parent render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, attempt, normalizedEmail, stopCamera]);
 
@@ -308,9 +296,6 @@ function Face({ open, email, onSuccess, onClose }) {
   );
 }
 
-// Promise-style wrapper so a flow can just `await requestFace()`: resolves
-// with the captured image (a JPEG data URL) once enrolled/verified, or null
-// if the user cancels. Render `faceModal` somewhere in the flow.
 export function useFaceAuth(email) {
   const [resolve, setResolve] = useState(null);
   const requestFace = useCallback(

@@ -32,28 +32,14 @@ import {
   Send,
 } from "lucide-react";
 
-// Bottom tab bar — mobile-only nav so switching between top-level sections
-// doesn't depend on the topbar's cramped icon row or on stumbling onto the
-// "View all" / "Groups" links buried inside Home's content. "send" is
-// rendered as a raised center FAB instead of a regular tab (see the "fab"
-// flag below) — same visual idea as the reference design's floating
-// transfer button.
 const MOBILE_NAV_TABS = [
-  // Opens Home's resting screen, so Home also works as "close whatever
-  // panel (Groups, History, a flow) is open" while already on Home.
   { key: "home", label: "Home", icon: House, section: "dashboard" },
-  // Opens Home's Groups panel (friends + group funds) in the phone — the
-  // same screen the balance card's group-funds chip opens.
   { key: "groups", label: "Groups", icon: UsersRound, section: "groups" },
   { key: "send", label: "Send", icon: Send, fab: true },
-  // Opens Home's combined Transactions screen (list + statements) in the
-  // phone, same as the topbar search result, instead of a separate page.
   { key: "history", label: "History", icon: HistoryIcon, section: "reports" },
   { key: "account", label: "Account", icon: CircleUserRound },
 ];
 
-// Same type -> icon mapping as the full Notifications.js page, reused here
-// for the topbar's notification preview dropdown so both stay in sync.
 const NOTIFICATION_ICONS = {
   receive: CircleArrowDown,
   security: ShieldAlert,
@@ -61,8 +47,6 @@ const NOTIFICATION_ICONS = {
 };
 
 const DEV_BYPASS_AUTH = process.env.REACT_APP_BYPASS_AUTH === "true";
-// Inside the Android app the OS draws a real status bar and gesture bar, so
-// the shell's drawn notch and home indicator would double them up.
 const IS_NATIVE_APP = Capacitor.isNativePlatform();
 
 // Top-bar search results — static services plus whatever friends match.
@@ -77,9 +61,6 @@ const SEARCH_SERVICES = [
 const searchResultItemClass =
   "flex items-center justify-between gap-2 w-full bg-transparent border-none text-foreground text-[0.85rem] font-medium text-left py-[0.6rem] px-[0.8rem] rounded-sm cursor-pointer transition-ui duration-[250ms] ease-in-out hover:bg-[var(--gold-pale)] hover:text-gold";
 
-// Every place the dashboard can be is in the URL (?page / ?section / ?tab),
-// so Back/Forward walk through panels, refresh keeps your place, and any
-// screen can be linked to. Unknown values fall back to the home screen.
 const PAGES = ["home", "groups", "account", "notifications"];
 const HOME_SECTIONS = ["dashboard", "add-money", "withdraw", "send", "send-many", "groups", "reports"];
 const GROUPS_TABS = ["friends", "groups"];
@@ -99,9 +80,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [friends, setFriends] = useState([]);
-  // A one-off "go here" instruction for Home.js, set when a top-bar search
-  // result is picked. Timestamped so picking the same result twice in a row
-  // still re-triggers Home's effect.
   const [navigateRequest, setNavigateRequest] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [hideTopBar, setHideTopBar] = useState(false);
@@ -112,13 +90,32 @@ export default function Dashboard() {
   const notifRef = useRef(null);
   const bellRef = useRef(null);
   const lastScrollY = useRef(0);
-  // Home.js's phone/balance card — scrolled into view when a search result
-  // opens one of its flows, so the flow isn't left off-screen.
   const balanceCardRef = useRef(null);
+  // Mobile: the screen scrolls *behind* the frosted top and bottom bars, so
+  // it needs padding equal to each bar. The top bar is --topbar-h; the tab
+  // bar's height depends on safe-area insets, so it's measured.
+  // Phone-view scrollbar shows only while scrolling (data-scrolling), then
+  // hides — set on the node directly so scrolling never re-renders.
+  const scrollIdleTimer = useRef(null);
+  const markScrolling = (e) => {
+    const el = e.currentTarget;
+    el.dataset.scrolling = "";
+    clearTimeout(scrollIdleTimer.current);
+    scrollIdleTimer.current = setTimeout(() => {
+      delete el.dataset.scrolling;
+    }, 900);
+  };
+  useEffect(() => () => clearTimeout(scrollIdleTimer.current), []);
+  const bottomNavRef = useRef(null);
+  const [bottomNavH, setBottomNavH] = useState(0);
+  useEffect(() => {
+    const el = bottomNavRef.current;
+    if (!el) return undefined;
+    const ro = new ResizeObserver(() => setBottomNavH(el.offsetHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [loading]);
 
-  // Runs after Home has committed (child effects/refs land first), so the
-  // ref is already attached even when the search jumped here from another
-  // page.
   useEffect(() => {
     if (navigateRequest) {
       balanceCardRef.current?.scrollIntoView({
@@ -128,12 +125,6 @@ export default function Dashboard() {
     }
   }, [navigateRequest]);
 
-  // Only the search results and the notification preview need manual
-  // outside-click handling — the user dropdown is a Radix DropdownMenu,
-  // which already closes itself on outside clicks. A manual listener here
-  // would see clicks inside it as "outside" (DropdownMenuContent portals to
-  // document.body, outside dropdownRef) and close the menu on mousedown
-  // before the clicked item's onClick could fire.
   useEffect(() => {
     const handleClick = (e) => {
       if (searchRef.current && !searchRef.current.contains(e.target)) {
@@ -159,12 +150,6 @@ export default function Dashboard() {
     return () => document.removeEventListener("keydown", onKey);
   }, [isNotifOpen]);
 
-  // Hides the topbar while scrolling down (past its own height, so it
-  // doesn't flicker right at the top) and brings it back the moment the
-  // user scrolls up at all — the standard "proper" hide-on-scroll pattern.
-  // Desktop only (fed from the window scroll). Below 768px only <main>
-  // scrolls, and it deliberately isn't wired in: the phone's topbar (logo,
-  // bell, avatar) stays put like a real app's nav bar.
   const handleScroll = (currentY) => {
     const scrolledPastBar = currentY > 96;
     const scrollingDown = currentY > lastScrollY.current;
@@ -253,10 +238,6 @@ export default function Dashboard() {
     }
   };
 
-  // The single writer for dashboard location. Pushes a history entry per
-  // destination (so Back undoes it); `replace` is for in-place changes like
-  // a segmented tab. Re-navigating to where you already are is a no-op, so
-  // the same destination is never stacked twice.
   const goTo = ({ page = "home", section = "dashboard", tab } = {}, { replace = false } = {}) => {
     const next = new URLSearchParams();
     if (page !== "home") next.set("page", page);
@@ -391,22 +372,6 @@ export default function Dashboard() {
   return (
     <div className="bg-[#0602145f] bg-fixed">
       <div className="relative flex w-full min-h-screen text-foreground overflow-x-hidden bg-[radial-gradient(ellipse_120%_60%_at_50%_-10%,rgba(38,50,82,0.6),var(--bg)_60%)] bg-fixed">
-        {/* Below 768px this becomes the persistent mobile "app shell": fixed
-        full-viewport, header/main/nav stacked as flex children instead of
-        flowing in the document. <main> is the only thing that scrolls
-        inside it, so the topbar and bottom nav both stay pinned in place —
-        the nav lives inside this shell (a real flex child) instead of a
-        separately fixed overlay. Desktop is untouched (relative, normal
-        page scroll, no bottom nav). */}
-        {/* Phone bezel — on the web, the mobile shell sits inside the same
-        phone modal the landing page's Login/Register open in (shared
-        phoneModal* classes). `contents` on desktop means none of the
-        bezel's box styles apply there, so only `max-[768px]:block` needs a
-        breakpoint. Its transform also makes it the containing block for
-        fixed children (e.g. Home's toast), keeping them inside the phone,
-        and lets BalanceCard's Send/Withdraw pills (position: fixed) escape
-        the scroll area's clipping to straddle the screen edge.
-        Native app skips it — the device is already the phone. */}
         <div
           data-phone-bezel={IS_NATIVE_APP ? undefined : ""}
           className={cn(
@@ -416,9 +381,6 @@ export default function Dashboard() {
                 "max-[768px]:block fixed z-[60] p-[8px] rounded-[var(--r)]",
                 phoneBezelColorClass,
                 phoneModalOpenClass,
-                // 2D only: the landing modal's translateZ lift (no perspective
-                // here anyway) makes Chrome place native popups — <select>
-                // lists, date pickers — at the wrong spot, off the phone.
                 "[transform:translate(-50%,-50%)]",
                 phoneModalShadowClass,
               ),
@@ -426,34 +388,24 @@ export default function Dashboard() {
         >
         <div
           className={cn(
-            "flex-1 flex flex-col min-w-0 min-h-screen max-[768px]:min-h-0 max-[768px]:bg-[var(--bg)]",
+            // Phone view: the notch strip is part of the header, so the
+            // whole top bar is one frosted surface the content scrolls under.
+            "flex-1 flex flex-col min-w-0 min-h-screen max-[768px]:min-h-0 max-[768px]:bg-[var(--bg)] max-[768px]:[--topbar-h:calc(90px+env(safe-area-inset-top))]",
             IS_NATIVE_APP
               ? "max-[768px]:fixed max-[768px]:inset-0 max-[768px]:z-[60] max-[768px]:h-[100dvh]"
-              : // overflow-clip, not -hidden: a hidden box is still a scroll
-              // container, so Home's balanceCard scrollIntoView() on screen
-              // switches scrolled the whole shell up, leaving a gap under the
-              // tab bar. clip can't be scrolled at all.
+              :
               "max-[768px]:relative max-[768px]:isolate max-[768px]:h-full max-[768px]:overflow-clip max-[768px]:rounded-[calc(var(--r)-8px)]",
           )}
         >
-          {/* Status-bar strip — the space the bezel's notch (below the
-          shell) hangs into. Clears an actual notch/Dynamic Island via
-          env(safe-area-inset-top) in the native app. Navy (--bg), not
-          the desktop topbar's near-black, so the bezel-colored notch and
-          bezel stand out against it. */}
-          <div
-            className="hidden max-[768px]:flex shrink-0 justify-center items-end pb-1 min-h-[22px] bg-[rgba(15,26,46,0.85)] [backdrop-filter:blur(20px)_saturate(1.2)] [-webkit-backdrop-filter:blur(20px)_saturate(1.2)]"
-            style={{ paddingTop: "env(safe-area-inset-top)" }}
-          >
-          </div>
-          {/* Simplified Top Bar */}
           <header
             className={cn(
-              "h-[68px] bg-[rgba(13,17,23,0.85)] max-[768px]:bg-[rgba(15,26,46,0.85)] [backdrop-filter:blur(20px)_saturate(1.2)] [-webkit-backdrop-filter:blur(20px)_saturate(1.2)] border-b border-white/[0.04] flex items-center justify-center sticky top-0 z-[100] w-full shrink-0 transition-transform duration-300 ease-in-out",
+              "h-[68px] max-[768px]:h-[var(--topbar-h)] max-[768px]:pt-[calc(22px+env(safe-area-inset-top))] px-[4%] max-[768px]:px-4 bg-[rgba(13,17,23,0.55)] [backdrop-filter:blur(24px)_saturate(1.5)] [-webkit-backdrop-filter:blur(24px)_saturate(1.5)] max-[768px]:bg-[rgba(28,42,70,0.72)] max-[768px]:[backdrop-filter:blur(20px)_saturate(180%)] max-[768px]:[-webkit-backdrop-filter:blur(20px)_saturate(180%)] border-b border-white/[0.04] max-[768px]:border-white/[0.08] flex items-center justify-center sticky top-0 z-[100] w-full shrink-0 transition-transform duration-300 ease-in-out",
               hideTopBar && "-translate-y-full",
             )}
           >
-            <div className="relative flex items-center justify-between gap-4 w-full max-w-[1280px] px-6 max-[768px]:px-4">
+            {/* Same 960px column and 4% gutter as the Home body below, so the
+                logo and profile line up with its outer edges. */}
+            <div className="relative flex items-center justify-between gap-4 w-full max-w-[960px]">
               <div className="flex items-center">
                 <button
                   type="button"
@@ -469,10 +421,6 @@ export default function Dashboard() {
                 </button>
               </div>
 
-              {/* In-flow middle track (flex-1, capped) rather than absolutely
-              centered — absolute centering ran under the Groups/bell/avatar
-              cluster at medium widths (~800px). Shrinks instead of
-              overlapping; hidden on mobile. */}
               <div
                 className="relative flex-1 min-w-0 max-w-[320px] flex items-center max-[768px]:hidden"
                 ref={searchRef}
@@ -547,8 +495,6 @@ export default function Dashboard() {
 
               <div className="flex items-center">
                 <div className="flex items-center gap-5 max-[768px]:gap-2">
-                  {/* Desktop has no bottom nav, so Groups gets a header entry
-                      (the mobile dock's Groups tab covers phones). */}
                   <button
                     type="button"
                     onClick={() => goToSection("groups")}
@@ -671,15 +617,18 @@ export default function Dashboard() {
             </div>
           </header>
 
-          {/* Content Area — rounded top corners + a faint glass surface (same
-          bg-white/[0.0X] + border-white/[0.06] language as the app's other
-          panels) so it reads as a distinct rounded sheet sitting under the
-          flat topbar, instead of content floating directly on the page bg.
-          Desktop only: inside the phone frame it doubled up with the balance
-          card's own rounded panel (a sheet inside a sheet), so on mobile the
-          card is the only surface. */}
           <main
-            className="flex-1 flex flex-col pt-12 max-[768px]:pt-4 max-[768px]:pb-6 max-[768px]:min-h-0 max-[768px]:overflow-y-auto max-[768px]:overflow-x-hidden bg-white/[0.015] border-t border-white/[0.06] rounded-t-[28px] max-[768px]:bg-transparent max-[768px]:border-t-0 max-[768px]:rounded-none"
+            style={
+              bottomNavH
+                ? {
+                    marginBottom: -bottomNavH,
+                    paddingBottom: `calc(${bottomNavH}px + 1.5rem)`,
+                    "--tabbar-h": `${bottomNavH}px`,
+                  }
+                : undefined
+            }
+            onScroll={markScrolling}
+            className="flex-1 flex flex-col pt-12 max-[768px]:mt-[calc(-1*var(--topbar-h))] max-[768px]:pt-[calc(var(--topbar-h)+1rem)] max-[768px]:min-h-0 max-[768px]:overflow-y-auto max-[768px]:overflow-x-hidden supports-[-moz-appearance:none]:[scrollbar-width:thin] supports-[-moz-appearance:none]:[scrollbar-color:transparent_transparent] supports-[-moz-appearance:none]:[&[data-scrolling]]:[scrollbar-color:rgba(var(--gold-rgb),0.25)_transparent] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-track]:mt-[calc(var(--topbar-h)+1rem)] [&::-webkit-scrollbar-track]:mb-[var(--tabbar-h,0px)] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-transparent [&[data-scrolling]::-webkit-scrollbar-thumb]:bg-[rgba(var(--gold-rgb),0.25)] bg-white/[0.015] border-t border-white/[0.06] rounded-t-[28px] max-[768px]:bg-transparent max-[768px]:border-t-0 max-[768px]:rounded-none"
           >
             <div className="flex-1 w-full max-w-[1400px] mx-auto px-[4%] pb-12 max-[768px]:pb-4">
               <div key={activePage} className="animate-flow-fade-in">
@@ -688,25 +637,14 @@ export default function Dashboard() {
             </div>
           </main>
 
-          {/* Mobile bottom tab bar — the only way to reach Groups/History/
-          Account on a phone was previously buried inside Home's own content
-          (its money-flow tabs, or the Recent Activity "View all" link).
-          Desktop keeps relying on the topbar + in-page links, so this only
-          shows under 768px. A shrink-0 flex child of the app shell above
-          (not a fixed overlay), so it's always the last thing in the shell
-          instead of floating over whatever's scrolled to the bottom. An
-          iOS-style tab bar: edge to edge, translucent material, a hairline
-          top edge, and the active tab marked by tint alone. */}
-          <div className="hidden max-[768px]:block shrink-0 material-thin border-t border-white/[0.08] pt-2 [padding-bottom:calc(0.35rem+env(safe-area-inset-bottom))]">
+          <div
+            ref={bottomNavRef}
+            data-bottom-nav=""
+            className="hidden max-[768px]:block relative z-[100] shrink-0 material-thin border-t border-white/[0.08] pt-2 [padding-bottom:calc(0.35rem+env(safe-area-inset-bottom))]">
             <nav
               aria-label="Main"
               className="flex items-center justify-around h-[58px] px-1">
               {MOBILE_NAV_TABS.map(({ key, label, icon: Icon, fab, section }) => {
-                // "Send" doesn't have its own activePage — it opens Home's
-                // internal send flow via the same goToSection helper the
-                // topbar search's "Send Money" result uses, so it has no
-                // "active" state of its own; it's drawn as a raised circle
-                // instead of a tab.
                 if (fab) {
                   return (
                     <button
@@ -722,9 +660,6 @@ export default function Dashboard() {
                     </button>
                   );
                 }
-                // Groups and History open panels inside Home, so they're
-                // current when Home is showing their section; Home itself is
-                // current for everything else Home shows.
                 const homeTab =
                   MOBILE_NAV_TABS.find((t) => t.section === homeSection)?.key ||
                   "home";
@@ -753,31 +688,17 @@ export default function Dashboard() {
                 );
               })}
             </nav>
-            {/* Home indicator — the other half of the realistic-phone cue
-            (paired with the notch above), sitting in the tab bar's own
-            safe-area padding instead of adding its own space. */}
             {!IS_NATIVE_APP && (
               <div className="w-[120px] h-[5px] bg-white/30 rounded-full mx-auto mt-1.5" />
             )}
           </div>
         </div>
-        {/* Phone screen layer for dialogs/sheets (see phoneScreenContainer
-        in lib/utils). Sits exactly over the screen (inset = bezel padding,
-        same rounded corners) and clips to it. Its own 2D transform makes it
-        the containing block for Radix's `fixed inset-0` overlays, so they
-        cover the screen, not the window. Empty it's click-through; portaled
-        children re-enable pointer events. Above the edge pills (z-10). */}
         {!IS_NATIVE_APP && (
           <div
             data-phone-screen=""
             className="hidden max-[768px]:block absolute inset-[8px] z-20 overflow-clip rounded-[calc(var(--r)-8px)] [transform:translate(0)] pointer-events-none [&>*]:pointer-events-auto"
           />
         )}
-        {/* Notch hanging from the screen's top edge, same shape as the
-        landing modal's. After the shell (which is `isolate`) so it paints on
-        top. Bezel-colored like the landing modal's; it reads because the
-        status strip and topbar behind it are navy on mobile, not the
-        bezel's near-black. */}
         {!IS_NATIVE_APP && (
           <div
             className={cn(

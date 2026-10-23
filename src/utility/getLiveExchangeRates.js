@@ -1,6 +1,3 @@
-// Free, keyless FX rates API (same no-signup style as getCurrentCountry.js's
-// ipapi.co call). Returns rates for every currency it tracks, so the Send
-// Money conversion isn't limited to the small mocked EXCHANGE_RATES table.
 export async function getLiveExchangeRates(baseCurrency) {
   try {
     const response = await fetch(

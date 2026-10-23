@@ -1,4 +1,3 @@
-// src/components/member/SetNewPassword.jsx
 import React, { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Home } from 'lucide-react';

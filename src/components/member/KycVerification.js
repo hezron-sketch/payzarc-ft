@@ -5,9 +5,6 @@ import { useStopCameraWhenHidden } from '../../utility/useStopCameraWhenHidden';
 import { cameraErrorMessage, useRetryWhenCameraAllowed } from '../../utility/cameraError';
 import { cn } from '@/lib/utils';
 
-// Same flow-card recipe as ProfileImageCapture.js/PaymentMethods.js — kept
-// as its own copy of the strings rather than a shared import, matching how
-// every other flow page in this app carries its own class constants.
 const flowCardClass =
   "relative p-8 w-full max-w-[440px] mx-auto min-h-[560px] flex flex-col gap-6 bg-[radial-gradient(circle_at_30%_0%,var(--card),var(--card2)_65%)] rounded-2xl shadow-[0_30px_70px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.04)_inset] animate-modal-3d-in max-[480px]:p-6 max-[480px]:px-5 max-[480px]:min-h-[480px]";
 const flowHeaderClass =
@@ -19,9 +16,6 @@ const primaryBtnClass =
 const ghostBtnClass =
   "w-full rounded-sm px-5 py-2.5 text-base font-semibold text-foreground bg-white/[0.03] border border-white/[0.08] transition-ui duration-200 hover:bg-white/[0.06] hover:border-gold/20 active:scale-[0.97] flex items-center justify-center gap-2 cursor-pointer";
 
-// Two fixed steps — a document shot, then a selfie — each using the same
-// capture mechanic, so this stays one small state machine instead of a
-// generic N-step camera framework nobody else needs yet.
 const STEPS = [
   {
     key: "document",
@@ -149,8 +143,6 @@ function KycVerification({ onRefreshUser, onBack }) {
 
   return (
     <div className="flex justify-center items-center p-4 box-border">
-      {/* ponytail: same one-off pulse trick ProfileImageCapture.js uses for
-          its face guide — not worth a global tailwind.config.js entry. */}
       <style>{`
         @keyframes kycGuidePulse {
           0% { opacity: 0.7; }

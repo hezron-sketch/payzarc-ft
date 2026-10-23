@@ -6,7 +6,6 @@ import axios from "axios";
 import { countries } from "../../utility/countries";
 import { CircleCheck } from "lucide-react";
 
-/* ─── helpers ─── */
 const formatDate = (dateString) => {
   if (!dateString) return "Not set";
   const date = new Date(dateString);
@@ -49,7 +48,6 @@ const getPinStrength = (pinValue) => {
   return { level: "strong", label: "Strong", color: "#22c55e" };
 };
 
-/* ─── IdentityDetailsForm ─── */
 function IdentityDetailsForm({ profileData, onRefreshUser, onClose }) {
   const [idType, setIdType] = useState("");
   const [idNumber, setIdNumber] = useState("");
@@ -178,7 +176,6 @@ function IdentityDetailsForm({ profileData, onRefreshUser, onClose }) {
   );
 }
 
-/* ─── ResidenceForm ─── */
 function ResidenceForm({ onRefreshUser, onClose }) {
   const [addressLine, setAddressLine] = useState("");
   const [country, setCountry] = useState("Detecting…");
@@ -297,7 +294,6 @@ function ResidenceForm({ onRefreshUser, onClose }) {
   );
 }
 
-/* ─── Main Profile ─── */
 function Profile({ user, onRefreshUser }) {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -608,7 +604,6 @@ function Profile({ user, onRefreshUser }) {
     .filter(Boolean)
     .join(" ");
 
-  /* ── Accordion panels config ── */
   const panels = [
     { id: 1, label: "Update identity details" },
     { id: 2, label: "Update residence" },
@@ -625,7 +620,6 @@ function Profile({ user, onRefreshUser }) {
       <h1 className={styles.pageTitle}>Personal Details</h1>
 
       <div className={styles.profileGrid}>
-        {/* ── LEFT: display information ── */}
         <div className={styles.leftColumn}>
           {/* Bio */}
           <div className={styles.bioCard}>
@@ -790,7 +784,6 @@ function Profile({ user, onRefreshUser }) {
           </div>
         </div>
 
-        {/* ── RIGHT: accordion actions ── */}
         <div className={styles.rightColumn}>
           <div className={styles.accordionContainer}>
             {panels.map(({ id, label }) => (
@@ -1267,7 +1260,6 @@ function Profile({ user, onRefreshUser }) {
         </div>
       </div>
 
-      {/* ── Modals ── */}
       {showContactsModal && (
         <div
           className={styles.popupOverlay}
@@ -1364,7 +1356,6 @@ function Profile({ user, onRefreshUser }) {
         </div>
       )}
 
-      {/* ── Success popups ── */}
       {[
         {
           show: showSuccessPopup,

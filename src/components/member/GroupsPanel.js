@@ -8,8 +8,6 @@ import { flowPanelClass } from "./shared";
 const tabTriggerClass =
   "rounded-full py-2 text-[0.85rem] font-semibold text-muted-foreground data-[state=active]:bg-gold data-[state=active]:text-black data-[state=active]:shadow-none hover:text-foreground";
 
-// Groups action button shows Friends.js and Groups.js as tabs, sharing the
-// same zoomed phone panel the other flows render into.
 function GroupsPanel({
   tab,
   onTabChange,
@@ -17,8 +15,6 @@ function GroupsPanel({
   onTotalChange,
   onWalletChange,
 }) {
-  // Which way the incoming pane should slide in from — "right" when moving
-  // Friends -> Groups (tab order left to right), "left" for the reverse.
   const [direction, setDirection] = useState("right");
 
   const selectTab = (next) => {

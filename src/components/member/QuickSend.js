@@ -1,8 +1,6 @@
 import React from "react";
 import { Send } from "lucide-react";
 
-// Resting content of the phone screen: the first three favourites, each a
-// one-tap shortcut into Send with that recipient pre-filled.
 function QuickSend({ favourites, onSeeAll, onSelect }) {
   return (
     <>
@@ -19,7 +17,8 @@ function QuickSend({ favourites, onSeeAll, onSelect }) {
 
       {favourites.length === 0 ? (
         <p className="text-[0.85rem] text-muted-foreground">
-          No saved recipients yet — add one from Send Money.
+          The people you send to most will live here. Save one from Send
+          Money — any of 150+ currencies.
         </p>
       ) : (
         <div className="pt-4 border-t border-white/[0.04] flex flex-col gap-1 stagger">

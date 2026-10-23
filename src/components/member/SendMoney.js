@@ -52,8 +52,6 @@ export function SendMoney({
 }) {
   const [requestFace, faceModal] = useFaceAuth(user?.email);
   const [sendAmount, setSendAmount] = useState("");
-  // The transfer in flight, shown in TransferStatus:
-  // { phase, kind?, error?, summary, auth, recipientValue, key }. null hides it.
   const [transfer, setTransfer] = useState(null);
   const [lookingUp, setLookingUp] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState(initialRecipient);
@@ -62,9 +60,6 @@ export function SendMoney({
       ? initialRecipient.display_name || recipientLabel(initialRecipient) || ""
       : "",
   );
-  // Manual override for the recipient currency dropdown — only used when
-  // nothing could be detected from the recipient, so the converted-amount
-  // field always has a currency to show.
   const [recipientCurrencyChoice, setRecipientCurrencyChoice] = useState("");
   // Own phone number, used to block adding yourself as a favourite.
   const [myPhone, setMyPhone] = useState("");
@@ -86,11 +81,6 @@ export function SendMoney({
     return name.includes(term) || phone.includes(term);
   });
 
-  // A bare local number — all digits, no "+", no dial code already on it —
-  // is assumed to be in the sender's own country, so typing "0707069007" (or
-  // "707069007") while sending from Kenya resolves to "+254707069007"
-  // without the user having to prefix it themselves. Left untouched for
-  // emails, already-coded numbers, and once a favourite is picked.
   const withSenderCountryCode = (value) => {
     const trimmed = (value || "").trim();
     if (!trimmed || trimmed.includes("@") || !myCountry?.code) return trimmed;
@@ -118,9 +108,6 @@ export function SendMoney({
     return detectCountryFromPhone(withSenderCountryCode(term));
   })();
 
-  // Converted value of the amount being sent, in the recipient's currency.
-  // Detection from the recipient's number always wins once it succeeds —
-  // the manual dropdown only fills in when nothing could be detected yet.
   const availableCurrencies = Object.keys(
     liveRates || EXCHANGE_RATES[senderCurrency] || {},
   );
@@ -165,11 +152,7 @@ export function SendMoney({
       return;
     }
     try {
-      // Step 1: Check — server-side validation the original flow ran before
-      // ever saving a favourite (blocks e.g. numbers that don't resolve to
-      // a real account).
       await contactsApi.post("/api/check/", { type: favouriteType, value });
-      // Step 2: Save
       await contactsApi.post("/api/favorite/add/", {
         favourite_type: favouriteType,
         favourite_detail: value,
@@ -187,9 +170,6 @@ export function SendMoney({
   };
 
   const handleSendMoney = async () => {
-    // Either a picked favourite OR a number typed straight into the search
-    // box. A raw typed number gets the sender's own country code assumed (a
-    // selectedRecipient's stored value is already fully qualified).
     const recipientValue =
       (selectedRecipient &&
         (selectedRecipient.value ||
@@ -200,8 +180,6 @@ export function SendMoney({
       showNotification("error", "Please fill in recipient and a valid amount");
       return;
     }
-    // Only format-check a raw typed value — a selectedRecipient came from
-    // favourites/friends and was already validated when it was saved.
     if (
       !selectedRecipient &&
       !isValidPhone(recipientValue) &&
@@ -211,8 +189,6 @@ export function SendMoney({
       return;
     }
 
-    // Name for display only — recipientValue (a phone number/handle) is
-    // still what's sent to the API below.
     let recipientDisplayName;
     setLookingUp(true);
     try {
@@ -265,9 +241,6 @@ export function SendMoney({
     });
   };
 
-  // Posts the transfer and walks TransferStatus through real phases. Retry
-  // reuses the same credential and idempotency key, so a dropped connection
-  // neither asks for the PIN again nor risks charging twice.
   const runTransfer = async (auth, recipientValue, summary, key) => {
     const base = { auth, recipientValue, summary, key };
     setTransfer({ ...base, phase: "sending" });

@@ -14,7 +14,6 @@ function Menu({ isMenuOpen, toggleMenu, handleLogout, navigate, handleNavClick }
         <div className={styles.dropdownMenu}>
           <button
             onClick={() => {
-              console.log('Settings clicked'); // Debug log
               handleNavClick('settings');
               toggleMenu();
             }}
@@ -27,7 +26,6 @@ function Menu({ isMenuOpen, toggleMenu, handleLogout, navigate, handleNavClick }
           </button>
           <button
             onClick={() => {
-              console.log('Logout clicked'); // Debug log
               handleLogout();
               toggleMenu();
             }}

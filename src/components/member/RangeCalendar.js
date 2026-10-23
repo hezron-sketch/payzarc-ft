@@ -2,14 +2,6 @@ import React, { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/* ─── Range Calendar ───
-   Inline month grid for picking a From/To range, rendered in the page's own
-   DOM so it opens inside the phone frame (native date pickers are drawn by
-   the browser and can't be contained). Values are "YYYY-MM-DD" strings, the
-   same shape <input type="date"> used, so callers didn't have to change.
-   First tap sets From; the next tap on/after it sets To (a tap before it
-   restarts the range). */
-
 const pad = (n) => String(n).padStart(2, "0");
 // Local date, not toISOString() — that's UTC and shifts the day near midnight.
 const toKey = (d) =>
@@ -138,8 +130,6 @@ export default function RangeCalendar({ start, end, onChange, onDone }) {
           const isEnd = k === end;
           const inRange = start && end && k > start && k < end;
           return (
-            // The outer cell carries the range band (edge to edge, so the
-            // band is continuous); the inner circle marks the endpoints.
             <div
               key={k}
               className={cn(

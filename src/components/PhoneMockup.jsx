@@ -1,10 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
-/* ─── Shared class strings for the phone "screen" content, reused by
-   PhoneMockup (landing hero), PhoneAuthStage's morph clone in App.js, and
-   PhoneFrame's own default render below — one source instead of
-   independently-drifting copies. ─── */
 export const psHeaderClass = "flex items-center justify-between mb-0.5";
 export const psLogoClass = "w-[18px] h-[18px] bg-gold rounded-[5px]";
 export const psDotsClass = "flex gap-[3px]";
@@ -16,42 +12,15 @@ export const psBalanceCardClass =
 export const psBalLabelClass = "text-[8px] text-info";
 export const psBalAmountClass = "text-[15px] font-bold text-foreground mt-px";
 
-/* ─── Shared iPhone look ───
-   Used by every phone frame in the app — PhoneFrame below (landing hero +
-   Dashboard preview), PhoneAuthStage's modal in App.js, and the dashboard's
-   BalanceCard — so they can't drift apart. Bezel = this color with an even
-   padding all round; the notch hangs from the screen's top edge in the same
-   color. Callers add the notch's size (w/h/rounded-b) for their scale. */
 export const phoneBezelColorClass = "bg-[#0d1117]";
 export const phoneNotchBaseClass =
   "absolute left-1/2 -translate-x-1/2 bg-[#0d1117] pointer-events-none z-[1]";
 
-/* ─── Expanded phone modal ─── shared by PhoneAuthStage (App.js) once
-   grown, and Dashboard's mobile shell, so both phones are the same size. */
 export const phoneModalShadowClass =
   "shadow-[0_55px_100px_rgba(0,0,0,0.5),0_100px_180px_-40px_rgba(0,0,0,0.6)]";
 export const phoneModalOpenClass =
-  // translateZ(48px) (with the backdrop's perspective above) is the "above
-  // the screen" 3D lift — it grows in alongside width/height/etc since
-  // transform is already in the transition list, so the panel rises toward
-  // the viewer as it expands, and sinks back down as it shrinks on close.
-  // Height-driven with width = height × 9/19.5 (PhoneFrame's own ratio) so
-  // the modal keeps a phone's proportions at every viewport height, instead
-  // of a fixed 420px width that went squat on shorter screens. The min()
-  // against 92vw keeps it from overflowing narrow-but-tall windows.
   "top-1/2 left-1/2 [transform:translate(-50%,-50%)_translateZ(48px)] h-[min(820px,88vh)] w-[min(calc(min(820px,88vh)*9/19.5),92vw)] [--r:44px] border-[0.5px] border-[rgba(var(--gold-rgb),0.16)] max-[480px]:w-[94vw] max-[480px]:h-[90vh] max-[480px]:[--r:36px]";
 
-/* ─── Phone Frame ───
-   The phone "card" itself (bezel + notch + screen content), with no
-   positioning of its own — callers place/size it via `className`. This is
-   what PhoneMockup (below) wraps with the landing hero's absolute+scaled
-   positioning, and what Dashboard's sidebar promo card uses directly at
-   normal flow/size. */
-// Default "screen" content — the landing hero's demo data. PhoneFrame's
-// callers (Dashboard's mini-preview widget) override these with the real
-// signed-in user's name/balance/contacts/activity; the hero and the auth
-// morph clone (App.js) render this component with no data props at all, so
-// these defaults are what they've always shown.
 const DEFAULT_CONTACTS = [
   { initials: "JM", bg: "#fde68a", color: "#78350f", name: "James" },
   { initials: "SA", bg: "#bfdbfe", color: "#1e3a5f", name: "Sarah" },
@@ -83,12 +52,7 @@ export const PhoneFrame = React.forwardRef(function PhoneFrame(
     <div
       ref={ref}
       className={cn(
-        // iPhone-style: thin even bezel (p-[5px]) all round, screen radius =
-        // outer radius − bezel so the corners stay concentric, and the notch
-        // cut into the top of the screen in the bezel's color.
         phoneBezelColorClass,
-        // aspect-[9/19.5] = an iPhone's proportions, so height no longer
-        // just follows however much demo content the screen holds.
         "w-[250px] aspect-[9/19.5] flex flex-col rounded-[30px] border-[1.5px] border-[rgba(var(--gold-rgb),0.18)] p-[5px] shadow-[0_45px_90px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.04)_inset]",
         className,
       )}
@@ -171,10 +135,6 @@ export const PhoneFrame = React.forwardRef(function PhoneFrame(
   );
 });
 
-/* ─── Phone Mockup ───
-   PhoneFrame pinned/scaled for the landing hero. Rendered with a forwarded
-   ref so PhoneAuthStage (App.js) can read its exact on-screen position/size
-   and morph a login/register panel out of it. */
 export const PhoneMockup = React.forwardRef(function PhoneMockup(
   { hidden },
   ref,
@@ -183,11 +143,6 @@ export const PhoneMockup = React.forwardRef(function PhoneMockup(
     <PhoneFrame
       ref={ref}
       hidden={hidden}
-      // translateZ (no rotation) is the 3D lift — kept rotation-free
-      // deliberately, since PhoneAuthStage measures this element's
-      // axis-aligned getBoundingClientRect() to start its grow animation;
-      // any rotateX/Y here would make that box no longer match what's
-      // visually rendered and break the seamless start of that morph.
       className="absolute left-1/2 top-0 origin-top [transform:translate(-50%,0)_scale(1.55)_translateZ(60px)] z-[2] max-[768px]:w-[230px] max-[768px]:[transform:translate(-50%,0)_scale(1.35)_translateZ(60px)] max-[400px]:[transform:translate(-50%,0)_scale(1.15)_translateZ(60px)]"
     />
   );

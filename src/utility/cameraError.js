@@ -1,12 +1,5 @@
 import { useEffect, useRef } from "react";
 
-// Turns a getUserMedia failure into what the customer should actually do.
-// Browsers can't open their own settings from a page, so a blocked camera
-// gets step-by-step directions for the device they're on instead.
-// ponytail: text directions only; add a native "open app settings" button
-// (e.g. capacitor-native-settings) if the Android app needs one tap.
-// Allowing it in settings restarts the camera by itself (see
-// useRetryWhenCameraAllowed below).
 const allowSteps = () => {
   const ua = navigator.userAgent;
   if (window.Capacitor?.isNativePlatform?.())
@@ -43,11 +36,6 @@ export const cameraErrorMessage = (err) => {
   }
 };
 
-// While a camera screen shows an error, restart the camera the moment the
-// customer allows it in site settings: no reload, no hunting for "Try
-// again". Only a real permission change to "granted" fires it, so it never
-// turns the camera on behind the user's back. Firefox can't query "camera";
-// there the Try again button still works.
 export function useRetryWhenCameraAllowed(active, retry) {
   const retryRef = useRef(retry);
   retryRef.current = retry;

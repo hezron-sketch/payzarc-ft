@@ -3,10 +3,6 @@ import TransactionDetails from "./TransactionDetails";
 import { ArrowDownLeft, ArrowUpRight, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Per-row status chip — colored by keyword match on the real tx.status
-// string (no fixed enum from the API), default reads as "completed" since
-// that's the overwhelmingly common status. Split into a pill class + dot
-// class so the call site can render dot + label like the sketch's chips.
 const txStatusTone = (status) => {
   const s = (status || "").toLowerCase();
   if (s.includes("fail") || s.includes("declin")) return "destructive";
@@ -32,8 +28,6 @@ const txStatusDotClass = (status) => {
   );
 };
 
-// Amount with an explicit +/- (credit/debit) and the currency — the API's
-// tx.amount may or may not already carry a sign, so strip it first.
 const getFormattedAmount = (amt, isCredit, currency) => {
   const value = Number(String(amt ?? 0).trim().replace(/^[+-]/, "")) || 0;
   return `${isCredit ? "+" : "−"}${currency} ${value.toLocaleString(undefined, {
@@ -42,11 +36,6 @@ const getFormattedAmount = (amt, isCredit, currency) => {
   })}`;
 };
 
-// Beside the phone on wider screens; inside the phone's screen (below
-// Quick Send) on small ones, where `embedded` drops its own card surface so
-// it sits on the phone's like Quick Send does. "View all" opens the combined
-// Transactions screen (Reports.js) inside the phone; a row opens that
-// transaction's own details (the same dialog Reports uses).
 function RecentActivity({ transactions, currency, onViewAll, embedded = false }) {
   const [selected, setSelected] = useState(null);
   return (
@@ -85,7 +74,8 @@ function RecentActivity({ transactions, currency, onViewAll, embedded = false })
         >
           {transactions.length === 0 ? (
             <p className="text-center text-[0.9rem] text-muted-foreground py-8">
-              No recent activity yet.
+              Your first transfer will show up here, tracked from sent to
+              delivered.
             </p>
           ) : (
             transactions.map((tx, idx) => {
@@ -96,27 +86,46 @@ function RecentActivity({ transactions, currency, onViewAll, embedded = false })
                   type="button"
                   key={tx.id || idx}
                   onClick={() => setSelected(tx)}
-                  className="w-full text-left flex items-center gap-4 p-4 md:p-5 max-[768px]:p-3.5 max-[768px]:gap-3 border-b border-white/[0.03] last:border-b-0 transition-colors duration-200 hover:bg-white/[0.04]"
+                  className={cn(
+                    "w-full text-left flex items-center border-b border-white/[0.03] last:border-b-0 transition-colors duration-200 hover:bg-white/[0.04]",
+                    embedded ? "gap-3 px-3.5 py-3" : "gap-4 p-4 md:p-5",
+                  )}
                 >
                   <div
                     className={cn(
-                      "w-11 h-11 rounded-xl flex items-center justify-center shrink-0",
+                      "rounded-xl flex items-center justify-center shrink-0",
+                      embedded ? "w-9 h-9" : "w-11 h-11",
                       credit
                         ? "bg-success/[0.08] text-success"
                         : "bg-white/[0.05] text-[var(--soft)]",
                     )}
                   >
                     {credit ? (
-                      <ArrowDownLeft size={18} aria-hidden="true" />
+                      <ArrowDownLeft size={embedded ? 16 : 18} aria-hidden="true" />
                     ) : (
-                      <ArrowUpRight size={18} aria-hidden="true" />
+                      <ArrowUpRight size={embedded ? 16 : 18} aria-hidden="true" />
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="min-w-0 flex-1 text-[0.9rem] font-semibold text-foreground truncate m-0">
+                  {/* Two rows, two edges: who + how much on top, when + state
+                      below — amounts and statuses each line up in one column. */}
+                  <div className="flex-1 min-w-0 flex flex-col gap-1">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="min-w-0 text-[0.9rem] font-semibold text-foreground truncate m-0">
                         {tx.name || tx.description || tx.transaction_type}
                       </p>
+                      <p
+                        className={cn(
+                          "text-[0.9rem] font-semibold tabular-nums whitespace-nowrap shrink-0 m-0",
+                          credit ? "text-success" : "text-foreground",
+                        )}
+                      >
+                        {getFormattedAmount(tx.amount, credit, tx.currency || currency)}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[0.78rem] text-muted-foreground tabular-nums whitespace-nowrap">
+                        {tx.date || new Date(tx.created_at).toLocaleDateString()}
+                      </span>
                       {tx.status && (
                         <span className={txStatusBadgeClass(tx.status)}>
                           <span className={txStatusDotClass(tx.status)} />
@@ -124,18 +133,7 @@ function RecentActivity({ transactions, currency, onViewAll, embedded = false })
                         </span>
                       )}
                     </div>
-                    <p className="text-[0.8rem] text-muted-foreground mt-0.5 m-0">
-                      {tx.date || new Date(tx.created_at).toLocaleDateString()}
-                    </p>
                   </div>
-                  <p
-                    className={cn(
-                      "text-[0.9rem] font-semibold tabular-nums shrink-0 m-0",
-                      credit ? "text-success" : "text-foreground",
-                    )}
-                  >
-                    {getFormattedAmount(tx.amount, credit, tx.currency || currency)}
-                  </p>
                 </button>
               );
             })

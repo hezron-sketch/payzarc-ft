@@ -1,9 +1,3 @@
-/**
- * Generates a branded Payzarc PDF receipt — a slip-sized "card" page
- * (not a full A4 letter page) so the layout isn't floating in a mostly
- * empty sheet.
- */
-
 const NAVY = [28, 35, 51];
 const GOLD = [236, 201, 75];
 const DARK = [30, 30, 30];
@@ -23,9 +17,6 @@ const PAGE_WIDTH = 110;
 const PAGE_HEIGHT = 204;
 const MARGIN = 10;
 
-// ponytail: jsPDF's default fonts can't render flag emoji glyphs (they'd
-// show as blank boxes), so the destination is text-only — swap in a custom
-// embedded font here if flag icons are ever needed.
 export async function generateReceiptPDF(transaction) {
   const jsPDFModule = await import("jspdf");
   const { jsPDF } = jsPDFModule;
@@ -88,7 +79,6 @@ export async function generateReceiptPDF(transaction) {
     doc.setLineDashPattern([], 0);
   };
 
-  // ── Header band ──────────────────────────────────────────────
   doc.setFillColor(...NAVY);
   doc.rect(0, 0, PAGE_WIDTH, 34, "F");
   text("PAYZARC", 15, { size: 19, weight: "bold", color: GOLD });
@@ -97,8 +87,6 @@ export async function generateReceiptPDF(transaction) {
   doc.setLineWidth(0.6);
   doc.line(centerX - 12, 27, centerX + 12, 27);
 
-  // ── Status icon: a filled circle with a checkmark (or a simple
-  //    ring for pending, since a check misreads as "already sent"). ──
   const iconY = 48;
   doc.setFillColor(...statusColor);
   doc.circle(centerX, iconY, 9, "F");
@@ -119,7 +107,6 @@ export async function generateReceiptPDF(transaction) {
     color: statusColor,
   });
 
-  // ── Amount ───────────────────────────────────────────────────
   text("AMOUNT", 74, { size: 7.5, color: MUTED });
   const amountStr = typeof amount === "number" ? amount.toFixed(2) : amount;
   text(amountStr, 87, { size: 25, weight: "bold", color: NAVY });
@@ -129,7 +116,6 @@ export async function generateReceiptPDF(transaction) {
 
   dashedLine(101);
 
-  // ── Detail rows ──────────────────────────────────────────────
   text("TRANSACTION DETAILS", 110, {
     x: MARGIN,
     align: "left",
@@ -159,7 +145,6 @@ export async function generateReceiptPDF(transaction) {
     y += 7.5;
   });
 
-  // ── Total charged, highlighted ───────────────────────────────
   y += 3;
   doc.setFillColor(252, 246, 227);
   doc.roundedRect(MARGIN, y - 5.5, PAGE_WIDTH - MARGIN * 2, 11, 2, 2, "F");
@@ -184,7 +169,6 @@ export async function generateReceiptPDF(transaction) {
 
   dashedLine(y + 14);
 
-  // ── Footer ───────────────────────────────────────────────────
   let footerY = y + 22;
   text("Thank you for choosing Payzarc.", footerY, {
     size: 8,

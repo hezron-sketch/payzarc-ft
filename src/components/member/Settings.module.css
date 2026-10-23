@@ -1,5 +1,5 @@
 .container {
-  min-height: calc(100vh - 140px); /* Adjust based on dashboard header/footer */
+  min-height: calc(100vh - 140px);
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -30,7 +30,7 @@
 }
 
 .headerSpacer {
-  width: 40px; /* Balances the back button for centering title */
+  width: 40px;
 }
 
 .backButton {
@@ -173,7 +173,6 @@
   box-sizing: border-box;
 }
 
-/* OTP Styles */
 .otpWrapper {
   width: 100%;
   margin: 1.5rem 0;
@@ -270,7 +269,6 @@
   color: white;
 }
 
-/* Success State */
 .successContent {
   display: flex;
   flex-direction: column;

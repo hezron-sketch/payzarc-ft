@@ -1,5 +1,3 @@
-// ponytail: partner names are placeholders per region until BD confirms
-// real integrations — swap the lists below when partners are signed.
 const REGIONS = {
   KE: {
     mobileMoney: ["Safaricom M-Pesa", "Airtel Money"],
@@ -24,9 +22,6 @@ const REGIONS = {
   },
 };
 
-// Buckets the sender's detected country into a provider set. Eurozone
-// countries are matched by currency instead of a hand-maintained name list
-// so every EUR country gets the EU set for free.
 export function getRegionProviders(myCountry) {
   if (!myCountry) return REGIONS.default;
   if (myCountry.name === "Kenya") return REGIONS.KE;

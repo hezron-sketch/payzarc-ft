@@ -1,23 +1,14 @@
-// Shared plumbing for the dashboard's money-out flows (SendMoney.js,
-// SendToMany.js, Withdraw.js). They all authorize the same way (transaction
-// PIN, or Face ID chosen in ReviewSheet.js; see authorize()),
-// and postTransfer() below stays the single place that credential is
-// attached to a request.
 import React from "react";
 import { transactionsApi } from "../../utility/axiosInstance";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { countries } from "../../utility/countries";
+import { GLOBAL_AVG_REMITTANCE_COST } from "../../utility/constants";
 import {
   primaryBtnClass,
   assertDelivered,
 } from "./shared";
 
-// The one place a transaction credential goes out: `{ pin }` as JSON, or
-// `{ faceImage }` (a JPEG data URL from Face.js) as a multipart upload the
-// backend re-verifies. `idempotencyKey` (see newIdempotencyKey) rides along
-// as a header so retrying the same reviewed transfer can't charge twice.
-// Resolves to the response body; rejects if the body says it failed.
 export const postTransfer = async (
   url,
   body,
@@ -40,25 +31,18 @@ export const postTransfer = async (
   return assertDelivered(data, "Transaction could not be delivered.");
 };
 
-// A full PIN wins; a blank one falls back to face verification. Resolves to
-// postTransfer's credential, or null if the user cancelled the face scan.
 export const authorize = async (pin, requestFace) => {
   if (pin.length === 4) return { pin };
   const faceImage = await requestFace();
   return faceImage ? { faceImage } : null;
 };
 
-// ponytail: flat 1.5% with a $1 minimum — placeholder pricing shared by
-// single Send and Send to Many until a real fees/pricing API replaces it.
 export const calcTransferFee = (amount) =>
   amount > 0 ? Math.max(1, amount * 0.015) : 0;
 
 export const addFavouriteBtnClass =
   "self-start bg-transparent border-none text-gold text-[0.8rem] font-semibold cursor-pointer p-0 -mt-[0.6rem] transition-opacity hover:opacity-75";
 
-// countries.js stores each entry's ISO alpha-2 code under `flag` (e.g. "KE");
-// this turns that into an actual flag emoji. Already-emoji values (the
-// getCurrentCountry error-fallback returns one directly) pass through as-is.
 export const isoToFlagEmoji = (iso) =>
   /^[A-Z]{2}$/.test(iso)
     ? String.fromCodePoint(...[...iso].map((c) => 127397 + c.charCodeAt(0)))
@@ -66,18 +50,11 @@ export const isoToFlagEmoji = (iso) =>
 
 export const recipientLabel = (r) => r.name || r.full_name || r.phone || r.value;
 
-// Recipient's country, detected from whatever was typed/picked so we can
-// show their flag. A phone number's dial code gives this away instantly;
-// an email only reveals it if that address already belongs to one of our
-// favourites/contacts (i.e. an existing user) — otherwise we know nothing
-// about them yet.
 export const findCountryByName = (name) =>
   name
     ? countries.find((c) => c.name.toLowerCase() === name.toLowerCase())
     : null;
 
-// Country from a phone number's dial code alone (longest/most specific
-// code wins, e.g. +1 US vs +1 area-coded territories).
 export const detectCountryFromPhone = (value) => {
   const digits = (value || "").replace(/[^\d+]/g, "");
   if (!digits) return null;
@@ -87,8 +64,6 @@ export const detectCountryFromPhone = (value) => {
   return matches[0] || null;
 };
 
-// A stored country name wins if present (favourites), otherwise fall back
-// to their phone's dial code.
 export const detectRecipientCountry = (r) =>
   findCountryByName(r?.country || r?.country_name) ||
   detectCountryFromPhone(r?.phone || r?.value || r?.phone_number);
@@ -101,9 +76,6 @@ export const errorMessage = (error, fallback) =>
       fallback
     : error.message || fallback;
 
-// Resolves a phone/email to the registered account holder's name before any
-// money moves, so the confirm dialog shows who will actually receive it.
-// Throws (with the server's message) when the recipient isn't found.
 export const lookupRecipientName = async (value) => {
   const { data = {} } = await transactionsApi.post("/api/recipient-lookup/", {
     recipient_phone: value,
@@ -125,6 +97,8 @@ export const lookupErrorMessage = (error) =>
   "Unable to find this recipient.";
 
 export function FeeSummary({ currency, fee, total, className }) {
+  // What the same amount would cost at the global average, minus our fee.
+  const saved = (total - fee) * GLOBAL_AVG_REMITTANCE_COST - fee;
   return (
     <div
       aria-live="polite"
@@ -145,6 +119,12 @@ export function FeeSummary({ currency, fee, total, className }) {
           {currency} {total.toFixed(2)}
         </span>
       </div>
+      {saved >= 0.01 && (
+        <p className="m-0 pt-1.5 mt-0.5 border-t border-white/[0.06] text-[0.75rem] text-muted-foreground tabular-nums">
+          ≈ {currency} {saved.toFixed(2)} less than the global average fee
+          ({+(GLOBAL_AVG_REMITTANCE_COST * 100).toFixed(2)}%)
+        </p>
+      )}
     </div>
   );
 }

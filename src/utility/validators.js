@@ -1,5 +1,3 @@
-// Shared field validators — pulled out so new forms don't each reinvent an
-// email/phone/card regex (several already do, ad hoc, per-file).
 export const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
 export const isValidPhone = (v) => /^\+?\d{7,15}$/.test(v.trim());
@@ -19,14 +17,4 @@ export const isValidExpiry = (v) => {
 
 export const isPositiveAmount = (v) => v !== "" && Number(v) > 0;
 
-// Rejects the one pair of characters every HTML/script injection payload
-// needs (<script>, <img onerror=...>, etc.) so free-text fields (names,
-// addresses, messages) can't carry markup through to the API.
-//
-// This is client-side defense-in-depth ONLY. React already escapes every
-// value it renders (this app has no dangerouslySetInnerHTML), so there's no
-// XSS-via-render path today — and no frontend check can stop a request sent
-// straight to the API, bypassing the form entirely. SQL/command injection in
-// particular is not a client-side problem at all: it's fixed by parameterized
-// queries and output encoding on the server, not by filtering here.
 export const isSafeText = (v) => !/[<>]/.test(v);

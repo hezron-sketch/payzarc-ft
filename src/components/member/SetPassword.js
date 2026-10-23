@@ -176,8 +176,6 @@ function SetPassword({ onBack }) {
                 className={inputFieldClass}
                 required
               />
-
-              {/* Helpful password rules below inputs */}
               <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '10px', textAlign: 'left' }}>
                 <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
                   <li>8–15 characters long</li>

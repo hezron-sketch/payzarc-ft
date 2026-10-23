@@ -7,3 +7,8 @@ build/
 
 # graphify
 /graphify-out/
+
+.claude/
+.impeccable/
+PRODUCT.md
+added-files.txt

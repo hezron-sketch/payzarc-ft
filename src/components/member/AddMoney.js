@@ -53,17 +53,9 @@ function AddMoney({
   const [newCard, setNewCard] = useState(EMPTY_CARD);
   // The deposit in flight, shown in TransferStatus (null hides it).
   const [result, setResult] = useState(null);
-  // Errors raised inside the picker dialog render inline there — a toast
-  // would sit outside the modal (hidden from screen readers, unclickable,
-  // and over the bottom sheet on phones).
   const [pickerError, setPickerError] = useState("");
-  // Defaults apply on the picker's first open only; reopening keeps the
-  // user's last choice.
   const [pickerInitialized, setPickerInitialized] = useState(false);
 
-  // Region-specific mobile money providers + partner banks for the sender's
-  // detected country (Kenya/EU/US get their own set, everything else falls
-  // back to generic bank transfer).
   const region = getRegionProviders(myCountry);
 
   const handleAddMoneyClick = () => {
@@ -157,10 +149,6 @@ function AddMoney({
     });
   };
 
-  // Posts the deposit and walks TransferStatus through real phases; retry
-  // reuses the idempotency key so it can't top up twice.
-  // NOTE: guessed endpoint, following the /api/send-money/ pattern — point
-  // this at your real deposit/top-up endpoint if different.
   const runDeposit = async (sourceLabel, key) => {
     const base = { sourceLabel, key, summary: `${amountLabel} from ${sourceLabel}` };
     setResult({ ...base, phase: "sending" });

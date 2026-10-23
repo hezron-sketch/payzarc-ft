@@ -14,29 +14,6 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { transactionsApi } from "../../utility/axiosInstance";
 import { pickerDialogClass, primaryBtnClass } from "./shared";
 
-// The one result screen every money flow ends on (Send, Send to Many,
-// Deposit, Withdraw), so moving money always closes the same way:
-//
-//   status = {
-//     phase: "sending" | "done" | "failed",
-//     kind?: "declined" | "unconfirmed" | "pending", // failed only (see failureKind)
-//     error?, summary, details?: [{ label, value }],
-//     items?: [{ key, name, amount, state: "sending"|"done"|"failed"|"pending" }],
-//   }
-//
-// `items` (Send to Many) swaps the three-step track for a per-recipient
-// list. Every step is driven by real state: "Done" only after the server
-// confirms, and "balance unchanged" only when the server said no. Step 1 is
-// "Submitted", not "Authorized" — the server checks the PIN/face, so the
-// client can't claim it passed.
-//
-// Recovery depends on why it failed: a decline can't succeed if replayed
-// (wrong PIN, insufficient funds), so its primary action is onReviewAgain
-// (a fresh review, credential and key); only an unconfirmed failure offers
-// the same-key onRetry, which the idempotency key makes safe. "pending"
-// (accepted, still settling) offers neither: it's not over, so the user
-// just closes and watches Transactions.
-// Same support address the landing page's Contact section lists.
 const SUPPORT_EMAIL = "info.e@payzarc.com";
 
 const TRACK = [
@@ -54,11 +31,6 @@ const itemIcon = {
   pending: { icon: LoaderCircle, className: "text-[var(--soft)] opacity-50" },
 };
 
-// A pending transfer is polled until its history row settles, then the
-// popup flips to done / declined on its own. ponytail: scans recent history
-// for the reference since there's no per-transaction status endpoint; swap
-// for GET /api/transactions/<ref>/ if the backend adds one. Gives up after
-// POLL_FOR_MS and leaves the pending screen ("watch Transactions") up.
 const POLL_MS = 4000;
 const POLL_FOR_MS = 120000;
 const SETTLED_AS = {
@@ -123,13 +95,13 @@ function TransferStatus({
   status: rawStatus,
   verb, // "Sending", "Depositing", "Withdrawing"
   doneTitle, // "Money delivered"
-  doneStep, // { label: "Delivered", sub: "Funds have arrived with the recipient" }
+  doneStep,
   onDone,
   onRetry,
   onReviewAgain,
   onEdit,
   onViewTransactions,
-  onSettled, // a pending transfer settled (e.g. refresh the wallet)
+  onSettled,
 }) {
   const settled = useSettled(
     rawStatus?.kind === "pending" && rawStatus.reference
@@ -150,8 +122,6 @@ function TransferStatus({
   // Current step: 2 while in flight or failed, 3 once confirmed.
   const current = phase === "done" ? 3 : 2;
 
-  // A batch always leads with its delivered count, so one unconfirmed row
-  // never hides what did go through.
   const title =
     phase === "sending"
       ? `${verb}…`
@@ -200,8 +170,6 @@ function TransferStatus({
                       className,
                     )}
                   >
-                    {/* key = state: each change remounts the icon so it
-                        pops in, instead of the glyph silently swapping. */}
                     <Icon
                       key={item.state}
                       size={14}
@@ -279,9 +247,6 @@ function TransferStatus({
                       />
                     </div>
                     {!isLast && (
-                      // Connector fills top-down toward the next step (scaleY
-                      // from the top) rather than just changing color — shows
-                      // the transfer travelling, not a light switching on.
                       <div className="relative w-0.5 flex-1 min-h-[26px] bg-white/[0.08] my-[3px] overflow-hidden">
                         <div
                           className={cn(

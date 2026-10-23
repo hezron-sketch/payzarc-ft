@@ -1,5 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Search } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  CalendarDays,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,8 +25,6 @@ import {
 
 const PAGE_SIZE = 25;
 
-// The reports API and the older history API name the same fields
-// differently — take the first one that's actually filled in.
 const first = (...values) =>
   values.find((v) => v !== undefined && v !== null && String(v).trim() !== "");
 const num = (...values) => Number(first(...values, 0)) || 0;
@@ -156,16 +160,14 @@ function LedgerRow({ label, value, className }) {
   );
 }
 
-// Transaction report for a date range, from Django's /api/reports/
-// endpoints: search/type/status filters, a paged list
-// (tap a row for details), full-column CSV, and server PDF/email statements.
 function Reports({ showNotification }) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [showDates, setShowDates] = useState(false);
+  // Which tool panel the search bar has expanded: "dates" | "filters" | null.
+  const [panel, setPanel] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [account, setAccount] = useState(null);
-  const [wallet, setWallet] = useState(null); // { balance, currency }
+  const [wallet, setWallet] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -240,8 +242,6 @@ function Reports({ showNotification }) {
     [transactions],
   );
 
-  // Date range is re-applied client-side too, in case the backend (or the
-  // local mock server) ignores start/end.
   const inRange = useMemo(() => {
     const from = startDate ? new Date(startDate) : null;
     const to = endDate ? new Date(`${endDate}T23:59:59.999`) : null;
@@ -276,15 +276,6 @@ function Reports({ showNotification }) {
     });
   }, [inRange, searchTerm, typeFilter, statusFilter]);
 
-  // Statement that ties out: opening + in - out = closing. Only completed
-  // transactions in the wallet's currency move the balance (pending/failed
-  // don't, and other currencies can't be added to it). Uses the date range
-  // only, never search/type/status, or it would stop balancing.
-  // Closing = current balance minus whatever completed after the range.
-  // ponytail: assumes the list includes post-range transactions (the mock
-  // ignores start/end); if Django filters them out, past ranges' closing
-  // will read as today's balance. Upgrade: have the API return
-  // opening/closing balances.
   const ledger = useMemo(() => {
     if (!wallet) return null;
     const currency = wallet.currency;
@@ -363,8 +354,6 @@ function Reports({ showNotification }) {
     }
   };
 
-  // Server emails a password-protected PDF; the password goes out in a
-  // separate email and is never shown here, even if the response has it.
   const handleEmailStatement = async () => {
     setStatementBusy("email");
     try {
@@ -403,10 +392,6 @@ function Reports({ showNotification }) {
         </div>
       )}
 
-      {/* One compact bar: search, with the date range as a tool inside
-          it. The calendar button expands the same bar (no second box) into
-          an inline range calendar — in-page DOM, so it opens inside the
-          phone frame. While closed, an active range shows as a gold dot. */}
       <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] transition-colors duration-200 focus-within:border-gold/30">
         <div className="flex items-center h-11">
           <Search
@@ -429,17 +414,29 @@ function Reports({ showNotification }) {
           <button
             type="button"
             aria-label="Filter by date"
-            aria-expanded={showDates}
-            onClick={() => setShowDates((v) => !v)}
+            aria-expanded={panel === "dates"}
+            onClick={() => setPanel((p) => (p === "dates" ? null : "dates"))}
             className="relative mx-1 w-9 h-9 shrink-0 rounded-lg flex items-center justify-center text-muted-foreground transition-colors outline-none hover:text-foreground hover:bg-white/[0.06] focus-visible:ring-2 focus-visible:ring-gold/40 aria-expanded:text-gold aria-expanded:bg-gold/10"
           >
             <CalendarDays size={17} aria-hidden="true" />
-            {(startDate || endDate) && !showDates && (
+            {(startDate || endDate) && panel !== "dates" && (
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-gold" />
+            )}
+          </button>
+          <button
+            type="button"
+            aria-label="Filter by type and status"
+            aria-expanded={panel === "filters"}
+            onClick={() => setPanel((p) => (p === "filters" ? null : "filters"))}
+            className="relative mr-1 w-9 h-9 shrink-0 rounded-lg flex items-center justify-center text-muted-foreground transition-colors outline-none hover:text-foreground hover:bg-white/[0.06] focus-visible:ring-2 focus-visible:ring-gold/40 aria-expanded:text-gold aria-expanded:bg-gold/10"
+          >
+            <SlidersHorizontal size={17} aria-hidden="true" />
+            {(typeFilter || statusFilter) && panel !== "filters" && (
               <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-gold" />
             )}
           </button>
         </div>
-        {showDates && (
+        {panel === "dates" && (
           <div className="border-t border-white/[0.06] p-3 animate-in fade-in slide-in-from-top-1 duration-200 ease-out">
             <RangeCalendar
               start={startDate}
@@ -448,8 +445,50 @@ function Reports({ showNotification }) {
                 setStartDate(from);
                 setEndDate(to);
               }}
-              onDone={() => setShowDates(false)}
+              onDone={() => setPanel(null)}
             />
+          </div>
+        )}
+        {panel === "filters" && (
+          <div className="flex gap-2 border-t border-white/[0.06] p-3 animate-in fade-in slide-in-from-top-1 duration-200 ease-out">
+          <Select
+            value={typeFilter || ALL}
+            onValueChange={(v) => {
+              setTypeFilter(v === ALL ? "" : v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger aria-label="Transaction type" className={selectClass}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="z-[1100]">
+              <SelectItem value={ALL}>All types</SelectItem>
+              {typeOptions.map((t) => (
+                <SelectItem key={t} value={t}>
+                  {t.replaceAll("_", " ")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={statusFilter || ALL}
+            onValueChange={(v) => {
+              setStatusFilter(v === ALL ? "" : v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger aria-label="Status" className={selectClass}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="z-[1100]">
+              <SelectItem value={ALL}>All statuses</SelectItem>
+              {statusOptions.map((st) => (
+                <SelectItem key={st} value={st}>
+                  {st}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           </div>
         )}
       </div>
@@ -486,52 +525,6 @@ function Reports({ showNotification }) {
           )}
         </div>
       )}
-
-      {/* Radix Select instead of native <select>: the native list is drawn
-          by the browser and landed outside the phone frame; this one is
-          positioned from the trigger and themed like the rest of the app.
-          z above the phone bezel (z-60). Radix items can't be "", hence
-          ALL as the "no filter" value. */}
-      <div className="flex gap-2 -mt-1">
-        <Select
-          value={typeFilter || ALL}
-          onValueChange={(v) => {
-            setTypeFilter(v === ALL ? "" : v);
-            setPage(1);
-          }}
-        >
-          <SelectTrigger aria-label="Transaction type" className={selectClass}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="z-[1100]">
-            <SelectItem value={ALL}>All types</SelectItem>
-            {typeOptions.map((t) => (
-              <SelectItem key={t} value={t}>
-                {t.replaceAll("_", " ")}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={statusFilter || ALL}
-          onValueChange={(v) => {
-            setStatusFilter(v === ALL ? "" : v);
-            setPage(1);
-          }}
-        >
-          <SelectTrigger aria-label="Status" className={selectClass}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="z-[1100]">
-            <SelectItem value={ALL}>All statuses</SelectItem>
-            {statusOptions.map((st) => (
-              <SelectItem key={st} value={st}>
-                {st}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
 
       <Button
         className={primaryBtnClass}
@@ -583,10 +576,23 @@ function Reports({ showNotification }) {
                 key={tx.id ?? `${txCode(tx)}-${idx}`}
                 type="button"
                 onClick={() => setSelectedTransaction(tx)}
-                className="flex w-full text-left rounded-xl px-2.5 py-2 hover:bg-white/[0.04] transition-colors"
+                className="flex items-center gap-3 w-full text-left rounded-xl px-2.5 py-2.5 hover:bg-white/[0.04] transition-colors"
               >
-                {/* Name + amount, then date + status. Code, fee, etc. live in
-                    the details popup (and the code is still searchable). */}
+                {/* Same in/out tile as Recent Activity, so both lists read alike. */}
+                <div
+                  className={cn(
+                    "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                    credit
+                      ? "bg-success/[0.08] text-success"
+                      : "bg-white/[0.05] text-[var(--soft)]",
+                  )}
+                >
+                  {credit ? (
+                    <ArrowDownLeft size={16} aria-hidden="true" />
+                  ) : (
+                    <ArrowUpRight size={16} aria-hidden="true" />
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline justify-between gap-3">
                     <p className="text-sm font-semibold truncate m-0">
@@ -594,11 +600,12 @@ function Reports({ showNotification }) {
                     </p>
                     <span
                       className={cn(
-                        "text-sm font-bold whitespace-nowrap shrink-0",
-                        credit ? "text-success" : "text-destructive",
+                        "text-sm font-bold tabular-nums whitespace-nowrap shrink-0",
+                        // Outgoing isn't an error: red is kept for failures.
+                        credit ? "text-success" : "text-foreground",
                       )}
                     >
-                      {credit ? "+" : "-"}
+                      {credit ? "+" : "−"}
                       {txCurrency(tx)} {money(txAmount(tx))}
                     </span>
                   </div>

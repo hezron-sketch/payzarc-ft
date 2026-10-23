@@ -26,16 +26,6 @@ import {
 import * as faceapi from "face-api.js";
 import { createWorker } from "tesseract.js";
 
-// ─── ID-scan OCR helpers ───
-// Best-effort text extraction from a photographed ID document, used only to
-// pre-fill step 1/2's fields — never sent to the backend (the register-full
-// payload below is built from formData alone, which never gains an idImage
-// field). Users can still type everything manually if OCR misses.
-//
-// Kenyan national IDs lay fields out behind fixed printed labels (ID Number,
-// Full Names, Date of Birth, Sex, ...). Anchoring on those labels is far more
-// reliable than guessing from position/shape alone, since it can't confuse
-// e.g. a serial number for the ID number, or "Date of Issue" for the DOB.
 const cleanOCRText = (text) => {
   if (!text) return "";
   return text
@@ -48,12 +38,6 @@ const cleanOCRText = (text) => {
 const normalizeLine = (line) => line.replace(/[|]/g, "I").replace(/\s+/g, " ").trim();
 const getLines = (text) => cleanOCRText(text).split("\n").map(normalizeLine).filter(Boolean);
 
-// Every fixed/printed label or static string that appears on the card,
-// besides the fields we actually want. A line matching one of these is never
-// a person's name, an ID number, or a date value in disguise.
-// "DATE" tolerates a leading D-vs-P misread — Tesseract confuses the two
-// fairly often on a blurry or low-angle scan (e.g. "DATE OF BIRTH" -> "PATE
-// OF BIRTH"), which was letting the label itself get picked up as a name.
 const ID_STATIC_LABELS = [
   /\bJAMHURI\b/i,
   /\bREPUBLIC\b/i,
@@ -75,9 +59,6 @@ const ID_STATIC_LABELS = [
 ];
 const isLabelLine = (line) => ID_STATIC_LABELS.some((pattern) => pattern.test(line));
 
-// Returns the value tied to a labeled field: whatever follows the label on
-// the same line, or the next non-label line down if the label sits on its
-// own (skipping past any further labels OCR ran together with it).
 const findLabelValue = (lines, labelPatterns) => {
   for (let i = 0; i < lines.length; i++) {
     for (const pattern of labelPatterns) {
@@ -134,8 +115,6 @@ const dateFromValue = (value) => {
 const extractDOB = (text) => {
   const labeled = dateFromValue(findLabelValue(getLines(text), DOB_LABELS));
   if (labeled) return labeled;
-  // Label wasn't readable — fall back to the first date-shaped string
-  // (risks picking up Date of Issue instead, but better than nothing).
   return dateFromValue(cleanOCRText(text));
 };
 
@@ -153,9 +132,6 @@ const extractGender = (text) => {
 };
 
 const NAME_LABELS = [/\bFULL\s*NAMES?\b/i];
-// A name-shaped line: 2-5 words, letters only. Word order is kept as printed
-// (first word -> first name, last word -> surname) to match how the manual
-// entry fields below are labeled.
 const nameFromLine = (line) => {
   if (!line) return null;
   const words = line.split(/\s+/).filter(Boolean);
@@ -179,11 +155,6 @@ const extractName = (text) => {
   return candidate ? nameFromLine(candidate) : null;
 };
 
-// Both camera previews are shown in an aspect-[4/3] box via object-cover, so
-// what the user frames the shot with is a crop of the raw video. Capturing
-// the full uncropped frame instead (as toDataURL(video) would) saves far more
-// dead space than the user ever saw — the ID card ends up a tiny sliver in
-// mostly black padding, which is why OCR was reading garbage.
 const captureVideoFrame = (video, canvas, mimeType, quality) => {
   const boxRatio = 4 / 3;
   const vw = video.videoWidth;
@@ -203,11 +174,6 @@ const captureVideoFrame = (video, canvas, mimeType, quality) => {
   return canvas.toDataURL(mimeType, quality);
 };
 
-// Shared class-builders for pieces whose sizing changes in compact mode
-// (Register rendered inside the phone-width Phone Auth Stage) — mirrors
-// Login.js's approach: functions rather than static strings since they
-// depend on the `compact` prop, replacing the `.page.compact .foo` CSS
-// Module modifiers.
 const formHeaderClass = (compact) => cn("flex flex-col gap-1.5", compact && "gap-1");
 const formTitleClass = (compact) =>
   cn(
@@ -317,10 +283,6 @@ function Register({ onBack, embedded = false, compact = false }) {
   const [isModelsLoaded, setIsModelsLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ID-scan OCR — kept out of formData deliberately (see the helpers above):
-  // idImage is a multi-MB data URL and formData is spread as-is into the
-  // register-full request body, so folding it in there would silently bloat
-  // that payload.
   const [idImage, setIdImage] = useState("");
   const [idCameraError, setIdCameraError] = useState("");
   const [isOCRProcessing, setIsOCRProcessing] = useState(false);
@@ -456,9 +418,6 @@ function Register({ onBack, embedded = false, compact = false }) {
 
   const handleNext = async () => {
     if (validateStep(step)) {
-      // Catch a taken phone/email here, not after the face and ID steps.
-      // ponytail: skipped if the endpoint is missing or down; register-full
-      // still rejects duplicates at the end.
       if (step === 4) {
         try {
           const { data } = await axios.post(
@@ -724,8 +683,6 @@ function Register({ onBack, embedded = false, compact = false }) {
     }
   }, [generatedAt, step]);
 
-  // "Already registered" gets a way forward (log in / reset password)
-  // instead of a dead-end "Registration failed".
   const showRegisterError = (msg = "") => {
     const m = msg.toLowerCase();
     if (!/already|exists|registered|taken|in use/.test(m)) {

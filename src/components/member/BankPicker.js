@@ -12,9 +12,6 @@ import {
 
 const EMPTY_BANK = { bankName: "", accountNumber: "", accountName: "" };
 
-// Linked-bank chooser shared by the Add Money and Withdraw dialogs: pick a
-// saved bank, or add one (which then gets selected). Opens straight on the
-// add form when nothing is linked yet.
 function BankPicker({
   banks,
   partnerBanks,
@@ -24,8 +21,6 @@ function BankPicker({
 }) {
   const [showForm, setShowForm] = useState(banks.length === 0);
   const [newBank, setNewBank] = useState(EMPTY_BANK);
-  // Shown inline: this picker lives inside a dialog, where a toast can't be
-  // seen, reached or announced.
   const [error, setError] = useState("");
 
   const handleAddBank = async () => {

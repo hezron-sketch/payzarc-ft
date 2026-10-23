@@ -13,9 +13,6 @@ function Friends({ onSelectFriend }) {
 
   const fetchAllFavourites = async () => {
     try {
-      // No local token pre-check: the API client attaches the token and its
-      // 401 handling owns "session expired" — a second gate here only broke
-      // dev bypass mode and duplicated the logic.
       const response = await djangoApis.system2.get("/api/favorites/all/");
       const result = response.data;
 
@@ -74,13 +71,6 @@ function Friends({ onSelectFriend }) {
           </p>
         </div>
       ) : (
-        // iOS-style contact rows — name is the only thing every recipient is
-        // guaranteed to have, so it's the sole primary line; the subtitle
-        // picks whichever single contact detail (phone, then email) is most
-        // useful for sending money, instead of cramming both into a table
-        // that has to squeeze three columns into a phone-width card.
-        // Tapping a row jumps straight to the send-money flow with that
-        // recipient preselected, same as the Quick Send tiles on Home.
         <div className="flex flex-col gap-1 stagger">
           {favourites.map((fav) => {
             const name = fav.display_name || "—";

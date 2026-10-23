@@ -1,5 +1,3 @@
-// Mock indicative rates — shared by the landing-page converter (App.js) and
-// the Send Money flow (Home.js). Swap for a live FX API when one exists.
 export const EXCHANGE_RATES = {
   USD: { KES: 129.5, INR: 83.3, NGN: 1500, GHS: 15.5, UGX: 3700 },
   GBP: { KES: 165, INR: 106, NGN: 1920, GHS: 19.8, UGX: 4730 },

@@ -32,17 +32,11 @@ import {
   InsufficientBalance,
 } from "./transferCore";
 
-// Send to Many is capped for free-tier accounts; Payzarc Pro (see the
-// Membership section on the Account page) removes the cap by flipping
-// `user.plan`.
 const FREE_SEND_MANY_LIMIT = 5;
 
 const avatarClass =
   "rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm";
 
-// "Send to Many" — step "pick" (multi-select recipients) then "amount" (one
-// shared amount, or per-recipient overrides). Recipients reuse the
-// favourite object shape Send uses; typed numbers get wrapped the same way.
 export function SendToMany({
   user,
   onPageChange,
@@ -63,14 +57,9 @@ export function SendToMany({
   const [sameAmount, setSameAmount] = useState("");
   const [amounts, setAmounts] = useState({}); // key -> amount string
   const [sending, setSending] = useState(false);
-  // The batch in flight, shown in TransferStatus with one row per
-  // recipient: { phase, kind?, auth, items: [{ key, idemKey, name, amount,
-  // value, amountNum, state }] }. null hides it.
   const [batch, setBatch] = useState(null);
   const [requestFace, faceModal] = useFaceAuth(user?.email);
 
-  // Stable identity for a recipient — favourites have an id, ad-hoc typed
-  // numbers don't, so fall back to whatever value identifies them.
   const keyOf = (r) => r.id ?? r.phone ?? r.value ?? r.name;
   const amountOf = (r) => parseFloat(amounts[keyOf(r)]) || 0;
 
@@ -107,9 +96,6 @@ export function SendToMany({
     setPhoneInput("");
   };
 
-  // Same amount fills every recipient's field, but only overwrites entries
-  // that still match the previous same-amount value — anyone the sender has
-  // since edited by hand keeps their custom amount.
   const applySameAmount = (value) => {
     setAmounts((prev) => {
       const next = { ...prev };
@@ -201,11 +187,6 @@ export function SendToMany({
     });
   };
 
-  // No batch endpoint exists yet — loop the same single-transfer endpoint
-  // Send uses. ponytail: sequential and not atomic; each recipient's row
-  // shows its own outcome, and "Retry failed" re-sends only those (same
-  // idempotency keys, so an unconfirmed one can't land twice). Swap for a
-  // real batch endpoint if this needs to be large or all-or-nothing.
   const runBatch = async (auth, startItems) => {
     let items = startItems.map((it) =>
       it.state === "done" ? it : { ...it, state: "pending" },
@@ -242,8 +223,6 @@ export function SendToMany({
         );
       } catch (error) {
         state = "failed";
-        // ponytail: a pending row joins the unconfirmed bucket ("check
-        // Transactions"); retry reuses its idempotency key, so it can't double-pay.
         if (failureKind(error) !== "declined") kind = "unconfirmed";
       }
       items = items.map((it) =>

@@ -12,15 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import { formInputClass, pickerDialogClass, primaryBtnClass } from "./shared";
 
-// The one review-and-confirm step every money flow ends in (Send, Send to
-// Many, Deposit, Withdraw): who, how much, what it costs, then a single
-// authorization. Flows open it through Home's openConfirmationDialog with
-//
-//   { title, recipient?, recipients?, rows, auth, confirmLabel?, onConfirm }
-//
-// `auth: true` asks for the transaction PIN with Face ID as the explicit
-// alternative; onConfirm then receives the 4-digit PIN, or "" for Face ID
-// (exactly what transferCore's authorize() expects). Cancel just closes.
 function ReviewSheet({ request, onClose }) {
   const [pin, setPin] = useState("");
   useEffect(() => setPin(""), [request]);

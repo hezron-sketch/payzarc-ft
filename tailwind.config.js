@@ -102,9 +102,10 @@ module.exports = {
           from: { opacity: 0, filter: "blur(4px)" },
           to: { opacity: 1, filter: "blur(0)" },
         },
+        // Current tracker step breathes in opacity only — no halo/glow.
         "progress-pulse": {
-          "0%, 100%": { boxShadow: "0 0 0 0 rgba(var(--gold-rgb), 0.45)" },
-          "50%": { boxShadow: "0 0 0 6px rgba(var(--gold-rgb), 0)" },
+          "0%, 100%": { opacity: 1 },
+          "50%": { opacity: 0.6 },
         },
       },
       // Apple's no-overshoot settle curve; same value as --ease-standard.

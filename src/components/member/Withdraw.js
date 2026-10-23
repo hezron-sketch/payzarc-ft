@@ -29,10 +29,6 @@ import {
   InsufficientBalance,
 } from "./transferCore";
 
-// Mpesa/bank withdrawals must land on an account already linked to this
-// user (Profile "Payment Methods") — never a number typed in on the spot.
-// Agent is the one exception: it's a physical cash-out code, not an
-// account, so it stays free text.
 export function Withdraw({
   myCountry,
   displayCurrency,
@@ -61,11 +57,7 @@ export function Withdraw({
   });
   // The withdrawal in flight, shown in TransferStatus (null hides it).
   const [result, setResult] = useState(null);
-  // Errors raised inside the picker dialog render inline there (a toast
-  // would sit outside the modal, unreachable and unannounced).
   const [pickerError, setPickerError] = useState("");
-  // The picker opens on the region's default destination once; after that
-  // reopening it keeps whatever the user last chose.
   const [destinationChosen, setDestinationChosen] = useState(false);
 
   const region = getRegionProviders(myCountry);
@@ -97,8 +89,6 @@ export function Withdraw({
       showNotification("error", "Enter an amount to withdraw");
       return;
     }
-    // Mobile money is only a real withdrawal rail where the region has one —
-    // default elsewhere to Bank, also a linked-account destination.
     if (!destinationChosen) {
       setDestination(region.mobileMoney.length > 0 ? "mpesa" : "bank");
       setShowAddMobileMoneyForm(paymentMethods.mobileMoney.length === 0);
@@ -138,8 +128,6 @@ export function Withdraw({
       : destination === "bank"
         ? !!selectedBankId
         : /^[A-Za-z0-9-]{3,20}$/.test(agentNumber);
-  // Shown under the picker's Continue while it's disabled, so the user knows
-  // what's missing instead of tapping into an error.
   const destinationHint =
     destination === "mpesa"
       ? "Choose or add a mobile money account."
@@ -173,17 +161,10 @@ export function Withdraw({
     });
   };
 
-  // Posts the withdrawal and walks TransferStatus through real phases; retry
-  // reuses the credential and idempotency key.
   const runWithdraw = async (auth, toLabel, key) => {
     const base = { auth, toLabel, key, summary: `${amountLabel} to ${toLabel}` };
     setResult({ ...base, phase: "sending" });
         try {
-          // Agent path confirmed against MerchantWithdrawalService: it reads
-          // `merchant_code`, not `agent_number`. Mpesa/bank paths send the id
-          // of the linked account (mirroring Add Money's bank_id/card_id) —
-          // ponytail: guessed field names, fix if the backend uses something
-          // else once those rails are implemented.
           const data = await postTransfer(
             "/api/withdraw/",
             {
@@ -258,8 +239,6 @@ export function Withdraw({
         )}
       </div>
 
-      {/* Destination picker, shown once a valid amount is entered. The PIN
-          comes last, in the review sheet, after the destination is chosen. */}
       <Dialog
         open={showPopup}
         onOpenChange={(open) => {

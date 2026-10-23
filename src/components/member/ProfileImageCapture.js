@@ -5,10 +5,6 @@ import { useStopCameraWhenHidden } from '../../utility/useStopCameraWhenHidden';
 import { cameraErrorMessage, useRetryWhenCameraAllowed } from '../../utility/cameraError';
 import { cn } from '@/lib/utils';
 
-// Same flow-card/back-button/button recipe as PaymentMethods.js and Home.js
-// (translucent white/[0.0X] surfaces, rounded-xl/2xl, gold-500 CTAs, the
-// tip-up modal-3d entrance) so this page reads as part of the same app
-// instead of the older standalone-modal look it predates.
 const flowCardClass =
   "relative p-8 w-full max-w-[440px] mx-auto min-h-[560px] flex flex-col gap-6 bg-[radial-gradient(circle_at_30%_0%,var(--card),var(--card2)_65%)] rounded-2xl shadow-[0_30px_70px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.04)_inset] animate-modal-3d-in max-[480px]:p-6 max-[480px]:px-5 max-[480px]:min-h-[480px]";
 const flowHeaderClass =
@@ -93,9 +89,6 @@ function ProfileImageCapture({ user, onRefreshUser, onBack }) {
     setUploadError('');
     setUploading(true);
     try {
-      // Content-Type is intentionally left unset here — axiosInstance's
-      // request interceptor strips any manual override for FormData bodies
-      // so the browser generates the multipart boundary itself.
       const blob = await fetch(capturedImage).then((r) => {
         if (!r.ok) throw new Error(`Failed to prepare image: ${r.status}`);
         return r.blob();
@@ -160,9 +153,6 @@ function ProfileImageCapture({ user, onRefreshUser, onBack }) {
 
   return (
     <div className="flex justify-center items-center p-4 box-border">
-      {/* ponytail: the face-guide oval's pulse isn't among the globally
-          registered animate-* utilities, so it's kept as a tiny scoped
-          @keyframes here rather than touching tailwind.config.js. */}
       <style>{`
         @keyframes profileGuidePulse {
           0% { opacity: 0.7; transform: scale(1); }

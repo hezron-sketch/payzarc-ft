@@ -43,8 +43,6 @@ const FUND_TYPES = [
 ];
 const fundTypeFor = (key) => FUND_TYPES.find((t) => t.key === key) || FUND_TYPES[0];
 
-// Flat row/gold-CTA recipe this file already used for the static fund-type
-// buttons, reused now for the real group cards.
 const cardClass =
   "w-full flex flex-col gap-3 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06]";
 const createGroupBtnClass =
@@ -55,12 +53,6 @@ const contributeBtnClass = cn(
   smallPillBtnClass,
   "text-black bg-gradient-to-b from-gold to-gold-dark",
 );
-// Add friend/Move to wallet are secondary actions next to Contribute — at
-// the card's actual width their labels wrapped to two lines as flex-1
-// pills (that's what read as "chunky"), so they're icon-only fixed-size
-// circles instead, same recipe as the mobile bottom nav's own icon
-// buttons. aria-label/title carry the label text screen readers/hover
-// still need.
 const iconOnlyBtnClass =
   "shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-foreground bg-white/[0.04] border border-white/[0.08] cursor-pointer transition-colors duration-200 hover:bg-white/[0.07] hover:border-gold/20 active:scale-[0.97]";
 const formLabelClass =
@@ -132,57 +124,60 @@ function GroupCard({ group, friends, onContribute, onAddMember, onWithdraw }) {
 
   return (
     <div className={cardClass}>
-      {/* Collapsed row — just name, member count, and amount. Everything
-      else (icon/category, member list, contribute/add-friend/withdraw)
-      only shows once expanded, instead of always being on screen. */}
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between gap-3 text-left cursor-pointer"
+        aria-expanded={expanded}
+        className="w-full flex items-center gap-3 text-left cursor-pointer"
       >
-        <p className="flex-1 min-w-0 text-sm font-semibold text-foreground truncate m-0">
-          {group.name}
-        </p>
-        <div className="flex items-center gap-2.5 shrink-0">
-          <span className="text-[0.7rem] text-muted-foreground whitespace-nowrap">
-            {group.members.length} member{group.members.length === 1 ? "" : "s"}
-          </span>
-          <span className="text-base font-bold text-gold whitespace-nowrap">
-            {group.currency} {group.balance.toLocaleString()}
-          </span>
-          <ChevronDown
-            size={16}
-            className={cn(
-              "text-muted-foreground transition-transform duration-200 shrink-0",
-              expanded && "rotate-180",
-            )}
-          />
+        <div
+          className={cn(
+            "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
+            fundType.iconBg,
+            fundType.iconColor,
+          )}
+        >
+          <Icon size={18} aria-hidden="true" />
+        </div>
+        {/* Title gets its own line; members and amount share the one below. */}
+        <div className="flex-1 min-w-0 flex flex-col gap-1">
+          <div className="flex items-start gap-2">
+            <p className="flex-1 min-w-0 text-[0.9rem] font-semibold text-foreground leading-snug line-clamp-2 break-words m-0">
+              {group.name}
+            </p>
+            <ChevronDown
+              size={16}
+              aria-hidden="true"
+              className={cn(
+                "mt-0.5 text-muted-foreground transition-transform duration-200 shrink-0",
+                expanded && "rotate-180",
+              )}
+            />
+          </div>
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[0.75rem] text-muted-foreground whitespace-nowrap">
+              {group.members.length} member
+              {group.members.length === 1 ? "" : "s"}
+            </span>
+            <span className="text-[0.95rem] font-bold text-gold tabular-nums whitespace-nowrap">
+              {group.currency} {group.balance.toLocaleString()}
+            </span>
+          </div>
         </div>
       </button>
 
       {expanded && (
         <div className="flex flex-col gap-3 animate-flow-fade-in">
-          <div className="flex items-center gap-2">
-            <div
-              className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-                fundType.iconBg,
-                fundType.iconColor,
-              )}
-            >
-              <Icon size={16} />
-            </div>
-            <span className="text-xs text-muted-foreground">
-              {fundType.label}
-            </span>
-          </div>
-
           {group.members.length > 0 && (
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col border-t border-white/[0.06] pt-1">
+              <div className="flex justify-between text-[0.7rem] font-medium text-muted-foreground uppercase tracking-wider py-1.5">
+                <span>Member</span>
+                <span>Contributed</span>
+              </div>
               {group.members.map((m) => (
                 <div
                   key={m.id}
-                  className="flex items-center gap-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2 transition-colors hover:bg-white/[0.05] hover:border-gold/20"
+                  className="flex items-center gap-2.5 py-2 border-b border-white/[0.04] last:border-b-0"
                 >
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center text-[0.65rem] shrink-0">
                     {(m.display_name || "?").slice(0, 1).toUpperCase()}
@@ -190,7 +185,7 @@ function GroupCard({ group, friends, onContribute, onAddMember, onWithdraw }) {
                   <span className="flex-1 min-w-0 text-sm text-foreground truncate">
                     {m.display_name}
                   </span>
-                  <span className="text-sm font-semibold text-gold shrink-0">
+                  <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">
                     {group.currency} {(m.contributed || 0).toLocaleString()}
                   </span>
                 </div>
@@ -365,10 +360,6 @@ function Groups({ onTotalChange, onWalletChange }) {
 
   const totalFund = groups.reduce((sum, g) => sum + g.balance, 0);
 
-  // The balance card's "Group Funds" pill (Home.js) fetches this same total
-  // once on its own mount — this keeps it in sync whenever a contribution,
-  // new group, etc. changes the real total here, instead of it going stale
-  // the moment this panel is opened without a full Home remount.
   useEffect(() => {
     onTotalChange?.(totalFund);
   }, [totalFund, onTotalChange]);
@@ -433,9 +424,6 @@ function Groups({ onTotalChange, onWalletChange }) {
     setGroups((prev) =>
       prev.map((g) => (g.id === groupId ? res.data.group : g)),
     );
-    // Personal balance lives in Home.js's own state, fetched separately
-    // from /api/balance — this tells it to refetch now that some of it
-    // just moved in, instead of it going stale until the next remount.
     onWalletChange?.();
   };
 

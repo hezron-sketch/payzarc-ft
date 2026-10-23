@@ -16,10 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
-// Shared class-builders for pieces whose sizing changes in compact mode
-// (Login rendered inside the phone-width Phone Auth Stage) — kept as
-// functions rather than static strings since they depend on the `compact`
-// prop, mirroring the `.page.compact .foo` CSS Module modifiers they replace.
 const formHeaderClass = (compact) =>
   cn("flex flex-col", compact ? "gap-1" : "gap-1.5");
 const formTitleClass = (compact) =>
@@ -59,7 +55,6 @@ const otpContainerClass = (compact) =>
 const inlineErrorClass =
   "flex items-center gap-1.5 bg-red-400/[0.08] border-[0.5px] border-red-400/25 rounded-sm px-3 py-2 text-xs text-red-400";
 
-/* ─── Mini phone illustration ─── */
 function PhoneIllustration() {
   return (
     <div className="relative flex justify-center h-[280px]">
@@ -136,7 +131,6 @@ function PhoneIllustration() {
   );
 }
 
-/* ─── OTP box ─── */
 function OtpInput({ otp, otpRefs, onChange, onKeyDown, onPaste, compact }) {
   return (
     <div className={otpContainerClass(compact)}>
@@ -158,9 +152,6 @@ function OtpInput({ otp, otpRefs, onChange, onKeyDown, onPaste, compact }) {
   );
 }
 
-/* ─── Error popup ─── */
-// `action` ({ label, onClick }) adds a way forward above Dismiss, e.g.
-// "Create account" when the user wasn't found.
 function ErrorPopup({ title, message, action, onClose, compact }) {
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -199,7 +190,6 @@ function ErrorPopup({ title, message, action, onClose, compact }) {
   );
 }
 
-/* ─── Main Login component ─── */
 function Login({ onBack, embedded = false, compact = false }) {
   const [step, setStep] = useState(1); // 1 = credentials, 2 = OTP
   const [isLoading, setIsLoading] = useState(false);
@@ -215,9 +205,7 @@ function Login({ onBack, embedded = false, compact = false }) {
   const [timerStarted, setTimerStarted] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [showExpired, setShowExpired] = useState(false);
-
-  // popup states
-  const [popup, setPopup] = useState(null); // { title, message }
+  const [popup, setPopup] = useState(null);
 
   const otpRefs = React.useRef([]);
   const navigate = useNavigate();
@@ -506,7 +494,6 @@ function Login({ onBack, embedded = false, compact = false }) {
               embedded ? "max-w-full gap-6" : "max-w-[400px] gap-5 max-[768px]:max-w-full",
             )}
           >
-            {/* Back home — hidden when embedded, the Modal already offers a close (×) */}
             <button
               className={cn(
                 "inline-flex items-center gap-1.5 bg-transparent border-[0.5px] border-white/10 rounded-md text-[#9ca3af] text-xs font-medium px-3 py-1 cursor-pointer w-fit transition-colors hover:text-[#f9fafb] hover:border-white/20",
@@ -637,7 +624,6 @@ function Login({ onBack, embedded = false, compact = false }) {
                 </p>
               </>
             ) : (
-              /* ── Step 2: OTP ── */
               <>
                 <div className={formHeaderClass(compact)}>
                   <div className="w-[52px] h-[52px] bg-[rgba(var(--gold-rgb),0.1)] border-[0.5px] border-[rgba(var(--gold-rgb),0.25)] rounded-[14px] flex items-center justify-center mb-1">

@@ -1,8 +1,6 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 
-// Full-screen card shared by the 404 page and the crash screen. Uses plain
-// location changes, not useNavigate, because ErrorBoundary sits outside the router.
 function StatusCard({ title, message, actionLabel, onAction }) {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-background text-foreground p-4 box-border">

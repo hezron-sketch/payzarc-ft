@@ -1,10 +1,3 @@
-/**
- * Generates a branded Payzarc PDF account statement — a summary of totals
- * followed by a multi-row transaction table on standard A4 pages, using the
- * same palette as the single-transaction receipt (generateReceipt.js) for a
- * consistent brand.
- */
-
 const NAVY = [28, 35, 51];
 const GOLD = [236, 201, 75];
 const DARK = [30, 30, 30];
@@ -36,9 +29,6 @@ const formatAmount = (tx) => {
   return `${prefix}${amount.toFixed(2)}`;
 };
 
-// One totals bucket per currency — summing across currencies would produce
-// a meaningless number, so sent/received are kept separate per currency
-// and each prints its own line.
 function summarize(transactions) {
   const byCurrency = {};
   transactions.forEach((tx) => {
@@ -129,8 +119,6 @@ export async function generateStatementPDF(transactions, options = {}) {
     return y + 2.5;
   };
 
-  // Summary panel — only on page 1, right under the header band. Height
-  // grows with however many currencies are involved (usually just one).
   const drawSummary = (y) => {
     const byCurrency = summarize(transactions);
     const currencies = Object.keys(byCurrency);

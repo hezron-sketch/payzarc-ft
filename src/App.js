@@ -32,7 +32,13 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { EXCHANGE_RATES } from "./utility/exchangeRates";
-import { PRO_PLAN_PRICE } from "./utility/constants";
+import {
+  PRO_PLAN_PRICE,
+  GLOBAL_AVG_REMITTANCE_COST,
+  GLOBAL_AVG_SOURCE_URL,
+} from "./utility/constants";
+import { countries } from "./utility/countries";
+import { calcTransferFee } from "./components/member/transferCore";
 import { isValidEmail, isSafeText } from "./utility/validators";
 import {
   PhoneMockup,
@@ -76,66 +82,46 @@ const QUICK_DESTINATIONS = [
   { flag: "🇬🇭", name: "Ghana", currency: "GHS", country: "Ghana", symbol: "GH₵" },
 ];
 
-// Picks a random hero destination that isn't the one currently shown on the
-// other floating card, so the two never quote the same currency at once.
+// Every currency Payzarc can deliver in, straight from the country list —
+// the "anywhere" claim on the page is counted, not written by hand.
+const SUPPORTED_CURRENCIES = [...new Set(countries.map((c) => c.currency))].sort();
+const SUPPORTED_COUNTRY_COUNT = countries.length;
+const HIGHLIGHT_CURRENCIES = new Set([
+  "USD", "GBP", "EUR",
+  ...QUICK_DESTINATIONS.map((d) => d.currency),
+]);
+
+const surfaceClass =
+  "bg-white/[0.03] backdrop-blur-[8px] border-[0.5px] border-border rounded-[20px]";
+const formatUsd = (n) =>
+  `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const formatPct = (r) => `${+(r * 100).toFixed(2)}%`;
+
 function pickHeroDestination(excludeCurrency) {
   const pool = QUICK_DESTINATIONS.filter((d) => d.currency !== excludeCurrency);
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-/* ─── Phone Auth Stage shell (backdrop/panel/notch/screen/preview/content) —
-   formerly a small CSS-Modules leftover (App.module.css), now expressed as
-   Tailwind classes like the rest of the app.
-
-   phoneStagePanelClass keeps its transition as one arbitrary `transition`
-   property (not the transition-/duration- utility classes) because the FLIP
-   "grow" animation needs all eight of top/left/width/height/border-radius/
-   transform/background/border-color animating at once, with transform/size/
-   radius on one easing curve and background/border-color on another —
-   Tailwind's utilities only apply a single duration+easing to the whole
-   transition-property list, which can't express two curves at once. The
-   320ms duration here must also stay in sync with the `setTimeout(..., 320)`
-   in PhoneAuthStage's close handler, which unmounts the clone once the
-   shrink-back animation finishes — writing it as one exact string removes
-   any risk of the utility classes and the JS timer drifting apart. */
 const phoneStageBackdropClass =
-  // perspective here is what makes the panel's translateZ (below) actually
-  // read as depth instead of doing nothing — 3D transforms only render with
-  // foreshortening relative to a perspective set on an ancestor.
   "fixed inset-0 z-[1000] flex items-center justify-center px-4 py-8 [perspective:1200px] bg-[rgba(6,8,14,0)] [backdrop-filter:blur(0px)] [-webkit-backdrop-filter:blur(0px)] transition-[background,backdrop-filter] duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)]";
 const phoneStageBackdropOpenClass =
   "bg-[rgba(6,8,14,0.62)] [backdrop-filter:blur(7px)] [-webkit-backdrop-filter:blur(7px)]";
-// Shadow while pinned to the mockup's spot (flat against the page, matching
-// the resting PhoneMockup's own shadow) vs once expanded (bigger + more
-// diffuse, selling the "lifted toward the viewer" 3D effect below).
 const phoneStagePanelShadowClosedClass =
   "shadow-[0_30px_80px_rgba(0,0,0,0.55)]";
 const phoneStagePanelClass =
-  // mask-image forces Chrome to clip this element's rounded corners on its
-  // own masking layer instead of the default overflow-hidden+3D-transform
-  // path — without it, translateZ (below, once expanded) makes the browser
-  // clip border-radius against the un-transformed layer, leaving a jagged
-  // sliver of the square edge visible past the rounded corner.
   "fixed flex flex-col p-[8px] border-[1.5px] border-white/10 overflow-hidden rounded-[var(--r)] [mask-image:radial-gradient(white,black)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] z-[1001] [transition:top_0.32s_cubic-bezier(0.16,1,0.3,1),left_0.32s_cubic-bezier(0.16,1,0.3,1),width_0.32s_cubic-bezier(0.16,1,0.3,1),height_0.32s_cubic-bezier(0.16,1,0.3,1),border-radius_0.32s_cubic-bezier(0.16,1,0.3,1),border-width_0.32s_cubic-bezier(0.16,1,0.3,1),transform_0.32s_cubic-bezier(0.16,1,0.3,1),box-shadow_0.32s_ease,background_0.32s_ease,border-color_0.32s_ease]";
-// Notch hangs from the screen's top edge (top = the panel's 8px bezel) in
-// the bezel's own color, like an iPhone's.
 const phoneStageNotchClass =
   "top-[8px] w-[40%] h-[22px] rounded-b-[14px]";
 // Screen radius = panel radius (--r) − 8px bezel, keeping corners concentric.
 const phoneStageScreenClass =
   "relative flex-1 bg-card rounded-[calc(var(--r)-8px)] [transition:border-radius_0.32s_cubic-bezier(0.16,1,0.3,1)] overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.12)_transparent] [&::-webkit-scrollbar]:w-[5px] [&::-webkit-scrollbar-thumb]:bg-white/[0.12] [&::-webkit-scrollbar-thumb]:rounded";
 const phoneStagePreviewClass =
-  // Matches the panel's own 320ms so the preview finishes fading exactly
-  // when the panel finishes growing/shrinking, instead of settling ~100ms
-  // early and leaving a moment where the shape is still moving but nothing
-  // else on screen is.
   "absolute inset-0 pt-[30px] pb-[10px] px-2 flex flex-col gap-[7px] opacity-100 transition-opacity duration-[320ms] ease-in-out pointer-events-none";
 const phoneStagePreviewHideClass = "opacity-0";
 const phoneStageContentClass =
   "px-[1.35rem] pt-[2.75rem] pb-[1.85rem] opacity-0 translate-y-[10px] transition-[opacity,transform] duration-[220ms] ease-in-out";
 const phoneStageContentShowClass = "opacity-100 translate-y-0 delay-100";
 
-/* ─── Navbar ─── */
 const NAV_LINKS = [
   { label: "Home", to: "/" },
   { label: "Features", to: "/features" },
@@ -160,12 +146,8 @@ function Navbar() {
                 alt="Payzarc-logo"
               />
             </div>
-            {/* <span className="text-[17px] font-bold text-foreground tracking-[-0.3px]">Payzarc</span> */}
           </div>
         </div>
-        {/* Absolutely positioned instead of a grid/flex sibling — same fix
-        as Dashboard.js's topbar — so it never fights the logo/login button
-        for space; it's just hidden below md anyway. */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-1 max-[768px]:hidden">
           {NAV_LINKS.map((l) => {
             const active = pathname === l.to;
@@ -201,20 +183,6 @@ function Navbar() {
   );
 }
 
-/* ─── Phone Auth Stage ───
-   This is the "morph" — instead of a modal, the same phone mockup shown in
-   the hero literally grows into the login/register screen. We measure the
-   mockup's live position with getBoundingClientRect (FLIP technique), hide
-   it in place, and render an animated clone (via a portal, so it can sit
-   above everything at position:fixed) that transitions from that exact spot
-   to a large centered "phone" containing the real form. Reversing the same
-   animation on close makes it feel like the form shrinks back into the
-   mockup rather than the page navigating away.
-
-   The clone's shell (backdrop/panel/notch/screen/preview/content) uses the
-   phoneStage*Class Tailwind strings defined above PhoneMockup — see the
-   comment there for why the panel's transition is one arbitrary property
-   instead of Tailwind's transition-/duration- utility classes. */
 function PhoneAuthStage({ overlay, onClose, mockupRef }) {
   const anchorRef = useRef(null);
   const closeTimerRef = useRef(null);
@@ -222,8 +190,6 @@ function PhoneAuthStage({ overlay, onClose, mockupRef }) {
   // closed -> opening -> open -> closing -> closed
   const [phase, setPhase] = useState("closed");
 
-  // Start the grow animation: snapshot the mockup's rect, then flip to
-  // "opening" so we can render the clone in that exact spot first.
   useLayoutEffect(() => {
     if (overlay && phase === "closed") {
       const node = anchorRef.current;
@@ -235,8 +201,6 @@ function PhoneAuthStage({ overlay, onClose, mockupRef }) {
     }
   }, [overlay, phase]);
 
-  // One frame later, swap to the expanded (centered/large) CSS state so the
-  // browser animates between the two — this is the actual "morph".
   useEffect(() => {
     if (phase !== "opening") return undefined;
     const id = requestAnimationFrame(() =>
@@ -245,8 +209,6 @@ function PhoneAuthStage({ overlay, onClose, mockupRef }) {
     return () => cancelAnimationFrame(id);
   }, [phase]);
 
-  // Start the shrink animation: snapshot the mockup's current rect (in case
-  // of scroll/resize) and animate back to it before unmounting.
   useEffect(() => {
     if (overlay) return undefined;
     if (phase !== "open" && phase !== "opening") return undefined;
@@ -256,9 +218,6 @@ function PhoneAuthStage({ overlay, onClose, mockupRef }) {
     setRect({ top: r.top, left: r.left, width: r.width, height: r.height, scale });
     setPhase("closing");
     return undefined;
-    // Must only re-run when overlay flips, so it captures phase as of that
-    // moment; adding phase would re-fire this on every phase transition and
-    // re-snapshot the rect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [overlay]);
 
@@ -288,10 +247,6 @@ function PhoneAuthStage({ overlay, onClose, mockupRef }) {
     };
   }, [isActive]);
 
-  // While opening/closing we pin the clone to the mockup's exact measured
-  // rect via inline styles; once "open" we hand control to the CSS class,
-  // which defines the large, centered target — the transition between the
-  // two is what produces the grow/shrink motion.
   const panelStyle =
     rect && !isExpanded
       ? {
@@ -339,10 +294,6 @@ function PhoneAuthStage({ overlay, onClose, mockupRef }) {
                 type="button"
                 className={cn(
                   "absolute top-[20px] right-[20px] z-[2] w-[30px] h-[30px] flex items-center justify-center bg-white/[0.06] border-[0.5px] border-white/[0.12] rounded-full text-[#9ca3af] cursor-pointer transition-[opacity,background,color,transform] duration-200 hover:bg-white/[0.12] hover:text-[#f9fafb] hover:rotate-90",
-                  // Delay only on the way in, so it appears once the panel
-                  // has mostly finished growing instead of popping in ~120ms
-                  // early; no delay on the way out, so it disappears
-                  // immediately when closing starts.
                   isExpanded
                     ? "opacity-100 delay-150"
                     : "opacity-0 pointer-events-none",
@@ -396,14 +347,6 @@ function PhoneAuthStage({ overlay, onClose, mockupRef }) {
                     isExpanded && phoneStageContentShowClass,
                   )}
                 >
-                  {/* key={overlay} forces a fresh element (and thus the
-                  fade-in below) whenever overlay flips between "login" and
-                  "register" — including the two-truthy-values case where
-                  the panel itself is already open and never re-runs its own
-                  grow/shrink effects (see the Link inside each form to the
-                  other). Rendering straight off `overlay` (not a separately
-                  tracked copy) means this can never end up stuck showing
-                  neither form. */}
                   <div key={overlay} className="animate-flow-fade-in">
                     {overlay === "login" && (
                       <Login onBack={onClose} embedded compact />
@@ -422,7 +365,6 @@ function PhoneAuthStage({ overlay, onClose, mockupRef }) {
   );
 }
 
-/* ─── Float Card ─── */
 function FloatCard({ side, iconBg, icon, label, value, sub }) {
   return (
     <div
@@ -450,22 +392,12 @@ function FloatCard({ side, iconBg, icon, label, value, sub }) {
   );
 }
 
-/* ─── Hero Section ─── */
 const HERO_SEND_AMOUNT = 2000;
 
 function Hero({ overlay, onCloseAuth }) {
   const navigate = useNavigate();
   const mockupNodeRef = useRef(null);
 
-  // The "buried under the footer" effect needs the preview box to be
-  // shorter than the phone mockup's actual rendered height, and Footer
-  // (a sibling under Home, not a child here) needs to be told how tall a
-  // buffer to add so the buried slice stays inside its own painted
-  // background instead of spilling out past it. A static px guess for that
-  // height broke on real content (fonts/line-heights render taller than
-  // estimated), so this measures the mockup directly and republishes it as
-  // CSS vars on the root — read by both the box below (--phone-box-h) and
-  // Footer's top buffer (--phone-footer-buffer) — instead of guessing again.
   useLayoutEffect(() => {
     const el = mockupNodeRef.current;
     if (!el) return undefined;
@@ -487,10 +419,6 @@ function Hero({ overlay, onCloseAuth }) {
     };
   }, []);
 
-  // Live-looking rates on the two floating cards: each swaps to a random
-  // destination currency every 10s, staggered 5s apart (one tick alternates
-  // which side updates) so they never change in lockstep or show the same
-  // currency at the same time.
   const [sendDest, setSendDest] = useState(QUICK_DESTINATIONS[0]);
   const [receiveDest, setReceiveDest] = useState(QUICK_DESTINATIONS[2]);
   const sendDestRef = useRef(sendDest);
@@ -517,60 +445,48 @@ function Hero({ overlay, onCloseAuth }) {
 
   return (
     <section className="relative flex flex-col items-center text-center min-h-screen pt-16 px-8 pb-12">
-      {/* The two larger rings moved to Home, shared across every panel
-          instead of Hero-only — see the comment there. */}
       <div className="absolute rounded-full border border-[rgba(var(--gold-rgb),0.07)] pointer-events-none" />
 
-      {/* <div className="inline-flex items-center gap-2 bg-white/5 border-[0.5px] border-input rounded-[20px] py-1.5 px-4 text-xs text-[var(--soft)] mb-6">
-        <div className="flex">
-          <div className="w-5 h-5 rounded-full border-[1.5px] border-background -mr-[5px] text-[9px] font-bold flex items-center justify-center bg-success text-[#166534]">J</div>
-          <div className="w-5 h-5 rounded-full border-[1.5px] border-background -mr-[5px] text-[9px] font-bold flex items-center justify-center bg-info text-[#1e3a5f]">A</div>
-          <div className="w-5 h-5 rounded-full border-[1.5px] border-background -mr-[5px] text-[9px] font-bold flex items-center justify-center bg-pink text-[#831843]">M</div>
-        </div>
-        Trusted by 21,000+ people worldwide
-      </div> */}
       <h1 className="text-[clamp(2.5rem,8vw,5rem)] font-bold tracking-[2px] text-gold text-center leading-[1.05] flex p-0 max-[768px]:text-[34px]">
         PAYZARC
       </h1>
 
-      <h1 className="text-[2rem] font-bold leading-[1.1] tracking-[-1.5px] text-foreground max-w-[520px] m-12 max-[768px]:text-lg max-[768px]:mx-4 max-[768px]:my-6">
-        Send money
+      <h2 className="text-[2rem] font-bold leading-[1.1] tracking-[-1.5px] text-foreground max-w-[520px] m-12 max-[768px]:text-lg max-[768px]:mx-4 max-[768px]:my-6">
+        Send money anywhere
         <br />
         at <span className="text-gold">Lower Rates</span>
-      </h1>
+      </h2>
 
-      <p className="text-[1.3rem] text-[var(--muted)] max-w-[400px] leading-[1.7] mb-8 max-[768px]:text-sm">
-        Payzarc offers industry-leading exchange rates with no hidden fees on
-        local and international transfers. Save more for every transaction
-        you make.
+      <p className="text-[1.3rem] text-[var(--muted)] max-w-[440px] leading-[1.7] mb-8 max-[768px]:text-sm">
+        One flat 1.5% fee, shown before you send — the global average is{" "}
+        {formatPct(GLOBAL_AVG_REMITTANCE_COST)}. Live rates in{" "}
+        {SUPPORTED_CURRENCIES.length} currencies, so more of every transfer
+        arrives.
       </p>
 
-      <div className="flex gap-3 mb-14 max-[480px]:flex-col max-[480px]:items-stretch">
+      <div className="flex items-center gap-5 mb-14 max-[480px]:flex-col max-[480px]:items-stretch max-[480px]:gap-3">
         <button
           className="inline-flex items-center justify-center gap-2 bg-gold text-[#111] border-none rounded-md py-2 px-7 text-2xl font-semibold cursor-pointer transition-[background,transform] duration-200 hover:bg-gold-dark hover:-translate-y-px max-[768px]:text-lg"
           onClick={() => navigate("/register")}
         >
           Get started <ChevronRight />
         </button>
-        {/* <button className="bg-white/5 text-[#d1d5db] border-[0.5px] border-input rounded-md py-2 px-7 text-sm font-medium cursor-pointer transition-colors duration-200 hover:bg-white/[0.09] max-[480px]:text-center">See how it works</button> */}
+        {/* Rates before sign-up: the price is the pitch, so it's never gated. */}
+        <button
+          type="button"
+          className="bg-transparent border-0 p-0 text-[15px] font-semibold text-[var(--soft)] underline decoration-white/20 underline-offset-[6px] cursor-pointer transition-colors duration-200 hover:text-gold hover:decoration-gold/50"
+          onClick={() => navigate("/rates")}
+        >
+          Check today's rate
+        </button>
       </div>
 
-      {/* Lives above the phone/cards group rather than below it — the box
-          below is deliberately shorter than the mockup so the phone
-          overflows into Footer, which leaves no clear space under the phone
-          for this pill anymore. */}
       <div className="relative z-[3] mb-4 inline-flex items-center gap-1.5 bg-success/[0.08] border-[0.5px] border-success/25 rounded-[20px] py-[5px] px-3 text-[11px] text-success whitespace-nowrap">
         <div className="w-1.5 h-1.5 rounded-full bg-success flex-shrink-0" />
-        Live rate · updated 2s ago
+        {SUPPORTED_CURRENCIES.length} currencies · {SUPPORTED_COUNTRY_COUNT}{" "}
+        countries
       </div>
 
-      {/* Box is intentionally shorter than PhoneMockup's own rendered height
-          so the mockup overflows past it — and past Hero's bottom edge
-          straight into Footer, which paints over the buried bottom slice
-          (see Footer's comment). --phone-box-h is set by the measurement
-          effect above (~68% of the mockup's real height, same ratio at any
-          breakpoint since it's re-measured on resize), with this 260px
-          only as the first-paint fallback before that effect runs. */}
       <div className="relative w-full max-w-[680px] h-[var(--phone-box-h,260px)] flex items-start justify-center [perspective:1400px]">
         <FloatCard
           side="left"
@@ -585,7 +501,7 @@ function Hero({ overlay, onCloseAuth }) {
           }
           label="You send"
           value={`$${HERO_SEND_AMOUNT.toLocaleString()}`}
-          sub={`USD · 1 = ${sendDest.currency} ${sendRate}`}
+          sub={`fee ${formatUsd(calcTransferFee(HERO_SEND_AMOUNT))} · 1 USD = ${sendRate} ${sendDest.currency}`}
         />
 
         <PhoneAuthStage
@@ -600,95 +516,260 @@ function Hero({ overlay, onCloseAuth }) {
           icon={<span className="text-lg leading-none">{receiveDest.flag}</span>}
           label="They receive"
           value={`${receiveDest.symbol}${receiveAmount.toLocaleString()}`}
-          sub={`${receiveDest.currency} · fees: ${receiveDest.symbol}0.00`}
+          sub={`${receiveDest.currency} · nothing taken off the rate`}
         />
       </div>
     </section>
   );
 }
 
-/* ─── Features Strip ─── */
-const FEATURES = [
-  {
-    iconBg: "rgba(var(--gold-rgb),0.12)",
-    iconStroke: "var(--gold)",
-    iconPath: (
-      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-    ),
-    title: "Low rates",
-    desc: "Reduced transaction cost.",
-  },
-  {
-    iconBg: "rgba(96,165,250,0.12)",
-    iconStroke: "#60a5fa",
-    iconPath: (
-      <>
-        <circle cx="12" cy="12" r="10" />
-        <polyline points="12 6 12 12 16 14" />
-      </>
-    ),
-    title: "Transfers in minutes",
-    desc: "Most transfers arrive in under 60 seconds across 50+ countries.",
-  },
-  {
-    iconBg: "rgba(74,222,128,0.1)",
-    iconStroke: "#4ade80",
-    iconPath: (
-      <>
-        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-        <path d="M7 11V7a5 5 0 0110 0v4" />
-      </>
-    ),
-    title: "Bank-grade security",
-    desc: "256-bit encryption and full regulatory compliance in all regions.",
-  },
-];
+// The $200 benchmark the World Bank measures every provider against.
+const BENCHMARK_AMOUNT = 200;
 
-// eslint-disable-next-line no-unused-vars -- kept for when FeaturesStrip is re-enabled in Home()
-function FeaturesStrip() {
+function FeeComparison() {
+  const ours = calcTransferFee(BENCHMARK_AMOUNT);
+  const average = BENCHMARK_AMOUNT * GLOBAL_AVG_REMITTANCE_COST;
+  const rows = [
+    {
+      label: "Global average",
+      rate: GLOBAL_AVG_REMITTANCE_COST,
+      fee: average,
+      barClass: "bg-white/[0.14]",
+    },
+    {
+      label: "Payzarc",
+      rate: ours / BENCHMARK_AMOUNT,
+      fee: ours,
+      barClass: "bg-gold",
+      highlight: true,
+    },
+  ];
   return (
-    <div className="stagger flex flex-col gap-3 w-full px-10 py-8 border-t-[0.5px] border-border items-center flex-1 max-[768px]:py-6 max-[768px]:px-5">
-      {FEATURES.map((f) => (
-        <div
-          key={f.title}
-          className="bg-white/[0.03] backdrop-blur-[8px] border-[0.5px] border-border rounded-[14px] p-5 flex flex-col gap-1.5 transition-[border-color,background] duration-200 hover:bg-white/[0.055] hover:border-input"
+    <div className={cn(surfaceClass, "p-6 flex flex-col gap-5")}>
+      <div>
+        <span className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-[0.6px]">
+          Cost to send {formatUsd(BENCHMARK_AMOUNT)}
+        </span>
+        <p className="text-[22px] font-bold text-foreground tracking-[-0.5px] mt-1 m-0">
+          You keep{" "}
+          <span className="text-gold tabular-nums">
+            {formatUsd(average - ours)}
+          </span>{" "}
+          more
+        </p>
+      </div>
+      <dl className="flex flex-col gap-4 m-0">
+        {rows.map((r) => (
+          <div key={r.label} className="flex flex-col gap-1.5">
+            <div className="flex items-baseline justify-between text-[13px]">
+              <dt
+                className={cn(
+                  r.highlight ? "text-foreground font-semibold" : "text-[var(--soft)]",
+                )}
+              >
+                {r.label}
+              </dt>
+              <dd className="m-0 tabular-nums text-foreground font-semibold">
+                {formatUsd(r.fee)}
+                <span className="ml-1.5 text-[var(--muted)] font-normal">
+                  {formatPct(r.rate)}
+                </span>
+              </dd>
+            </div>
+            <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+              <div
+                className={cn("h-full rounded-full", r.barClass)}
+                style={{ width: `${(r.fee / average) * 100}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </dl>
+      <p className="text-[11px] text-[var(--muted)] leading-[1.5] m-0">
+        Average total cost of sending {formatUsd(BENCHMARK_AMOUNT)}, per the{" "}
+        <a
+          href={GLOBAL_AVG_SOURCE_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="text-[var(--soft)] underline decoration-white/20 underline-offset-2 hover:text-gold"
         >
-          <div
-            className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center mb-1.5"
-            style={{ background: f.iconBg }}
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke={f.iconStroke}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              {f.iconPath}
-            </svg>
-          </div>
-          <div className="text-[13px] font-bold text-foreground">
-            {f.title}
-          </div>
-          <div className="text-[12px] text-[var(--muted)] leading-[1.55]">
-            {f.desc}
-          </div>
-        </div>
-      ))}
+          World Bank, Q1 2025
+        </a>
+        . Payzarc's fee is 1.5%, $1 minimum, never folded into the rate.
+      </p>
     </div>
   );
 }
 
-/* ─── Converter Section ─── */
+function CurrencyWall() {
+  return (
+    <div className={cn(surfaceClass, "p-6 flex flex-col gap-4")}>
+      <div>
+        <span className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-[0.6px]">
+          Where your money can go
+        </span>
+        <p className="text-[22px] font-bold text-foreground tracking-[-0.5px] mt-1 m-0">
+          <span className="text-gold tabular-nums">
+            {SUPPORTED_CURRENCIES.length}
+          </span>{" "}
+          currencies, {SUPPORTED_COUNTRY_COUNT} countries
+        </p>
+      </div>
+      {/* Set as type, not chips: the density itself is the message. */}
+      <p
+        className="m-0 text-[11px] leading-[2] tracking-[0.12em] tabular-nums text-[var(--muted)] [word-spacing:0.35em]"
+        aria-label={`Supported currencies: ${SUPPORTED_CURRENCIES.join(", ")}`}
+      >
+        {SUPPORTED_CURRENCIES.map((ccy) => (
+          <span
+            key={ccy}
+            aria-hidden="true"
+            className={cn(
+              "inline-block mr-[0.6em]",
+              HIGHLIGHT_CURRENCIES.has(ccy) && "text-gold font-semibold",
+            )}
+          >
+            {ccy}
+          </span>
+        ))}
+      </p>
+    </div>
+  );
+}
+
+const vignetteClass =
+  "mt-auto rounded-xl bg-white/[0.03] border-[0.5px] border-white/[0.06] px-3.5 py-3 text-[12px]";
+
+// The story follows one transfer, in the order the app asks for it.
+const STORY_CHAPTERS = [
+  {
+    title: "See the rate first",
+    body: "Check what arrives before you even sign up. The rate on screen is the rate you get.",
+    vignette: (
+      <div className={cn(vignetteClass, "flex items-center justify-between tabular-nums")}>
+        <span className="text-[var(--soft)]">1 USD</span>
+        <span className="text-[var(--muted)]" aria-hidden="true">→</span>
+        <span className="text-foreground font-semibold">
+          {EXCHANGE_RATES.USD.KES} KES
+        </span>
+      </div>
+    ),
+  },
+  {
+    title: "Pick anyone, anywhere",
+    body: "A saved friend or a phone number. We detect their country and currency for you.",
+    vignette: (
+      <div className={cn(vignetteClass, "flex items-center gap-2")}>
+        <span className="text-base leading-none" aria-hidden="true">
+          {QUICK_DESTINATIONS.map((d) => d.flag).join(" ")}
+        </span>
+        <span className="text-[var(--muted)] whitespace-nowrap">
+          +{SUPPORTED_COUNTRY_COUNT - QUICK_DESTINATIONS.length} more
+        </span>
+      </div>
+    ),
+  },
+  {
+    title: "See every cent",
+    body: "The fee sits on its own line, before you confirm. Nothing hidden in the exchange rate.",
+    vignette: (
+      <dl className={cn(vignetteClass, "flex flex-col gap-1 m-0 tabular-nums")}>
+        {[
+          ["Amount", formatUsd(BENCHMARK_AMOUNT)],
+          ["Fee · 1.5%", formatUsd(calcTransferFee(BENCHMARK_AMOUNT))],
+        ].map(([k, v]) => (
+          <div key={k} className="flex justify-between text-[var(--soft)]">
+            <dt>{k}</dt>
+            <dd className="m-0">{v}</dd>
+          </div>
+        ))}
+        <div className="flex justify-between pt-1 mt-0.5 border-t-[0.5px] border-white/[0.08] font-semibold">
+          <dt className="text-foreground">Total</dt>
+          <dd className="m-0 text-gold">
+            {formatUsd(BENCHMARK_AMOUNT + calcTransferFee(BENCHMARK_AMOUNT))}
+          </dd>
+        </div>
+      </dl>
+    ),
+  },
+  {
+    title: "Watch it arrive",
+    body: "Sent, processing, delivered. Every step is tracked, with a receipt when it lands.",
+    vignette: (
+      <ol className={cn(vignetteClass, "flex items-center gap-1.5 list-none m-0")}>
+        {["Sent", "Processing", "Delivered"].map((s, i, all) => (
+          <li key={s} className="flex items-center gap-1.5 min-w-0">
+            <span className="w-4 h-4 rounded-full bg-gold text-[#111] flex items-center justify-center shrink-0">
+              <CircleCheck size={10} strokeWidth={3} aria-hidden="true" />
+            </span>
+            <span className="text-[var(--soft)] truncate">{s}</span>
+            {i < all.length - 1 && (
+              <span className="w-2 h-px bg-white/[0.15] shrink-0" aria-hidden="true" />
+            )}
+          </li>
+        ))}
+      </ol>
+    ),
+  },
+];
+
+function Story() {
+  const navigate = useNavigate();
+  return (
+    // Same frosted surface as the footer, so the hero phone still sinks
+    // behind the page the way it always has.
+    <section className="relative z-10 bg-[rgba(13,17,23,0.85)] backdrop-blur-[12px] border-t-[0.5px] border-border px-8 pt-20 pb-20 max-[768px]:px-5 max-[768px]:pt-14 max-[768px]:pb-14">
+      <div className="max-w-[1120px] mx-auto">
+        <PageHeader
+          eyebrow="How it works"
+          title="One transfer, four steps, no fine print"
+          subtitle="We built Payzarc because too much of every transfer home disappears into fees. Here's everything that happens between you and the person you're paying."
+        />
+        <ol className="stagger grid grid-cols-4 gap-5 list-none m-0 p-0 max-[1024px]:grid-cols-2 max-[640px]:grid-cols-1">
+          {STORY_CHAPTERS.map((c, i) => (
+            <li key={c.title} className={cn(surfaceClass, "p-5 flex flex-col gap-2 min-h-[220px]")}>
+              <span className="text-[11px] font-semibold text-gold tabular-nums tracking-[0.12em]">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <h3 className="text-[15px] font-bold text-foreground m-0">
+                {c.title}
+              </h3>
+              <p className="text-[13px] text-[var(--muted)] leading-[1.6] m-0 mb-3">
+                {c.body}
+              </p>
+              {c.vignette}
+            </li>
+          ))}
+        </ol>
+
+        <div className="grid grid-cols-2 gap-5 mt-5 max-[768px]:grid-cols-1">
+          <FeeComparison />
+          <CurrencyWall />
+        </div>
+
+        <div className="flex items-center justify-between gap-6 mt-14 pt-8 border-t-[0.5px] border-border max-[640px]:flex-col max-[640px]:items-start">
+          <p className="text-[18px] font-semibold text-foreground m-0 max-w-[520px] text-balance">
+            Rates and fees are public.
+            <span className="text-[var(--muted)] font-normal"> Sign up only when you're ready to send.</span>
+          </p>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 bg-gold text-[#111] border-none rounded-md px-6 py-2.5 text-[15px] font-bold cursor-pointer transition-[background,transform] duration-200 hover:bg-gold-dark hover:-translate-y-0.5 shrink-0"
+            onClick={() => navigate("/register")}
+          >
+            Create free account <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function isValidAmount(val) {
   const n = parseFloat(val);
   return !isNaN(n) && n >= 1 && n <= 1000000;
 }
 
-// eslint-disable-next-line no-unused-vars -- kept for when Converter is re-enabled in Home()
 function Converter() {
   const navigate = useNavigate();
   const [fromCountry, setFromCountry] = useState("");
@@ -750,7 +831,8 @@ function Converter() {
         Calculate your transfer
       </h2>
       <p className="text-[14px] text-[var(--muted)] mb-6">
-        Real-time rates, zero surprises.
+        An indicative quote now; the exact live rate is shown before you
+        confirm.
       </p>
 
       <div className="bg-white/[0.03] backdrop-blur-[8px] border-[0.5px] border-border rounded-[20px] p-6 flex flex-col gap-4">
@@ -809,6 +891,11 @@ function Converter() {
               {EXCHANGE_RATES[COUNTRIES[fromCountry]]?.[COUNTRIES[toCountry]]}{" "}
               {COUNTRIES[toCountry]} · indicative rate
             </div>
+            <div className="text-[12px] text-[var(--soft)] mt-2 tabular-nums">
+              Fee {calcTransferFee(parseFloat(fromValue)).toFixed(2)}{" "}
+              {COUNTRIES[fromCountry]} (1.5%) · charged on top, not taken off
+              what they receive
+            </div>
           </div>
         )}
 
@@ -843,19 +930,6 @@ function Converter() {
   );
 }
 
-/* ─── Footer ───
-   `relative z-10` with a solid background: the hero's phone mockup is
-   deliberately allowed to overflow down past the hero section (see Hero's
-   preview box) so it's "buried" under the footer — that only reads
-   correctly if the footer paints on top of it and isn't see-through, and
-   is tall enough to actually contain the buried slice instead of it
-   sticking out past Footer's own bottom edge. min-h-[var(--phone-footer-buffer)]
-   (set by Hero's measurement effect to the real overflow amount) is a
-   floor, not padding: with this much real content the footer is already
-   taller than that floor in the normal case, so content still starts
-   flush at the top border; the floor only pads out empty space below the
-   content — instead of pushing it down from above — on the rare
-   viewport/content combo where the overflow is taller than the content. */
 function Footer() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -868,13 +942,6 @@ function Footer() {
   ];
 
   return (
-    // flex-shrink-0: without it, a flex item's explicit min-height (the
-    // buffer below) replaces its *default* min-height, which is normally
-    // "never shrink below your own content" — on a marketing-page pane
-    // where content is taller than the viewport, that let flex-shrink
-    // compress this footer down to the (much smaller) buffer value,
-    // clipping nothing itself (overflow:visible) but leaving its content
-    // spilling past its own background box, into the page's bg behind it.
     <footer className="relative z-10 flex-shrink-0 bg-[rgba(13,17,23,0.85)] backdrop-blur-[12px] border-t-[0.5px] border-border min-h-[var(--phone-footer-buffer,0px)]">
       <div className="max-w-[1280px] mx-auto px-6 py-12 max-[768px]:px-5 max-[768px]:py-9">
         <div className="grid grid-cols-[1.3fr_1fr_1fr] gap-10 max-[768px]:grid-cols-1 max-[768px]:gap-8 max-[768px]:text-center">
@@ -950,10 +1017,6 @@ function Footer() {
   );
 }
 
-/* ─── Marketing pages (Features/Rates/Help/Contact) ───
-   Full-width panels in Home's horizontal strip (see PANEL_ORDER + MarketingPage
-   above Home) — each wrapped by MarketingPage there, not by these
-   components directly. */
 function PageHeader({ eyebrow, title, subtitle, titleClassName }) {
   return (
     <div className="max-w-[640px] mb-10">
@@ -1035,12 +1098,6 @@ function FeaturesContent() {
         title="Built for how money actually moves"
         subtitle="Everything in Payzarc is designed around real transfers, real rates, and real people — not just a wallet balance on a screen."
       />
-      {/* Was a single-column accordion list, sized for the old ~380px phone
-          panel — a 3-up card grid (matching Rates' card style) actually
-          uses the page's real width instead of leaving it mostly empty.
-          Each card keeps the same expand-for-detail interaction (same
-          grid-template-rows 0fr->1fr trick), just triggered by its own
-          "Learn more" instead of the whole row being a giant button. */}
       <div className="stagger grid grid-cols-3 gap-5 max-[1024px]:grid-cols-2 max-[640px]:grid-cols-1">
         {FEATURES_LIST.map(({ icon: Icon, title, description, details }) => {
           const isOpen = openTitle === title;
@@ -1074,9 +1131,6 @@ function FeaturesContent() {
                 />
               </button>
 
-              {/* grid-template-rows 0fr->1fr instead of conditional
-                  mount/unmount — animates smoothly both ways (open AND
-                  close) without measuring scrollHeight in JS. */}
               <div
                 className="grid transition-[grid-template-rows] duration-300 ease-in-out"
                 style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}
@@ -1142,6 +1196,10 @@ function RatesContent() {
           </p>
         </div>
       </div>
+      <div className="grid grid-cols-2 gap-5 mt-5 max-[768px]:grid-cols-1">
+        <FeeComparison />
+        <CurrencyWall />
+      </div>
       <Converter />
     </>
   );
@@ -1176,8 +1234,6 @@ const FAQS = [
 
 function HelpContent() {
   const navigate = useNavigate();
-  // Single index open at a time — a standard accordion, not a checklist of
-  // independently-toggled panels.
   const [openIndex, setOpenIndex] = useState(0);
   return (
     <>
@@ -1267,9 +1323,6 @@ function ContactContent() {
       return;
     }
     setFormError("");
-    // No support-ticketing backend exists for the marketing site — this is
-    // an honest client-side "mock success", same pattern the rest of the
-    // app uses for flows without a real endpoint behind them yet.
     setSent(true);
   };
 
@@ -1402,28 +1455,8 @@ function ContactContent() {
   );
 }
 
-/* ─── Home Page ───
-   Home is the single source of truth for the app's visual language, and it
-   stays mounted for "/", the login route, and the register route — only the
-   `overlay` value changes. Auth no longer opens as a separate modal: the
-   phone mockup in the hero morphs directly into the login/register screen
-   (see PhoneAuthStage), so the transition reads as "this page transformed"
-   rather than "a new page appeared". Features/Rates/Help/Contact get the
-   same treatment at the page level now: one fixed shell (Navbar + a single
-   scrollable pane below), and navigating between them swaps the pane's
-   content in place with a smooth rise (animate-page-swap-in) instead of
-   sliding between separate full-screen panels — so it reads as "this page's
-   content changed", not "a new page appeared", matching Login/Register. */
 const PANEL_ORDER = ["home", "features", "rates", "help", "contact"];
 
-// min-h-full (not h-full) — unlike the old multi-panel strip, only one of
-// these is ever mounted at a time now, so it can grow taller than the pane
-// and let the pane's own overflow-y-auto handle it, instead of needing a
-// fixed height itself. flex-col + flex-1 on the content wrapper still
-// pushes Footer to the bottom on pages shorter than the viewport.
-// No Footer here anymore — it's rendered once at the Home level now,
-// outside the swapped content, so it doesn't unmount/remount (and flicker)
-// on every page change. See Home.
 function MarketingPage({ children }) {
   return (
     <div className="px-8 pt-16 pb-24 max-[768px]:px-5 max-[768px]:pt-12">
@@ -1437,10 +1470,6 @@ function Home({ overlay }) {
   const closeOverlay = () => navigate("/");
 
   const isAuthOverlay = overlay === "login" || overlay === "register";
-  // Login/Register still morph out of the hero's own phone mockup, so
-  // opening either forces the pane back to "home" content first — needed
-  // for PhoneAuthStage to have a mounted mockup to measure regardless of
-  // which page the user was on when they hit the navbar's Login button.
   const panel = isAuthOverlay
     ? "home"
     : PANEL_ORDER.includes(overlay)
@@ -1448,39 +1477,24 @@ function Home({ overlay }) {
       : "home";
 
   return (
-    // Fixed-height app shell (h-screen, overflow-hidden): Navbar stays put,
-    // and the single pane below is the only thing that scrolls — switching
-    // pages never scrolls the whole document, just swaps this pane's
-    // content. No bg-fixed needed since this shell itself never scrolls.
     <div className="h-screen overflow-hidden bg-[#0602145f] flex flex-col">
       <div className="relative flex-1 min-h-0 flex flex-col bg-[radial-gradient(ellipse_120%_60%_at_50%_-10%,rgba(38,50,82,0.6),var(--bg)_60%)] text-foreground font-sans leading-[1.6] overflow-hidden">
-        {/* Shared across every page (was Hero-only) — sits at this level so
-            it isn't tied to any one page's content and never scrolls away,
-            same as the gradient background above. */}
         <div className="absolute rounded-full border border-[rgba(var(--gold-rgb),0.07)] pointer-events-none w-[600px] h-[600px] -top-[160px] left-1/2 -translate-x-1/2" />
         <div className="absolute rounded-full border border-[rgba(var(--gold-rgb),0.07)] pointer-events-none w-[380px] h-[380px] -top-[60px] left-1/2 -translate-x-1/2" />
 
         <Navbar />
 
-        {/* flex-col here (not on the key={panel} div below) — Footer sits
-            outside the swapped/animated block as a stable sibling, so it
-            never unmounts or re-plays an entrance animation on page change,
-            same as Navbar. flex-1 on the swapped block still pushes Footer
-            to the bottom of the pane on pages shorter than the viewport. */}
         <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col">
-          {/* key={panel}, not overlay — opening Login/Register while
-              already on "home" shouldn't re-trigger this fade (that's
-              PhoneAuthStage's own transition); only an actual page change
-              should. */}
           <div key={panel} className="flex-1 animate-page-swap-in">
             {panel === "home" && (
-              <Hero
-                overlay={isAuthOverlay ? overlay : null}
-                onCloseAuth={closeOverlay}
-              />
+              <>
+                <Hero
+                  overlay={isAuthOverlay ? overlay : null}
+                  onCloseAuth={closeOverlay}
+                />
+                <Story />
+              </>
             )}
-            {/* <FeaturesStrip /> */}
-            {/* <Converter /> */}
             {panel === "features" && (
               <MarketingPage>
                 <FeaturesContent />
@@ -1509,12 +1523,6 @@ function Home({ overlay }) {
   );
 }
 
-/* ─── App Content ───
-   Home is rendered unconditionally so it never unmounts while the user
-   opens/closes the login or register overlay — only the `overlay` value
-   changes. Fully separate destinations (password recovery, the logged-in
-   dashboard) remain standalone pages via <Routes>, since they represent a
-   genuinely different context from the marketing home screen. */
 function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -1556,10 +1564,6 @@ function AppContent() {
     );
   }
 
-  // Features/Rates/Help/Contact grow out of the hero's phone mockup the
-  // same way Login/Register do (see PhoneAuthStage) — Home stays mounted
-  // underneath and only the overlay value changes, rather than unmounting
-  // into a separate standalone page.
   const OVERLAY_PATHS = {
     "/login": "login",
     "/register": "register",
@@ -1574,7 +1578,6 @@ function AppContent() {
   return <Home overlay={overlay} />;
 }
 
-/* ─── App Router ─── */
 function App() {
   return (
     <ErrorBoundary>

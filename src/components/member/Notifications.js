@@ -9,9 +9,6 @@ const ICONS = {
   transaction: CircleCheck,
 };
 
-// Same outer card/header class strings PaymentMethods.js (and, before it,
-// Home.js) use — this is a standalone page, so it needs its own card chrome
-// rather than sharing Home's balance card.
 const flowCardClass =
   "relative p-8 w-full max-w-[600px] mx-auto min-h-[560px] flex flex-col gap-7 bg-card border border-border rounded-lg animate-flow-fade-in max-[640px]:p-6 max-[640px]:px-5 max-[640px]:gap-6 max-[640px]:min-h-[480px]";
 const flowHeaderClass =

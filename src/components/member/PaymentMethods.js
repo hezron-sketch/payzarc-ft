@@ -40,10 +40,6 @@ function getPinStrength(pinValue) {
   return { level: "strong", label: "Strong", color: "#22c55e" };
 }
 
-// Same card/flow/form class strings Home.js uses (restyled to match the
-// rest of the dashboard: flat bg-card, no border, rounded-2xl, translucent
-// white/[0.0X] surfaces for inputs/method cards) — kept here too since this
-// is a standalone page, not mounted inside Home's balance card.
 const flowCardClass =
   "relative p-8 w-full max-w-[600px] mx-auto min-h-[560px] flex flex-col gap-7 bg-card rounded-2xl animate-flow-fade-in max-[640px]:p-6 max-[640px]:px-5 max-[640px]:gap-6 max-[640px]:min-h-[480px]";
 const flowHeaderClass =
@@ -60,9 +56,6 @@ const addFavouriteBtnClass =
   "self-start bg-transparent border-none text-gold text-[0.8rem] font-semibold cursor-pointer p-0 -mt-[0.6rem] transition-opacity hover:opacity-75";
 const flowFormClass =
   "flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full";
-// Sections: one rhythm everywhere — a hairline + 24px above each section,
-// 10px from its heading to its content. Header actions (Edit / View list)
-// sit on the heading's own line, never nudged above it.
 const sectionHeaderClass = "flex justify-between items-center gap-3 min-h-8";
 const groupClass =
   "flex flex-col gap-2.5 pt-6 border-t border-white/[0.06]";
@@ -93,17 +86,10 @@ function ProfileRow({ label, value, verified }) {
   );
 }
 
-// The Account page: profile info plus connected banks/cards/mobile money —
-// the linked accounts here are what the Add Money popup (Home.js) offers as
-// saved sources. Bank/mobile money options are geolocation-aware, reusing
-// the same region lookup Add Money uses.
 function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
   const [profile, setProfile] = useState(null);
   const [myCountry, setMyCountry] = useState(null);
   const [methods, setMethods] = useState({ banks: [], cards: [], mobileMoney: [] });
-  // Update Photo used to be its own separate page (reached from the avatar
-  // dropdown) — now it's just a toggled view within this page, since the
-  // avatar click navigates straight here.
   const [showPhotoCapture, setShowPhotoCapture] = useState(false);
   const [showKyc, setShowKyc] = useState(false);
   const [showAddBank, setShowAddBank] = useState(false);
@@ -119,18 +105,12 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
   const [cardError, setCardError] = useState("");
   const [mobileError, setMobileError] = useState("");
 
-  // Inline change-password flow — "idle" (just the button) -> "form"
-  // (current/new/confirm) -> "otp" (code entry) -> "success". Kept as part
-  // of this page's own sections rather than swapping to a separate screen.
   const [pwStep, setPwStep] = useState("idle");
   const [pwForm, setPwForm] = useState(emptyPasswordForm);
   const [pwOtp, setPwOtp] = useState("");
   const [pwError, setPwError] = useState("");
   const [pwLoading, setPwLoading] = useState(false);
 
-  // Membership (basic/pro) — upgrade charges one of the payment methods
-  // already on file below; there's no billing provider yet so this just
-  // flips `user.plan` server-side once a method is confirmed to exist.
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [chargeTo, setChargeTo] = useState("");
   const [subError, setSubError] = useState("");
@@ -176,9 +156,6 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
   const [showIdsList, setShowIdsList] = useState(false);
   const [idsListLoading, setIdsListLoading] = useState(false);
 
-  // Transaction PIN — required by Home.js's send-money flow
-  // (requirePin dialog sends transaction_pin), so without this section
-  // users would have no way to ever set the PIN that flow demands.
   const [showPinForm, setShowPinForm] = useState(false);
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -648,8 +625,6 @@ function PaymentMethods({ onBack, user, onLogout, onRefreshUser }) {
         onRefreshUser={onRefreshUser}
         onBack={() => {
           setShowKyc(false);
-          // idVerified lives on /api/profile-details, not /api/dashboard —
-          // onRefreshUser alone wouldn't update the Identification row here.
           axiosInstance
             .get("/api/profile-details")
             .then((res) => setProfile(res.data))
