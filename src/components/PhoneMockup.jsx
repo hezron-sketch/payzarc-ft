@@ -16,8 +16,10 @@ export const phoneBezelColorClass = "bg-[#0d1117]";
 export const phoneNotchBaseClass =
   "absolute left-1/2 -translate-x-1/2 bg-[#0d1117] pointer-events-none z-[1]";
 
+// Resting, not hovering: a tight contact shadow, a short soft one, and a
+// faint wide ambient one — the way a real object close to a surface reads.
 export const phoneModalShadowClass =
-  "shadow-[0_55px_100px_rgba(0,0,0,0.5),0_100px_180px_-40px_rgba(0,0,0,0.6)]";
+  "shadow-[0_1px_2px_rgba(0,0,0,0.35),0_6px_16px_-4px_rgba(0,0,0,0.35),0_20px_40px_-16px_rgba(0,0,0,0.45)]";
 export const phoneModalOpenClass =
   "top-1/2 left-1/2 [transform:translate(-50%,-50%)_translateZ(48px)] h-[min(820px,88vh)] w-[min(calc(min(820px,88vh)*9/19.5),92vw)] [--r:44px] border-[0.5px] border-[rgba(var(--gold-rgb),0.16)] max-[480px]:w-[94vw] max-[480px]:h-[90vh] max-[480px]:[--r:36px]";
 
@@ -53,7 +55,7 @@ export const PhoneFrame = React.forwardRef(function PhoneFrame(
       ref={ref}
       className={cn(
         phoneBezelColorClass,
-        "w-[250px] aspect-[9/19.5] flex flex-col rounded-[30px] border-[1.5px] border-[rgba(var(--gold-rgb),0.18)] p-[5px] shadow-[0_45px_90px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.04)_inset]",
+        "w-[250px] aspect-[9/19.5] flex flex-col rounded-[30px] border-[1.5px] border-[rgba(var(--gold-rgb),0.18)] p-[5px] shadow-[0_1px_2px_rgba(0,0,0,0.35),0_6px_16px_-4px_rgba(0,0,0,0.35),0_20px_40px_-16px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.04)_inset]",
         className,
       )}
       style={hidden ? { visibility: "hidden" } : undefined}

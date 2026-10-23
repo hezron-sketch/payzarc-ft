@@ -86,7 +86,9 @@
 }
 
 body {
-  background-color: var(--primary-pagebgcolor);
+  /* App-wide backdrop: line-art over navy. The colour shows while it loads. */
+  background: var(--primary-pagebgcolor) url("../assets/app-bg.webp") center /
+    cover no-repeat fixed;
   color: var(--primary-page-font-color-white);
   font-family: var(--primary-page-font-family);
   -webkit-font-smoothing: antialiased;

@@ -362,7 +362,7 @@ export default function Dashboard() {
 
   if (loading)
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-background text-[var(--soft)]">
+      <div className="flex flex-col items-center justify-center h-screen text-[var(--soft)]">
         <div className="w-12 h-12 border-4 border-secondary border-t-gold rounded-full animate-spin"></div>
         <p>Loading Dashboard...</p>
       </div>
@@ -370,8 +370,8 @@ export default function Dashboard() {
   if (!user) return null;
 
   return (
-    <div className="bg-[#0602145f] bg-fixed">
-      <div className="relative flex w-full min-h-screen text-foreground overflow-x-hidden bg-[radial-gradient(ellipse_120%_60%_at_50%_-10%,rgba(38,50,82,0.6),var(--bg)_60%)] bg-fixed">
+    <div>
+      <div className="relative flex w-full min-h-screen text-foreground overflow-x-hidden">
         <div
           data-phone-bezel={IS_NATIVE_APP ? undefined : ""}
           className={cn(

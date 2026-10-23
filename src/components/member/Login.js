@@ -426,7 +426,7 @@ function Login({ onBack, embedded = false, compact = false }) {
   };
 
   return (
-    <div className={cn("text-foreground", embedded ? "bg-transparent min-h-0" : "bg-background min-h-screen")}>
+    <div className={cn("text-foreground", embedded ? "bg-transparent min-h-0" : "min-h-screen")}>
       {popup && (
         <ErrorPopup
           title={popup.title}
@@ -482,7 +482,7 @@ function Login({ onBack, embedded = false, compact = false }) {
         {/* Right panel — form */}
         <div
           className={cn(
-            "flex items-center justify-center bg-background",
+            "flex items-center justify-center",
             embedded
               ? "p-0 bg-transparent items-stretch justify-stretch"
               : "p-10 px-8 max-[768px]:p-8 max-[768px]:px-5 max-[768px]:items-start max-[768px]:pt-12",

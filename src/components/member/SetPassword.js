@@ -117,7 +117,7 @@ function SetPassword({ onBack }) {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-background text-foreground p-4 box-border">
+    <div className="min-h-screen w-full flex items-center justify-center text-foreground p-4 box-border">
       {blocked ? (
         <div className={popupOverlayClass}>
           <div className={popupContentClass}>

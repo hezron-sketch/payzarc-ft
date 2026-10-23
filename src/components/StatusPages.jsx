@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 
 function StatusCard({ title, message, actionLabel, onAction }) {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-background text-foreground p-4 box-border">
+    <div className="min-h-screen w-full flex items-center justify-center text-foreground p-4 box-border">
       <div className="w-full max-w-[400px] bg-card border border-border flex flex-col items-center p-6 rounded-lg text-center">
         <img src="/images/payzarc.png" alt="Payzarc" className="w-[100px] max-w-[35%] h-auto mb-4" />
         <h1 className="text-lg font-bold mb-1">{title}</h1>

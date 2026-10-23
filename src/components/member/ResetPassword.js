@@ -133,7 +133,7 @@ function ResetPassword({ onBack }) {
 
   if (isBlocked) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background text-foreground p-4 box-border">
+      <div className="min-h-screen w-full flex items-center justify-center text-foreground p-4 box-border">
         <div className="p-6 bg-card border border-border rounded-lg flex flex-col items-center w-full max-w-[400px] gap-4">
           <img src="/images/payzarc.png" alt="Payzarc" className="block text-center max-w-[35%] mx-auto" />
           <div className="bg-card rounded-lg w-full flex flex-col items-center p-6">
@@ -151,7 +151,7 @@ function ResetPassword({ onBack }) {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-background text-foreground p-4 box-border">
+    <div className="min-h-screen w-full flex items-center justify-center text-foreground p-4 box-border">
       <div className="p-6 bg-card border border-border rounded-lg flex flex-col items-center w-full max-w-[400px] gap-4">
         <img src="/images/payzarc.png" alt="Payzarc" className="block text-center max-w-[35%] mx-auto" />
 

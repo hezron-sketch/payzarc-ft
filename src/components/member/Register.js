@@ -750,7 +750,7 @@ function Register({ onBack, embedded = false, compact = false }) {
   );
 
   return (
-    <div className={cn("text-foreground", embedded ? "bg-transparent min-h-0" : "bg-background min-h-screen")}>
+    <div className={cn("text-foreground", embedded ? "bg-transparent min-h-0" : "min-h-screen")}>
       <div className={cn("min-h-screen grid grid-cols-1 md:grid-cols-2", embedded && "block min-h-0")}>
         {/* Left Panel */}
         <div
@@ -790,7 +790,7 @@ function Register({ onBack, embedded = false, compact = false }) {
         {/* Right Panel */}
         <div
           className={cn(
-            "flex items-center justify-center bg-background",
+            "flex items-center justify-center",
             embedded
               ? "p-0 bg-transparent items-stretch justify-stretch"
               : "p-10 px-8 max-[768px]:p-8 max-[768px]:px-5 max-[768px]:items-start max-[768px]:pt-12",

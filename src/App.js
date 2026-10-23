@@ -107,7 +107,7 @@ const phoneStageBackdropClass =
 const phoneStageBackdropOpenClass =
   "bg-[rgba(6,8,14,0.62)] [backdrop-filter:blur(7px)] [-webkit-backdrop-filter:blur(7px)]";
 const phoneStagePanelShadowClosedClass =
-  "shadow-[0_30px_80px_rgba(0,0,0,0.55)]";
+  "shadow-[0_1px_2px_rgba(0,0,0,0.35),0_6px_16px_-4px_rgba(0,0,0,0.35),0_20px_40px_-16px_rgba(0,0,0,0.45)]";
 const phoneStagePanelClass =
   "fixed flex flex-col p-[8px] border-[1.5px] border-white/10 overflow-hidden rounded-[var(--r)] [mask-image:radial-gradient(white,black)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] z-[1001] [transition:top_0.32s_cubic-bezier(0.16,1,0.3,1),left_0.32s_cubic-bezier(0.16,1,0.3,1),width_0.32s_cubic-bezier(0.16,1,0.3,1),height_0.32s_cubic-bezier(0.16,1,0.3,1),border-radius_0.32s_cubic-bezier(0.16,1,0.3,1),border-width_0.32s_cubic-bezier(0.16,1,0.3,1),transform_0.32s_cubic-bezier(0.16,1,0.3,1),box-shadow_0.32s_ease,background_0.32s_ease,border-color_0.32s_ease]";
 const phoneStageNotchClass =
@@ -397,25 +397,43 @@ const HERO_SEND_AMOUNT = 2000;
 function Hero({ overlay, onCloseAuth }) {
   const navigate = useNavigate();
   const mockupNodeRef = useRef(null);
+  const heroRef = useRef(null);
 
+  // The hero is exactly one screen tall and pinned (sticky); as the story
+  // scrolls up over it, it recedes — shrinks, blurs and fades with scroll
+  // progress. Styles are written straight to the node: no re-render per frame.
   useLayoutEffect(() => {
-    const el = mockupNodeRef.current;
-    if (!el) return undefined;
-    const update = () => {
-      const h = el.getBoundingClientRect().height;
-      if (!h) return;
-      const overlap = Math.round(h * 0.32);
-      const root = document.documentElement.style;
-      root.setProperty("--phone-box-h", `${Math.round(h - overlap)}px`);
-      root.setProperty("--phone-footer-buffer", `${overlap}px`);
+    const hero = heroRef.current;
+    const scroller = hero.closest("[data-landing-scroller]");
+    if (!scroller) return undefined;
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    let raf = 0;
+    const apply = () => {
+      raf = 0;
+      const h = scroller.clientHeight;
+      hero.style.height = `${h}px`;
+      // Shared with Story so it's exactly one screen too.
+      scroller.style.setProperty("--screen-h", `${h}px`);
+      const p = Math.min(1, Math.max(0, scroller.scrollTop / h));
+      hero.style.opacity = p ? String(1 - p * 0.75) : "";
+      // Reduced motion keeps the fade (it aids comprehension), drops the rest.
+      if (!reduceMotion) {
+        hero.style.transform = p ? `scale(${1 - p * 0.12})` : "";
+        hero.style.filter = p ? `blur(${(p * 10).toFixed(2)}px)` : "";
+      }
     };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    window.addEventListener("resize", update);
+    const schedule = () => {
+      if (!raf) raf = requestAnimationFrame(apply);
+    };
+    apply();
+    scroller.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
     return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", update);
+      cancelAnimationFrame(raf);
+      scroller.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
     };
   }, []);
 
@@ -444,27 +462,30 @@ function Hero({ overlay, onCloseAuth }) {
   const receiveAmount = Math.round(HERO_SEND_AMOUNT * receiveRate);
 
   return (
-    <section className="relative flex flex-col items-center text-center min-h-screen pt-16 px-8 pb-12">
-      <div className="absolute rounded-full border border-[rgba(var(--gold-rgb),0.07)] pointer-events-none" />
-
-      <h1 className="text-[clamp(2.5rem,8vw,5rem)] font-bold tracking-[2px] text-gold text-center leading-[1.05] flex p-0 max-[768px]:text-[34px]">
+    // Spacing and title size track viewport height so the whole hero fits
+    // one screen; the phone fills what's left and is cropped at the bottom.
+    <section
+      ref={heroRef}
+      className="sticky top-0 flex flex-col items-center text-center overflow-hidden px-8 pt-[clamp(1.25rem,6vh,4rem)] origin-[50%_30%] will-change-transform"
+    >
+      <h1 className="text-[clamp(2.5rem,min(8vw,9vh),5rem)] font-bold tracking-[2px] text-gold text-center leading-[1.05] flex p-0 max-[768px]:text-[34px]">
         PAYZARC
       </h1>
 
-      <h2 className="text-[2rem] font-bold leading-[1.1] tracking-[-1.5px] text-foreground max-w-[520px] m-12 max-[768px]:text-lg max-[768px]:mx-4 max-[768px]:my-6">
+      <h2 className="text-[2rem] font-bold leading-[1.1] tracking-[-1.5px] text-foreground max-w-[520px] mx-12 my-[clamp(1rem,5vh,3rem)] max-[768px]:text-lg max-[768px]:mx-4">
         Send money anywhere
         <br />
         at <span className="text-gold">Lower Rates</span>
       </h2>
 
-      <p className="text-[1.3rem] text-[var(--muted)] max-w-[440px] leading-[1.7] mb-8 max-[768px]:text-sm">
+      <p className="text-[1.3rem] text-[var(--muted)] max-w-[440px] leading-[1.7] mb-[clamp(1rem,3.5vh,2rem)] max-[768px]:text-sm">
         One flat 1.5% fee, shown before you send — the global average is{" "}
         {formatPct(GLOBAL_AVG_REMITTANCE_COST)}. Live rates in{" "}
         {SUPPORTED_CURRENCIES.length} currencies, so more of every transfer
         arrives.
       </p>
 
-      <div className="flex items-center gap-5 mb-14 max-[480px]:flex-col max-[480px]:items-stretch max-[480px]:gap-3">
+      <div className="flex items-center gap-5 mb-[clamp(1.5rem,6vh,3.5rem)] max-[480px]:flex-col max-[480px]:items-stretch max-[480px]:gap-3">
         <button
           className="inline-flex items-center justify-center gap-2 bg-gold text-[#111] border-none rounded-md py-2 px-7 text-2xl font-semibold cursor-pointer transition-[background,transform] duration-200 hover:bg-gold-dark hover:-translate-y-px max-[768px]:text-lg"
           onClick={() => navigate("/register")}
@@ -481,13 +502,7 @@ function Hero({ overlay, onCloseAuth }) {
         </button>
       </div>
 
-      <div className="relative z-[3] mb-4 inline-flex items-center gap-1.5 bg-success/[0.08] border-[0.5px] border-success/25 rounded-[20px] py-[5px] px-3 text-[11px] text-success whitespace-nowrap">
-        <div className="w-1.5 h-1.5 rounded-full bg-success flex-shrink-0" />
-        {SUPPORTED_CURRENCIES.length} currencies · {SUPPORTED_COUNTRY_COUNT}{" "}
-        countries
-      </div>
-
-      <div className="relative w-full max-w-[680px] h-[var(--phone-box-h,260px)] flex items-start justify-center [perspective:1400px]">
+      <div className="relative w-full max-w-[680px] flex-1 min-h-[160px] flex items-start justify-center [perspective:1400px]">
         <FloatCard
           side="left"
           iconBg="rgba(59,130,246,0.15)"
@@ -637,120 +652,105 @@ function CurrencyWall() {
   );
 }
 
-const vignetteClass =
-  "mt-auto rounded-xl bg-white/[0.03] border-[0.5px] border-white/[0.06] px-3.5 py-3 text-[12px]";
-
-// The story follows one transfer, in the order the app asks for it.
-const STORY_CHAPTERS = [
-  {
-    title: "See the rate first",
-    body: "Check what arrives before you even sign up. The rate on screen is the rate you get.",
-    vignette: (
-      <div className={cn(vignetteClass, "flex items-center justify-between tabular-nums")}>
-        <span className="text-[var(--soft)]">1 USD</span>
-        <span className="text-[var(--muted)]" aria-hidden="true">→</span>
-        <span className="text-foreground font-semibold">
-          {EXCHANGE_RATES.USD.KES} KES
-        </span>
-      </div>
-    ),
-  },
-  {
-    title: "Pick anyone, anywhere",
-    body: "A saved friend or a phone number. We detect their country and currency for you.",
-    vignette: (
-      <div className={cn(vignetteClass, "flex items-center gap-2")}>
-        <span className="text-base leading-none" aria-hidden="true">
-          {QUICK_DESTINATIONS.map((d) => d.flag).join(" ")}
-        </span>
-        <span className="text-[var(--muted)] whitespace-nowrap">
-          +{SUPPORTED_COUNTRY_COUNT - QUICK_DESTINATIONS.length} more
-        </span>
-      </div>
-    ),
-  },
-  {
-    title: "See every cent",
-    body: "The fee sits on its own line, before you confirm. Nothing hidden in the exchange rate.",
-    vignette: (
-      <dl className={cn(vignetteClass, "flex flex-col gap-1 m-0 tabular-nums")}>
-        {[
-          ["Amount", formatUsd(BENCHMARK_AMOUNT)],
-          ["Fee · 1.5%", formatUsd(calcTransferFee(BENCHMARK_AMOUNT))],
-        ].map(([k, v]) => (
-          <div key={k} className="flex justify-between text-[var(--soft)]">
-            <dt>{k}</dt>
-            <dd className="m-0">{v}</dd>
-          </div>
-        ))}
-        <div className="flex justify-between pt-1 mt-0.5 border-t-[0.5px] border-white/[0.08] font-semibold">
-          <dt className="text-foreground">Total</dt>
-          <dd className="m-0 text-gold">
-            {formatUsd(BENCHMARK_AMOUNT + calcTransferFee(BENCHMARK_AMOUNT))}
-          </dd>
-        </div>
-      </dl>
-    ),
-  },
-  {
-    title: "Watch it arrive",
-    body: "Sent, processing, delivered. Every step is tracked, with a receipt when it lands.",
-    vignette: (
-      <ol className={cn(vignetteClass, "flex items-center gap-1.5 list-none m-0")}>
-        {["Sent", "Processing", "Delivered"].map((s, i, all) => (
-          <li key={s} className="flex items-center gap-1.5 min-w-0">
-            <span className="w-4 h-4 rounded-full bg-gold text-[#111] flex items-center justify-center shrink-0">
-              <CircleCheck size={10} strokeWidth={3} aria-hidden="true" />
-            </span>
-            <span className="text-[var(--soft)] truncate">{s}</span>
-            {i < all.length - 1 && (
-              <span className="w-2 h-px bg-white/[0.15] shrink-0" aria-hidden="true" />
-            )}
-          </li>
-        ))}
-      </ol>
-    ),
-  },
+// One idea per line: what you keep, then how a transfer goes.
+const STORY_STEPS = [
+  { title: "See the rate", note: "before you sign up" },
+  { title: "Pick anyone", note: `in ${SUPPORTED_CURRENCIES.length} currencies` },
+  { title: "See the fee", note: "on its own line" },
+  { title: "Watch it land", note: "sent → delivered" },
 ];
 
 function Story() {
   const navigate = useNavigate();
+  const ours = calcTransferFee(BENCHMARK_AMOUNT);
+  const average = BENCHMARK_AMOUNT * GLOBAL_AVG_REMITTANCE_COST;
+  const bars = [
+    { label: "Global average", fee: average, barClass: "bg-white/[0.16]" },
+    { label: "Payzarc", fee: ours, barClass: "bg-gold", strong: true },
+  ];
   return (
-    // Same frosted surface as the footer, so the hero phone still sinks
-    // behind the page the way it always has.
-    <section className="relative z-10 bg-[rgba(13,17,23,0.85)] backdrop-blur-[12px] border-t-[0.5px] border-border px-8 pt-20 pb-20 max-[768px]:px-5 max-[768px]:pt-14 max-[768px]:pb-14">
-      <div className="max-w-[1120px] mx-auto">
-        <PageHeader
-          eyebrow="How it works"
-          title="One transfer, four steps, no fine print"
-          subtitle="We built Payzarc because too much of every transfer home disappears into fees. Here's everything that happens between you and the person you're paying."
-        />
-        <ol className="stagger grid grid-cols-4 gap-5 list-none m-0 p-0 max-[1024px]:grid-cols-2 max-[640px]:grid-cols-1">
-          {STORY_CHAPTERS.map((c, i) => (
-            <li key={c.title} className={cn(surfaceClass, "p-5 flex flex-col gap-2 min-h-[220px]")}>
-              <span className="text-[11px] font-semibold text-gold tabular-nums tracking-[0.12em]">
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <h3 className="text-[15px] font-bold text-foreground m-0">
-                {c.title}
-              </h3>
-              <p className="text-[13px] text-[var(--muted)] leading-[1.6] m-0 mb-3">
-                {c.body}
-              </p>
-              {c.vignette}
-            </li>
-          ))}
-        </ol>
+    // Frosted like the footer; z-10 so it slides up over the pinned hero.
+    // One screen tall, content centred in it.
+    <section className="relative z-10 min-h-[var(--screen-h,100vh)] flex items-center bg-[rgba(13,17,23,0.85)] backdrop-blur-[12px] border-t-[0.5px] border-border px-8 py-16 max-[768px]:px-5 max-[768px]:py-14">
+      <div className="w-full max-w-[1120px] mx-auto flex flex-col gap-[clamp(2.5rem,8vh,5rem)]">
+        <div className="grid grid-cols-[1.15fr_1fr] gap-20 items-center max-[900px]:grid-cols-1 max-[900px]:gap-12">
+          <div>
+            <span className="text-[11px] font-bold tracking-[3px] text-gold uppercase">
+              Why Payzarc
+            </span>
+            <h2 className="text-[clamp(2rem,4.5vw,3.25rem)] font-bold tracking-[-1.5px] leading-[1.05] text-foreground mt-3 mb-4">
+              Send {formatUsd(BENCHMARK_AMOUNT).replace(".00", "")}.
+              <br />
+              Keep <span className="text-gold">{formatUsd(average - ours)}</span>{" "}
+              more.
+            </h2>
+            <p className="text-[15px] text-[var(--muted)] m-0 mb-8">
+              One flat 1.5% fee. The world average is{" "}
+              {formatPct(GLOBAL_AVG_REMITTANCE_COST)}.
+            </p>
+            <dl className="flex flex-col gap-3.5 max-w-[440px] m-0">
+              {bars.map((b) => (
+                <div key={b.label} className="flex flex-col gap-1.5">
+                  <div className="flex justify-between text-[13px]">
+                    <dt className={b.strong ? "text-foreground font-semibold" : "text-[var(--soft)]"}>
+                      {b.label}
+                    </dt>
+                    <dd className="m-0 tabular-nums text-foreground">
+                      {formatUsd(b.fee)}
+                    </dd>
+                  </div>
+                  <div className="h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                    <div
+                      className={cn("h-full rounded-full", b.barClass)}
+                      style={{ width: `${(b.fee / average) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </dl>
+            <p className="text-[11px] text-[var(--muted)] mt-4 m-0">
+              Cost to send {formatUsd(BENCHMARK_AMOUNT)} ·{" "}
+              <a
+                href={GLOBAL_AVG_SOURCE_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="underline decoration-white/20 underline-offset-2 hover:text-gold"
+              >
+                World Bank, Q1 2025
+              </a>
+            </p>
+          </div>
 
-        <div className="grid grid-cols-2 gap-5 mt-5 max-[768px]:grid-cols-1">
-          <FeeComparison />
-          <CurrencyWall />
+          <ol className="list-none m-0 p-0 border-t-[0.5px] border-border">
+            {STORY_STEPS.map((step, i) => (
+              <li
+                key={step.title}
+                className="flex items-baseline gap-5 py-5 border-b-[0.5px] border-border"
+              >
+                <span className="text-[11px] font-semibold text-gold tabular-nums tracking-[0.12em] w-5 shrink-0">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="flex-1 text-[17px] font-semibold text-foreground">
+                  {step.title}
+                </span>
+                <span className="text-[13px] text-[var(--muted)] text-right">
+                  {step.note}
+                </span>
+              </li>
+            ))}
+          </ol>
         </div>
 
-        <div className="flex items-center justify-between gap-6 mt-14 pt-8 border-t-[0.5px] border-border max-[640px]:flex-col max-[640px]:items-start">
-          <p className="text-[18px] font-semibold text-foreground m-0 max-w-[520px] text-balance">
-            Rates and fees are public.
-            <span className="text-[var(--muted)] font-normal"> Sign up only when you're ready to send.</span>
+        <div className="flex items-center justify-between gap-6 max-[640px]:flex-col max-[640px]:items-start">
+          <p className="text-[13px] text-[var(--muted)] m-0 tabular-nums">
+            <span className="text-foreground font-semibold">
+              {SUPPORTED_CURRENCIES.length}
+            </span>{" "}
+            currencies ·{" "}
+            <span className="text-foreground font-semibold">
+              {SUPPORTED_COUNTRY_COUNT}
+            </span>{" "}
+            countries
           </p>
           <button
             type="button"
@@ -942,7 +942,7 @@ function Footer() {
   ];
 
   return (
-    <footer className="relative z-10 flex-shrink-0 bg-[rgba(13,17,23,0.85)] backdrop-blur-[12px] border-t-[0.5px] border-border min-h-[var(--phone-footer-buffer,0px)]">
+    <footer className="relative z-10 flex-shrink-0 bg-[rgba(13,17,23,0.85)] backdrop-blur-[12px] border-t-[0.5px] border-border">
       <div className="max-w-[1280px] mx-auto px-6 py-12 max-[768px]:px-5 max-[768px]:py-9">
         <div className="grid grid-cols-[1.3fr_1fr_1fr] gap-10 max-[768px]:grid-cols-1 max-[768px]:gap-8 max-[768px]:text-center">
           <div className="flex flex-col gap-3 max-[768px]:items-center">
@@ -1477,14 +1477,17 @@ function Home({ overlay }) {
       : "home";
 
   return (
-    <div className="h-screen overflow-hidden bg-[#0602145f] flex flex-col">
-      <div className="relative flex-1 min-h-0 flex flex-col bg-[radial-gradient(ellipse_120%_60%_at_50%_-10%,rgba(38,50,82,0.6),var(--bg)_60%)] text-foreground font-sans leading-[1.6] overflow-hidden">
+    <div className="h-screen overflow-hidden flex flex-col">
+      <div className="relative flex-1 min-h-0 flex flex-col text-foreground font-sans leading-[1.6] overflow-hidden">
         <div className="absolute rounded-full border border-[rgba(var(--gold-rgb),0.07)] pointer-events-none w-[600px] h-[600px] -top-[160px] left-1/2 -translate-x-1/2" />
         <div className="absolute rounded-full border border-[rgba(var(--gold-rgb),0.07)] pointer-events-none w-[380px] h-[380px] -top-[60px] left-1/2 -translate-x-1/2" />
 
         <Navbar />
 
-        <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col">
+        <div
+          data-landing-scroller=""
+          className="relative flex-1 min-h-0 overflow-y-auto flex flex-col"
+        >
           <div key={panel} className="flex-1 animate-page-swap-in">
             {panel === "home" && (
               <>
