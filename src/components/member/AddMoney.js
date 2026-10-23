@@ -188,6 +188,7 @@ function AddMoney({
         phase: "failed",
         kind: failureKind(error),
         error: errorMessage(error, "Deposit failed"),
+        reference: error.reference,
       });
     }
   };
@@ -418,6 +419,7 @@ function AddMoney({
         }}
         onRetry={() => runDeposit(result.sourceLabel, result.key)}
         onViewTransactions={() => openSection("reports")}
+        onSettled={refreshWallet}
       />
     </>
   );

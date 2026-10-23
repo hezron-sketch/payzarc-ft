@@ -63,18 +63,32 @@ export const assertDelivered = (data, fallback) => {
     error.declined = true;
     throw error;
   }
+  // Accepted but not settled yet (e.g. awaiting an M-Pesa callback): not a
+  // failure, but not "delivered" either. Callers' catch blocks route it to
+  // TransferStatus's pending state via failureKind.
+  if (PENDING_STATUSES.includes(status)) {
+    const error = new Error(data?.message || "Still processing.");
+    error.pending = true;
+    // What TransferStatus polls history for until it settles.
+    error.reference = data?.transaction_code ?? data?.reference ?? data?.id;
+    throw error;
+  }
   return data;
 };
+const PENDING_STATUSES = ["pending", "processing", "queued"];
 
 // Did this money request definitely fail ("declined"), or might it have gone
 // through before the connection dropped ("unconfirmed")? Only a 4xx or an
 // explicit failed/declined body proves nothing moved; a timeout, network
 // error or 5xx may have reached the ledger first.
+// "pending" means the server accepted it and is still settling.
 export const failureKind = (error) =>
-  error?.declined ||
-  (error?.response?.status >= 400 && error?.response?.status < 500)
-    ? "declined"
-    : "unconfirmed";
+  error?.pending
+    ? "pending"
+    : error?.declined ||
+        (error?.response?.status >= 400 && error?.response?.status < 500)
+      ? "declined"
+      : "unconfirmed";
 
 // One key per reviewed transfer, sent with every attempt so a retry after a
 // timeout can't charge twice (the backend dedupes on the Idempotency-Key

@@ -19,6 +19,10 @@ import { getCurrentCountry } from "../../utility/getCurrentCountry";
 import { API_URL } from "../../utility/constants";
 import { isValidEmail, isSafeText } from "../../utility/validators";
 import { useStopCameraWhenHidden } from "../../utility/useStopCameraWhenHidden";
+import {
+  cameraErrorMessage,
+  useRetryWhenCameraAllowed,
+} from "../../utility/cameraError";
 import * as faceapi from "face-api.js";
 import { createWorker } from "tesseract.js";
 
@@ -452,6 +456,28 @@ function Register({ onBack, embedded = false, compact = false }) {
 
   const handleNext = async () => {
     if (validateStep(step)) {
+      // Catch a taken phone/email here, not after the face and ID steps.
+      // ponytail: skipped if the endpoint is missing or down; register-full
+      // still rejects duplicates at the end.
+      if (step === 4) {
+        try {
+          const { data } = await axios.post(
+            `${API_URL}/api/member/check-availability`,
+            {
+              phone: `${formData.countryCode}${formData.phone}`,
+              email: formData.email,
+            },
+          );
+          if (data?.phone_taken || data?.email_taken) {
+            const field = data.phone_taken ? "phone" : "email";
+            setErrors({ [field]: "Already registered" });
+            showRegisterError(`${field} already registered`);
+            return;
+          }
+        } catch {
+          // Check unavailable: carry on.
+        }
+      }
       if (step === 6) {
         try {
           const response = await axios.post(
@@ -494,7 +520,7 @@ function Register({ onBack, embedded = false, compact = false }) {
     setIdCameraError("");
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setIdCameraError("Camera is not supported by this browser.");
+        setIdCameraError(cameraErrorMessage());
         return;
       }
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -512,10 +538,11 @@ function Register({ onBack, embedded = false, compact = false }) {
       }
     } catch (err) {
       setIdCameraError(
-        "Unable to access the camera. Please allow camera permission and try again.",
+        cameraErrorMessage(err),
       );
     }
   }, [stopIDCamera]);
+  useRetryWhenCameraAllowed(step === 1 && !!idCameraError, startIDCamera);
 
   const processIDWithOCR = async (imageData) => {
     setIsOCRProcessing(true);
@@ -639,9 +666,10 @@ function Register({ onBack, embedded = false, compact = false }) {
       }
       setCameraError("");
     } catch (err) {
-      setCameraError("Camera access denied or unavailable.");
+      setCameraError(cameraErrorMessage(err));
     }
   }, [stopCamera]);
+  useRetryWhenCameraAllowed(step === 5 && !!cameraError, startCamera);
 
   const captureImage = async () => {
     if (!videoRef.current || !canvasRef.current || !isModelsLoaded) return;
@@ -696,6 +724,29 @@ function Register({ onBack, embedded = false, compact = false }) {
     }
   }, [generatedAt, step]);
 
+  // "Already registered" gets a way forward (log in / reset password)
+  // instead of a dead-end "Registration failed".
+  const showRegisterError = (msg = "") => {
+    const m = msg.toLowerCase();
+    if (!/already|exists|registered|taken|in use/.test(m)) {
+      setErrorPopup(msg || "Registration failed. Please try again.");
+      return;
+    }
+    const what = m.includes("phone")
+      ? "phone number"
+      : m.includes("email")
+        ? "email address"
+        : null;
+    setErrorPopup({
+      title: what ? `This ${what} is already registered` : "You already have an account",
+      message: `An account already uses ${what ? `this ${what}` : "these details"}. Log in, or reset your password if you've forgotten it.`,
+      actions: [
+        { label: "Log in", to: "/login" },
+        { label: "Reset password", to: "/reset-password" },
+      ],
+    });
+  };
+
   const handleSubmit = async () => {
     if (validateStep(7) && remainingTime > 0) {
       setIsSubmitting(true);
@@ -707,9 +758,14 @@ function Register({ onBack, embedded = false, compact = false }) {
           registrationData,
         );
         if (res.data.success) setStep(8);
-        else setErrorPopup(res.data.error || "Registration failed");
+        else showRegisterError(res.data.error);
       } catch (error) {
-        setErrorPopup("Registration failed. Please try again.");
+        const data = error.response?.data;
+        showRegisterError(
+          data?.error ||
+            data?.message ||
+            (error.response?.status === 409 ? "already registered" : ""),
+        );
       } finally {
         setIsSubmitting(false);
       }
@@ -854,7 +910,16 @@ function Register({ onBack, embedded = false, compact = false }) {
                   </div>
 
                   {idCameraError && (
-                    <p className={inlineErrorClass}>{idCameraError}</p>
+                    <p className={inlineErrorClass}>
+                      {idCameraError}{" "}
+                      <button
+                        type="button"
+                        onClick={startIDCamera}
+                        className="underline font-semibold"
+                      >
+                        Try again
+                      </button>
+                    </p>
                   )}
 
                   {isOCRProcessing && (
@@ -1160,7 +1225,16 @@ function Register({ onBack, embedded = false, compact = false }) {
                     <canvas ref={canvasRef} className="hidden" />
                   </div>
                   {cameraError && (
-                    <p className={inlineErrorClass}>{cameraError}</p>
+                    <p className={inlineErrorClass}>
+                      {cameraError}{" "}
+                      <button
+                        type="button"
+                        onClick={startCamera}
+                        className="underline font-semibold"
+                      >
+                        Try again
+                      </button>
+                    </p>
                   )}
                   <div className={buttonGroupClass}>
                     {formData.memberImage ? (
@@ -1356,14 +1430,30 @@ function Register({ onBack, embedded = false, compact = false }) {
             )}
           >
             <DialogTitle className="text-[17px] font-bold text-red-400">
-              Error
+              {errorPopup.title || "Error"}
             </DialogTitle>
-            <p className="text-[13px] text-[#9ca3af] leading-[1.55]">{errorPopup}</p>
+            <p className="text-[13px] text-[#9ca3af] leading-[1.55]">
+              {errorPopup.message || errorPopup}
+            </p>
+            {errorPopup.actions?.map((a, i) => (
+              <Button
+                key={a.to}
+                onClick={() => navigate(a.to)}
+                className={cn(
+                  "w-full h-auto py-2 rounded-[6px] text-sm font-semibold shadow-none",
+                  i === 0
+                    ? "bg-gold text-black hover:bg-gold/90"
+                    : "bg-transparent text-gold border border-gold/40 hover:bg-gold/10",
+                )}
+              >
+                {a.label}
+              </Button>
+            ))}
             <Button
               onClick={() => setErrorPopup("")}
               className="w-full h-auto py-2 rounded-[6px] bg-red-400/[0.12] text-red-400 border border-red-400/30 text-sm font-semibold hover:bg-red-400/20 shadow-none"
             >
-              OK
+              {errorPopup.actions ? "Cancel" : "OK"}
             </Button>
           </DialogContent>
         </Dialog>

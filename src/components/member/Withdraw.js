@@ -220,6 +220,7 @@ export function Withdraw({
             phase: "failed",
             kind: failureKind(error),
             error: errorMessage(error, "Withdrawal failed"),
+            reference: error.reference,
           });
         }
   };
@@ -440,6 +441,7 @@ export function Withdraw({
         }}
         onRetry={() => runWithdraw(result.auth, result.toLabel, result.key)}
         onViewTransactions={() => openSection("reports")}
+        onSettled={refreshWallet}
       />
       {faceModal}
     </>

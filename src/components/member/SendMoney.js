@@ -290,6 +290,7 @@ export function SendMoney({
         phase: "failed",
         kind: failureKind(error),
         error: errorMessage(error, "Transfer failed"),
+        reference: error.reference,
       });
     }
   };
@@ -459,6 +460,7 @@ export function SendMoney({
           )
         }
         onViewTransactions={() => openSection("reports")}
+        onSettled={refreshWallet}
       />
       {faceModal}
     </>

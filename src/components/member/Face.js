@@ -8,6 +8,10 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useStopCameraWhenHidden } from "../../utility/useStopCameraWhenHidden";
+import {
+  cameraErrorMessage,
+  useRetryWhenCameraAllowed,
+} from "../../utility/cameraError";
 import { pickerDialogClass, primaryBtnClass } from "./shared";
 
 const FACE_API_URL = `${
@@ -47,6 +51,7 @@ function Face({ open, email, onSuccess, onClose }) {
     if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
   useStopCameraWhenHidden(stopCamera);
+  useRetryWhenCameraAllowed(mode === "error", () => setAttempt((a) => a + 1));
 
   const normalizedEmail = (email || "").trim().toLowerCase();
 
@@ -124,7 +129,7 @@ function Face({ open, email, onSuccess, onClose }) {
       } catch (err) {
         fail(
           "Camera access is required.",
-          err?.message || "Please allow camera access and try again.",
+          cameraErrorMessage(err),
         );
         return;
       }

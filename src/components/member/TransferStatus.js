@@ -1,15 +1,17 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ShieldCheck,
   RefreshCw,
   Check,
   CircleAlert,
   CircleHelp,
+  Clock,
   LoaderCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { transactionsApi } from "../../utility/axiosInstance";
 import { pickerDialogClass, primaryBtnClass } from "./shared";
 
 // The one result screen every money flow ends on (Send, Send to Many,
@@ -17,7 +19,7 @@ import { pickerDialogClass, primaryBtnClass } from "./shared";
 //
 //   status = {
 //     phase: "sending" | "done" | "failed",
-//     kind?: "declined" | "unconfirmed",   // failed only (see failureKind)
+//     kind?: "declined" | "unconfirmed" | "pending", // failed only (see failureKind)
 //     error?, summary, details?: [{ label, value }],
 //     items?: [{ key, name, amount, state: "sending"|"done"|"failed"|"pending" }],
 //   }
@@ -31,7 +33,9 @@ import { pickerDialogClass, primaryBtnClass } from "./shared";
 // Recovery depends on why it failed: a decline can't succeed if replayed
 // (wrong PIN, insufficient funds), so its primary action is onReviewAgain
 // (a fresh review, credential and key); only an unconfirmed failure offers
-// the same-key onRetry, which the idempotency key makes safe.
+// the same-key onRetry, which the idempotency key makes safe. "pending"
+// (accepted, still settling) offers neither: it's not over, so the user
+// just closes and watches Transactions.
 // Same support address the landing page's Contact section lists.
 const SUPPORT_EMAIL = "info.e@payzarc.com";
 
@@ -50,8 +54,73 @@ const itemIcon = {
   pending: { icon: LoaderCircle, className: "text-[var(--soft)] opacity-50" },
 };
 
+// A pending transfer is polled until its history row settles, then the
+// popup flips to done / declined on its own. ponytail: scans recent history
+// for the reference since there's no per-transaction status endpoint; swap
+// for GET /api/transactions/<ref>/ if the backend adds one. Gives up after
+// POLL_FOR_MS and leaves the pending screen ("watch Transactions") up.
+const POLL_MS = 4000;
+const POLL_FOR_MS = 120000;
+const SETTLED_AS = {
+  completed: "done",
+  success: "done",
+  successful: "done",
+  delivered: "done",
+  failed: "declined",
+  declined: "declined",
+  reversed: "declined",
+  cancelled: "declined",
+};
+const SETTLED_STATUS = {
+  done: { phase: "done" },
+  declined: {
+    kind: "declined",
+    error: "Payzarc couldn't complete this transfer.",
+  },
+};
+
+function useSettled(reference, onSettled) {
+  const [settled, setSettled] = useState(null);
+  const onSettledRef = useRef(onSettled);
+  onSettledRef.current = onSettled;
+  useEffect(() => {
+    setSettled(null);
+    if (!reference) return;
+    let stopped = false;
+    let timer;
+    const started = Date.now();
+    const tick = async () => {
+      try {
+        const { data } = await transactionsApi.get(
+          "/api/transactions/history/?limit=20",
+        );
+        const txs = data.results || data.transactions || data || [];
+        const tx = txs.find((t) =>
+          [t.transaction_code, t.reference, t.id].map(String).includes(reference),
+        );
+        const outcome = SETTLED_AS[String(tx?.status || "").toLowerCase()];
+        if (outcome && !stopped) {
+          setSettled(outcome);
+          onSettledRef.current?.();
+          return;
+        }
+      } catch {
+        // A failed poll just waits for the next one.
+      }
+      if (!stopped && Date.now() - started < POLL_FOR_MS)
+        timer = setTimeout(tick, POLL_MS);
+    };
+    timer = setTimeout(tick, POLL_MS);
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [reference]);
+  return settled;
+}
+
 function TransferStatus({
-  status,
+  status: rawStatus,
   verb, // "Sending", "Depositing", "Withdrawing"
   doneTitle, // "Money delivered"
   doneStep, // { label: "Delivered", sub: "Funds have arrived with the recipient" }
@@ -60,12 +129,23 @@ function TransferStatus({
   onReviewAgain,
   onEdit,
   onViewTransactions,
+  onSettled, // a pending transfer settled (e.g. refresh the wallet)
 }) {
+  const settled = useSettled(
+    rawStatus?.kind === "pending" && rawStatus.reference
+      ? String(rawStatus.reference)
+      : null,
+    onSettled,
+  );
+  const status = settled ? { ...rawStatus, ...SETTLED_STATUS[settled] } : rawStatus;
   if (!status) return null;
   const { phase, kind, items } = status;
   const failedCount = items?.filter((i) => i.state === "failed").length ?? 0;
   const deliveredCount = items ? items.length - failedCount : 0;
   const unconfirmed = phase === "failed" && kind === "unconfirmed";
+  const pending = phase === "failed" && kind === "pending";
+  // Unconfirmed and pending both read as "not over yet": gold, not red.
+  const unsettled = unconfirmed || pending;
   const steps = [...TRACK, { ...doneStep, icon: Check }];
   // Current step: 2 while in flight or failed, 3 once confirmed.
   const current = phase === "done" ? 3 : 2;
@@ -79,7 +159,9 @@ function TransferStatus({
         ? doneTitle
         : items && deliveredCount > 0
           ? `${deliveredCount} of ${items.length} delivered`
-          : unconfirmed
+          : pending
+            ? "Still processing"
+            : unconfirmed
             ? "We couldn't confirm this"
             : "Not sent";
 
@@ -88,7 +170,7 @@ function TransferStatus({
       open
       onOpenChange={(open) => {
         if (open || phase === "sending") return;
-        phase === "done" ? onDone() : onEdit();
+        phase === "done" || pending ? onDone() : onEdit();
       }}
     >
       <DialogContent
@@ -163,9 +245,11 @@ function TransferStatus({
               const isCurrent = phase === "sending" && current === stepNum;
               const reached = current >= stepNum && !failedHere;
               const StepIcon = failedHere
-                ? unconfirmed
-                  ? CircleHelp
-                  : CircleAlert
+                ? pending
+                  ? Clock
+                  : unconfirmed
+                    ? CircleHelp
+                    : CircleAlert
                 : isPast
                   ? Check
                   : step.icon;
@@ -177,7 +261,7 @@ function TransferStatus({
                         "w-[34px] h-[34px] rounded-full bg-white/[0.03] border border-white/[0.06] text-[var(--soft)] flex items-center justify-center flex-shrink-0 transition-[background-color,border-color,color] duration-300 ease-apple",
                         reached && "bg-gold border-gold text-black",
                         failedHere &&
-                          (unconfirmed
+                          (unsettled
                             ? "bg-gold/10 border-gold/40 text-gold"
                             : "bg-destructive/15 border-destructive/40 text-destructive"),
                         isCurrent && "animate-progress-pulse",
@@ -216,15 +300,19 @@ function TransferStatus({
                       )}
                     >
                       {failedHere
-                        ? unconfirmed
-                          ? "Not confirmed"
-                          : "Not completed"
+                        ? pending
+                          ? "Pending"
+                          : unconfirmed
+                            ? "Not confirmed"
+                            : "Not completed"
                         : step.label}
                     </span>
                     <p className="mt-0.5 text-[0.8rem] text-[var(--soft)] m-0">
                       {failedHere
-                        ? unconfirmed
-                          ? "It may still have gone through."
+                        ? pending
+                          ? "Accepted, waiting to settle."
+                          : unconfirmed
+                            ? "It may still have gone through."
                           : "Your balance is unchanged."
                         : step.sub}
                     </p>
@@ -240,12 +328,14 @@ function TransferStatus({
             role="alert"
             className={cn(
               "text-[0.85rem] text-foreground rounded-[14px] px-4 py-3 m-0 border",
-              unconfirmed
+              unsettled
                 ? "bg-gold/[0.06] border-gold/25"
                 : "bg-destructive/10 border-destructive/30",
             )}
           >
-            {unconfirmed
+            {pending
+              ? "Payzarc accepted this and is finishing it. Watch Transactions for the result. Don't send it again."
+              : unconfirmed
               ? items
                 ? `We couldn't confirm ${failedCount === 1 ? "1 payment" : `${failedCount} payments`}. Check Transactions before retrying.`
                 : "The connection dropped before we heard back. Check Transactions before trying again."
@@ -280,7 +370,16 @@ function TransferStatus({
         )}
         {phase === "failed" && (
           <div className="flex flex-col gap-2">
-            {unconfirmed ? (
+            {pending ? (
+              <>
+                <Button className={primaryBtnClass} onClick={onViewTransactions}>
+                  Check Transactions
+                </Button>
+                <Button variant="ghost" className="h-11 w-full" onClick={onDone}>
+                  Done
+                </Button>
+              </>
+            ) : unconfirmed ? (
               <>
                 <Button className={primaryBtnClass} onClick={onViewTransactions}>
                   Check Transactions

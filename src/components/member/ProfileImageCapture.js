@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronLeft, Camera, RotateCcw, Check, CircleCheck, LoaderCircle } from "lucide-react";
 import axiosInstance from '../../utility/axiosInstance';
 import { useStopCameraWhenHidden } from '../../utility/useStopCameraWhenHidden';
+import { cameraErrorMessage, useRetryWhenCameraAllowed } from '../../utility/cameraError';
 import { cn } from '@/lib/utils';
 
 // Same flow-card/back-button/button recipe as PaymentMethods.js and Home.js
@@ -58,10 +59,11 @@ function ProfileImageCapture({ user, onRefreshUser, onBack }) {
       setIsCameraActive(true);
       setCameraError('');
     } catch (err) {
-      setCameraError('Camera access denied. Please allow permission and refresh.');
+      setCameraError(cameraErrorMessage(err));
       setIsCameraActive(false);
     }
   }, [stopCamera]);
+  useRetryWhenCameraAllowed(!!cameraError, startCamera);
 
   const captureImage = () => {
     if (!videoRef.current || !canvasRef.current || !isCameraActive) return;

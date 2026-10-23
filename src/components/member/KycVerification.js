@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronLeft, IdCard, ScanFace, Check, RotateCcw, CircleCheck, LoaderCircle } from "lucide-react";
 import axiosInstance from '../../utility/axiosInstance';
 import { useStopCameraWhenHidden } from '../../utility/useStopCameraWhenHidden';
+import { cameraErrorMessage, useRetryWhenCameraAllowed } from '../../utility/cameraError';
 import { cn } from '@/lib/utils';
 
 // Same flow-card recipe as ProfileImageCapture.js/PaymentMethods.js — kept
@@ -77,10 +78,11 @@ function KycVerification({ onRefreshUser, onBack }) {
       setIsCameraActive(true);
       setCameraError('');
     } catch (err) {
-      setCameraError('Camera access denied. Please allow permission and refresh.');
+      setCameraError(cameraErrorMessage(err));
       setIsCameraActive(false);
     }
   }, [stopCamera]);
+  useRetryWhenCameraAllowed(!!cameraError, startCamera);
 
   useEffect(() => {
     if (!currentShot) startCamera();

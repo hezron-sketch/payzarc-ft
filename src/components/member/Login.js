@@ -159,7 +159,9 @@ function OtpInput({ otp, otpRefs, onChange, onKeyDown, onPaste, compact }) {
 }
 
 /* ─── Error popup ─── */
-function ErrorPopup({ title, message, onClose, compact }) {
+// `action` ({ label, onClick }) adds a way forward above Dismiss, e.g.
+// "Create account" when the user wasn't found.
+function ErrorPopup({ title, message, action, onClose, compact }) {
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
@@ -175,6 +177,17 @@ function ErrorPopup({ title, message, onClose, compact }) {
           {title}
         </DialogTitle>
         <p className="text-[13px] text-[#9ca3af] leading-[1.55]">{message}</p>
+        {action && (
+          <Button
+            onClick={() => {
+              onClose();
+              action.onClick();
+            }}
+            className="w-full h-auto py-2 rounded-[6px] bg-gold text-black text-sm font-semibold hover:bg-gold/90 shadow-none"
+          >
+            {action.label}
+          </Button>
+        )}
         <Button
           onClick={onClose}
           className="w-full h-auto py-2 rounded-[6px] bg-red-400/[0.12] text-red-400 border border-red-400/30 text-sm font-semibold hover:bg-red-400/20 shadow-none"
@@ -252,7 +265,14 @@ function Login({ onBack, embedded = false, compact = false }) {
       .toString()
       .padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
-  const showPopup = (title, message) => setPopup({ title, message });
+  const showPopup = (title, message, action) =>
+    setPopup({ title, message, action });
+  const showNotFound = (what) =>
+    showPopup(
+      "Account not found",
+      `We couldn't find an account with that ${what}. Create one to get started. It only takes a few minutes.`,
+      { label: "Create account", onClick: () => navigate("/register") },
+    );
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -274,7 +294,7 @@ function Login({ onBack, embedded = false, compact = false }) {
           username: t,
         });
         if (!r.data?.email) {
-          showPopup("Not registered", "This username is not registered.");
+          showNotFound("username");
           return;
         }
         loginEmail = r.data.email;
@@ -302,16 +322,31 @@ function Login({ onBack, embedded = false, compact = false }) {
       setTimerStarted(true);
       setShowExpired(false);
     } catch (err) {
-      const msg = err.response?.data?.error || err.message || "";
-      if (err.response?.status === 401)
-        showPopup("Login failed", "Incorrect username or password.");
-      else if (msg.toLowerCase().includes("blocked"))
+      const status = err.response?.status;
+      const msg =
+        err.response?.data?.error || err.response?.data?.message || "";
+      const m = msg.toLowerCase();
+      // "Not found" first: some backends answer it with a 401 too.
+      if (
+        status === 404 ||
+        /not found|not registered|does not exist|no account/.test(m)
+      )
+        showNotFound(useUsername ? "username" : "email");
+      else if (m.includes("blocked") || m.includes("locked"))
         showPopup(
           "Account blocked",
           "Your account is blocked. Contact support.",
         );
-      else if (msg.toLowerCase().includes("not registered"))
-        showPopup("Not registered", "This account does not exist.");
+      else if (status === 401)
+        showPopup("Login failed", "Incorrect username or password.", {
+          label: "Reset password",
+          onClick: () => navigate("/reset-password"),
+        });
+      else if (!err.response)
+        showPopup(
+          "Can't reach Payzarc",
+          "Check your internet connection and try again.",
+        );
       else showPopup("Error", msg || "Login failed. Please try again.");
       setPassword("");
     } finally {
@@ -408,6 +443,7 @@ function Login({ onBack, embedded = false, compact = false }) {
         <ErrorPopup
           title={popup.title}
           message={popup.message}
+          action={popup.action}
           onClose={() => setPopup(null)}
           compact={compact}
         />

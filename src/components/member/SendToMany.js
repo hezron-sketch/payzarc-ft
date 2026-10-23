@@ -242,7 +242,9 @@ export function SendToMany({
         );
       } catch (error) {
         state = "failed";
-        if (failureKind(error) === "unconfirmed") kind = "unconfirmed";
+        // ponytail: a pending row joins the unconfirmed bucket ("check
+        // Transactions"); retry reuses its idempotency key, so it can't double-pay.
+        if (failureKind(error) !== "declined") kind = "unconfirmed";
       }
       items = items.map((it) =>
         it.key === target.key ? { ...it, state } : it,

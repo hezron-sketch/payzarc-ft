@@ -72,6 +72,24 @@ const server = http.createServer((req, res) => {
       return;
     }
 
+    // Sign-up step 4 asks this before the face/ID steps. Try the mock
+    // account's +254712345678 / hezronwandera46@gmail.com to see "taken".
+    if (
+      req.method === "POST" &&
+      normalizedPath === "/api/member/check-availability"
+    ) {
+      const same = (a, b) =>
+        String(a || "").toLowerCase() === String(b || "").toLowerCase();
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          phone_taken: db.profile.some((p) => same(p.phone, parsedBody.phone)),
+          email_taken: db.profile.some((p) => same(p.email, parsedBody.email)),
+        }),
+      );
+      return;
+    }
+
     if (
       req.method === "POST" &&
       (normalizedPath === "/api/login" || normalizedPath === "/login")
@@ -85,6 +103,14 @@ const server = http.createServer((req, res) => {
           p.password === parsedBody.password,
       );
 
+      const known = db.profile.some(
+        (p) => p.email.toLowerCase() === (parsedBody.email || "").toLowerCase(),
+      );
+      if (!isResend && !known) {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "User not found" }));
+        return;
+      }
       if (!isResend && !matched) {
         res.writeHead(401, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Incorrect username or password" }));
@@ -251,6 +277,35 @@ const server = http.createServer((req, res) => {
       (normalizedPath === "/api/send-money" ||
         normalizedPath === "/api/send-money")
     ) {
+      // Send exactly 123 to test the pending flow: answers "pending", then
+      // the history row flips to Completed ~10s later (TransferStatus polls).
+      if (Number(parsedBody.amount) === 123) {
+        const code = `TXP${Date.now()}`;
+        db.transactions.push({
+          id: Date.now(),
+          created_at: new Date().toISOString().slice(0, 19).replace("T", " "),
+          transaction_code: code,
+          name: `Mock User ${String(parsedBody.recipient_number).slice(-4)}`,
+          amount: 123,
+          currency: "KES",
+          transaction_type: "DEBIT",
+          status: "Pending",
+          fee: Number(parsedBody.fee) || 0,
+          recipient: parsedBody.recipient_number,
+        });
+        saveDb(db);
+        setTimeout(() => {
+          const later = JSON.parse(fs.readFileSync(dbPath, "utf8"));
+          const tx = later.transactions.find((t) => t.transaction_code === code);
+          if (tx) tx.status = "Completed";
+          saveDb(later);
+        }, 10000);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({ status: "pending", transaction_code: code }),
+        );
+        return;
+      }
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({ success: true, message: "Money sent successfully!" }),
