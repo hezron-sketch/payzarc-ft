@@ -63,8 +63,9 @@ const groupTitleClass =
   "m-0 text-[0.95rem] font-semibold tracking-[-0.01em] text-foreground";
 const headerActionClass =
   "shrink-0 bg-transparent border-none text-gold text-[0.8rem] font-semibold cursor-pointer px-2 py-1.5 -mr-2 rounded-md transition-[opacity,background-color] duration-200 hover:bg-[var(--gold-pale)]";
+// Saved methods use the app list style: hairline-split rows, no boxes.
 const methodCardClass =
-  "flex justify-between items-center bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-[0.85rem] text-sm font-semibold text-foreground";
+  "flex justify-between items-center gap-3 px-1 py-3 border-b border-white/[0.06] text-sm font-semibold text-foreground";
 const mutedClass = "text-[var(--soft)] font-medium text-xs";
 const logoutBtnClass =
   "self-start inline-flex items-center gap-2 bg-transparent border-none text-destructive text-[0.85rem] font-semibold cursor-pointer p-0 transition-opacity hover:opacity-75";

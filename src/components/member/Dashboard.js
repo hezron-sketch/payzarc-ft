@@ -374,6 +374,7 @@ export default function Dashboard() {
       <div className="relative flex w-full min-h-screen text-foreground overflow-x-hidden">
         <div
           data-phone-bezel={IS_NATIVE_APP ? undefined : ""}
+          data-overlay-open={isNotifOpen || undefined}
           className={cn(
             "contents",
             !IS_NATIVE_APP &&
@@ -399,10 +400,17 @@ export default function Dashboard() {
         >
           <header
             className={cn(
-              "h-[68px] max-[768px]:h-[var(--topbar-h)] max-[768px]:pt-[calc(22px+env(safe-area-inset-top))] px-[4%] max-[768px]:px-4 bg-[rgba(13,17,23,0.55)] [backdrop-filter:blur(24px)_saturate(1.5)] [-webkit-backdrop-filter:blur(24px)_saturate(1.5)] max-[768px]:bg-[rgba(28,42,70,0.72)] max-[768px]:[backdrop-filter:blur(20px)_saturate(180%)] max-[768px]:[-webkit-backdrop-filter:blur(20px)_saturate(180%)] border-b border-white/[0.04] max-[768px]:border-white/[0.08] flex items-center justify-center sticky top-0 z-[100] w-full shrink-0 transition-transform duration-300 ease-in-out",
+              "h-[68px] max-[768px]:h-[var(--topbar-h)] max-[768px]:pt-[calc(22px+env(safe-area-inset-top))] px-[4%] max-[768px]:px-4 border-b border-white/[0.04] max-[768px]:border-white/[0.08] flex items-center justify-center sticky top-0 z-[100] w-full shrink-0 transition-transform duration-300 ease-in-out",
               hideTopBar && "-translate-y-full",
             )}
           >
+            {/* The frost lives on its own layer, not the header: an element
+                with backdrop-filter blinds the backdrop-filter of everything
+                inside it, which left the notification panel unblurred. */}
+            <span
+              aria-hidden="true"
+              className="absolute inset-0 -z-10 pointer-events-none bg-[rgba(13,17,23,0.55)] [backdrop-filter:blur(24px)_saturate(1.5)] [-webkit-backdrop-filter:blur(24px)_saturate(1.5)] max-[768px]:bg-[rgba(28,42,70,0.72)] max-[768px]:[backdrop-filter:blur(20px)_saturate(180%)] max-[768px]:[-webkit-backdrop-filter:blur(20px)_saturate(180%)]"
+            />
             {/* Same 960px column and 4% gutter as the Home body below, so the
                 logo and profile line up with its outer edges. */}
             <div className="relative flex items-center justify-between gap-4 w-full max-w-[960px]">
@@ -513,7 +521,7 @@ export default function Dashboard() {
                     <button
                       ref={bellRef}
                       type="button"
-                      className="relative text-[var(--soft)] w-11 h-11 rounded-full flex items-center justify-center transition-colors duration-200 hover:bg-white/[0.05] hover:text-foreground"
+                      className="relative text-[var(--soft)] w-11 h-11 rounded-full flex items-center justify-center transition-colors duration-200 hover:bg-white/[0.05] hover:text-foreground aria-expanded:text-gold aria-expanded:bg-gold/[0.12]"
                       aria-label={
                         unreadNotificationCount > 0
                           ? `Notifications, ${unreadNotificationCount} unread`
@@ -531,7 +539,13 @@ export default function Dashboard() {
                     </button>
 
                     {isNotifOpen && (
-                      <div className="absolute top-[calc(100%+8px)] right-0 w-72 material-thin border border-white/[0.08] rounded-xl p-2 z-[200] origin-top-right animate-popover-in">
+                      <div className="absolute top-[calc(100%+10px)] right-0 w-72 material-thick border border-white/[0.1] rounded-xl p-2 z-[200] origin-top-right animate-popover-in shadow-[0_18px_40px_-12px_rgba(0,0,0,0.7)]">
+                        {/* Pointer up to the bell (centred 22px from the
+                            right): top half of a rotated square. */}
+                        <span
+                          aria-hidden="true"
+                          className="absolute -top-[6.5px] right-4 w-3 h-3 rotate-45 material-thick border-l border-t border-white/[0.1] [clip-path:polygon(0_0,100%_0,0_100%)]"
+                        />
                         <p className="text-xs font-semibold text-[var(--soft)] px-3 pt-2 pb-1 uppercase tracking-wide">
                           Notifications
                         </p>
@@ -540,14 +554,14 @@ export default function Dashboard() {
                             You're all caught up.
                           </p>
                         ) : (
-                          <div className="flex flex-col max-h-[320px] overflow-y-auto">
+                          <div className="flex flex-col divide-y divide-white/[0.06] max-h-[320px] overflow-y-auto">
                             {notifications.slice(0, 5).map((n) => {
                               const Icon = NOTIFICATION_ICONS[n.type] || Bell;
                               return (
                                 <button
                                   key={n.id}
                                   type="button"
-                                  className="flex gap-3 px-3 py-2 rounded-md hover:bg-white/5 text-left transition-colors"
+                                  className="flex gap-3 px-3 py-2.5 hover:bg-white/[0.04] text-left transition-colors"
                                   onClick={() => {
                                     markNotificationRead(n);
                                     setIsNotifOpen(false);
@@ -628,7 +642,7 @@ export default function Dashboard() {
                 : undefined
             }
             onScroll={markScrolling}
-            className="flex-1 flex flex-col pt-12 max-[768px]:mt-[calc(-1*var(--topbar-h))] max-[768px]:pt-[calc(var(--topbar-h)+1rem)] max-[768px]:min-h-0 max-[768px]:overflow-y-auto max-[768px]:overflow-x-hidden supports-[-moz-appearance:none]:[scrollbar-width:thin] supports-[-moz-appearance:none]:[scrollbar-color:transparent_transparent] supports-[-moz-appearance:none]:[&[data-scrolling]]:[scrollbar-color:rgba(var(--gold-rgb),0.25)_transparent] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-track]:mt-[calc(var(--topbar-h)+1rem)] [&::-webkit-scrollbar-track]:mb-[var(--tabbar-h,0px)] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-transparent [&[data-scrolling]::-webkit-scrollbar-thumb]:bg-[rgba(var(--gold-rgb),0.25)] bg-white/[0.015] border-t border-white/[0.06] rounded-t-[28px] max-[768px]:bg-transparent max-[768px]:border-t-0 max-[768px]:rounded-none"
+            className="flex-1 flex flex-col pt-12 max-[768px]:mt-[calc(-1*var(--topbar-h))] max-[768px]:pt-[calc(var(--topbar-h)+1rem)] max-[768px]:min-h-0 max-[768px]:[container-type:size] max-[768px]:overflow-y-auto max-[768px]:overflow-x-hidden supports-[-moz-appearance:none]:[scrollbar-width:thin] supports-[-moz-appearance:none]:[scrollbar-color:transparent_transparent] supports-[-moz-appearance:none]:[&[data-scrolling]]:[scrollbar-color:rgba(var(--gold-rgb),0.25)_transparent] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-track]:mt-[calc(var(--topbar-h)+1rem)] [&::-webkit-scrollbar-track]:mb-[var(--tabbar-h,0px)] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-transparent [&[data-scrolling]::-webkit-scrollbar-thumb]:bg-[rgba(var(--gold-rgb),0.25)] bg-white/[0.015] border-t border-white/[0.06] rounded-t-[28px] max-[768px]:bg-transparent max-[768px]:border-t-0 max-[768px]:rounded-none"
           >
             <div className="flex-1 w-full max-w-[1400px] mx-auto px-[4%] pb-12 max-[768px]:pb-4">
               <div key={activePage} className="animate-flow-fade-in">

@@ -21,6 +21,10 @@ import RangeCalendar from "./RangeCalendar";
 import {
   primaryBtnClass,
   flowPanelClass,
+  listClass,
+  listRowClass,
+  listTileClass,
+  listTitleClass,
 } from "./shared";
 
 const PAGE_SIZE = 25;
@@ -552,7 +556,7 @@ function Reports({ showNotification }) {
         </Button>
       </div>
 
-      <div className="pt-4 border-t border-white/[0.06] flex flex-col gap-1 stagger">
+      <div className={cn("pt-1 border-t border-white/[0.06] stagger", listClass)}>
         {loading && (
           <p className="text-muted-foreground text-sm text-center py-6">
             Loading report...
@@ -576,12 +580,11 @@ function Reports({ showNotification }) {
                 key={tx.id ?? `${txCode(tx)}-${idx}`}
                 type="button"
                 onClick={() => setSelectedTransaction(tx)}
-                className="flex items-center gap-3 w-full text-left rounded-xl px-2.5 py-2.5 hover:bg-white/[0.04] transition-colors"
+                className={listRowClass}
               >
-                {/* Same in/out tile as Recent Activity, so both lists read alike. */}
                 <div
                   className={cn(
-                    "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                    listTileClass,
                     credit
                       ? "bg-success/[0.08] text-success"
                       : "bg-white/[0.05] text-[var(--soft)]",
@@ -595,7 +598,7 @@ function Reports({ showNotification }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline justify-between gap-3">
-                    <p className="text-sm font-semibold truncate m-0">
+                    <p className={listTitleClass}>
                       {txCounterparty(tx) || txType(tx).replaceAll("_", " ")}
                     </p>
                     <span

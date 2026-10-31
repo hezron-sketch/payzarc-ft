@@ -11,7 +11,33 @@ export const modal3dClass =
   "material-thick border border-white/[0.08] animate-popup-in";
 // Wrapper every flow panel renders inside the phone screen.
 export const flowPanelClass =
-  "flex flex-col gap-[1.1rem] w-full max-w-[420px] mx-auto max-[640px]:max-w-full";
+  "flex flex-col gap-3 w-full max-w-[420px] mx-auto max-[640px]:max-w-full";
+// Labelled field in one box: a short prefix (To, KES) replaces the label row
+// above it, which is what lets each flow fit the phone screen unscrolled.
+export const fieldClass =
+  "flex items-center gap-3 h-12 shrink-0 rounded-xl px-4 bg-white/[0.03] border border-white/[0.06] transition-colors duration-200 focus-within:ring-2 focus-within:ring-gold/40 focus-within:border-gold/60 focus-within:bg-white/[0.07]";
+export const fieldAffixClass =
+  "shrink-0 text-[0.8rem] font-semibold text-[var(--soft)] tabular-nums";
+export const fieldInputClass =
+  "flex-1 min-w-0 h-full bg-transparent border-0 outline-none text-base text-foreground placeholder:text-muted-foreground";
+// The amount is the point of every flow, so it gets the big type.
+export const amountFieldClass = cn(fieldClass, "h-14");
+export const amountInputClass = cn(
+  fieldInputClass,
+  "text-[1.5rem] font-semibold tabular-nums tracking-[-0.02em]",
+);
+// The app's one list style (taken from Transactions): borderless rows split
+// by hairlines, a 36px leading tile, title/meta left, value/status right.
+export const listClass = "flex flex-col divide-y divide-white/[0.06]";
+export const listRowClass =
+  "w-full flex items-center gap-3 px-2.5 py-3 text-left transition-colors duration-200 hover:bg-white/[0.04]";
+export const listTileClass =
+  "w-9 h-9 rounded-xl flex items-center justify-center shrink-0";
+export const listAvatarClass =
+  "w-9 h-9 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-xs shrink-0";
+export const listTitleClass = "text-sm font-semibold text-foreground truncate m-0";
+export const listMetaClass = "text-[0.72rem] text-muted-foreground truncate m-0";
+
 export const pickerDialogClass = cn(
   "w-[min(400px,100%)] max-w-[400px] rounded-[22px] p-7 flex flex-col gap-4 max-h-[90dvh] overflow-y-auto",
   "max-[640px]:left-0 max-[640px]:right-0 max-[640px]:top-auto max-[640px]:bottom-0 max-[640px]:translate-x-0 max-[640px]:translate-y-0 max-[640px]:w-full max-[640px]:max-w-full max-[640px]:rounded-b-none max-[640px]:px-6 max-[640px]:pb-[calc(1.75rem+env(safe-area-inset-bottom))] max-[640px]:data-[state=open]:slide-in-from-bottom-8",

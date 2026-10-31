@@ -17,6 +17,9 @@ import {
   formInputClass,
   primaryBtnClass,
   flowPanelClass,
+  fieldAffixClass,
+  amountFieldClass,
+  amountInputClass,
   pickerDialogClass,
   modalAddLinkClass,
   methodBtnClass,
@@ -184,18 +187,24 @@ function AddMoney({
   return (
     <>
       <div className={flowPanelClass}>
-        <Label htmlFor="deposit-amount" className={formLabelClass}>
-          Amount ({displayCurrency})
-        </Label>
-        <Input
-          id="deposit-amount"
-          inputMode="decimal"
-          autoComplete="off"
-          className={formInputClass}
-          placeholder="0.00"
-          value={addAmount}
-          onChange={(e) => setAddAmount(toDecimalInput(e.target.value))}
-        />
+        <div className={amountFieldClass}>
+          <span className={fieldAffixClass} aria-hidden="true">
+            {displayCurrency}
+          </span>
+          <input
+            id="deposit-amount"
+            aria-label={`Amount to deposit, ${displayCurrency}`}
+            inputMode="decimal"
+            autoComplete="off"
+            className={amountInputClass}
+            placeholder="0.00"
+            value={addAmount}
+            onChange={(e) => setAddAmount(toDecimalInput(e.target.value))}
+          />
+        </div>
+        <p className="-mt-1 text-[0.75rem] text-[var(--soft)] m-0">
+          Mobile money, bank or card — you'll pick next.
+        </p>
 
         <Button className={primaryBtnClass} onClick={handleAddMoneyClick}>
           Continue

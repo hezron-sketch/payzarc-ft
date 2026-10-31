@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import TransactionDetails from "./TransactionDetails";
 import { ArrowDownLeft, ArrowUpRight, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { listClass, listRowClass, listTileClass, listTitleClass } from "./shared";
 
 const txStatusTone = (status) => {
   const s = (status || "").toLowerCase();
@@ -39,18 +40,18 @@ const getFormattedAmount = (amt, isCredit, currency) => {
 function RecentActivity({ transactions, currency, onViewAll, embedded = false }) {
   const [selected, setSelected] = useState(null);
   return (
-    <div className="flex flex-col items-center">
-      <div className="w-full">
+    <div className={cn("flex flex-col", embedded ? "flex-1 min-h-0" : "items-center")}>
+      <div className={cn("w-full", embedded && "flex-1 min-h-0 flex flex-col")}>
         <div
           className={cn(
             "flex items-center justify-between",
-            embedded ? "mb-3" : "mb-4",
+            embedded ? "mb-1 h-6" : "mb-4",
           )}
         >
           <h2
             className={cn(
               "font-bold text-foreground m-0",
-              embedded ? "text-base" : "text-[1.05rem] tracking-tight",
+              embedded ? "text-[0.95rem]" : "text-[1.05rem] tracking-tight",
             )}
           >
             Recent Activity
@@ -67,8 +68,11 @@ function RecentActivity({ transactions, currency, onViewAll, embedded = false })
         <div
           className={cn(
             "overflow-hidden stagger",
+            listClass,
+            // Fixed-height column that wraps: rows that don't fit whole move
+            // to a clipped second column, so the phone shows only full rows.
             embedded
-              ? "rounded-[14px] bg-white/[0.03] border border-white/[0.06]"
+              ? "flex-1 min-h-0 flex-wrap content-start"
               : "bg-card rounded-2xl",
           )}
         >
@@ -86,36 +90,32 @@ function RecentActivity({ transactions, currency, onViewAll, embedded = false })
                   type="button"
                   key={tx.id || idx}
                   onClick={() => setSelected(tx)}
-                  className={cn(
-                    "w-full text-left flex items-center border-b border-white/[0.03] last:border-b-0 transition-colors duration-200 hover:bg-white/[0.04]",
-                    embedded ? "gap-3 px-3.5 py-3" : "gap-4 p-4 md:p-5",
-                  )}
+                  className={cn(listRowClass, embedded ? "shrink-0" : "px-4")}
                 >
                   <div
                     className={cn(
-                      "rounded-xl flex items-center justify-center shrink-0",
-                      embedded ? "w-9 h-9" : "w-11 h-11",
+                      listTileClass,
                       credit
                         ? "bg-success/[0.08] text-success"
                         : "bg-white/[0.05] text-[var(--soft)]",
                     )}
                   >
                     {credit ? (
-                      <ArrowDownLeft size={embedded ? 16 : 18} aria-hidden="true" />
+                      <ArrowDownLeft size={16} aria-hidden="true" />
                     ) : (
-                      <ArrowUpRight size={embedded ? 16 : 18} aria-hidden="true" />
+                      <ArrowUpRight size={16} aria-hidden="true" />
                     )}
                   </div>
                   {/* Two rows, two edges: who + how much on top, when + state
                       below — amounts and statuses each line up in one column. */}
                   <div className="flex-1 min-w-0 flex flex-col gap-1">
                     <div className="flex items-baseline justify-between gap-3">
-                      <p className="min-w-0 text-[0.9rem] font-semibold text-foreground truncate m-0">
+                      <p className={cn(listTitleClass, "min-w-0")}>
                         {tx.name || tx.description || tx.transaction_type}
                       </p>
                       <p
                         className={cn(
-                          "text-[0.9rem] font-semibold tabular-nums whitespace-nowrap shrink-0 m-0",
+                          "text-sm font-bold tabular-nums whitespace-nowrap shrink-0 m-0",
                           credit ? "text-success" : "text-foreground",
                         )}
                       >
@@ -123,7 +123,7 @@ function RecentActivity({ transactions, currency, onViewAll, embedded = false })
                       </p>
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-[0.78rem] text-muted-foreground tabular-nums whitespace-nowrap">
+                      <span className="text-[0.72rem] text-muted-foreground tabular-nums whitespace-nowrap">
                         {tx.date || new Date(tx.created_at).toLocaleDateString()}
                       </span>
                       {tx.status && (

@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from "react";
+import { Star } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { contactsApi } from "../../utility/axiosInstance";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { EXCHANGE_RATES } from "../../utility/exchangeRates";
 import { isValidEmail, isValidPhone } from "../../utility/validators";
 import { useFaceAuth } from "./Face";
 import {
-  formLabelClass,
-  formInputClass,
   primaryBtnClass,
   flowPanelClass,
+  fieldClass,
+  fieldAffixClass,
+  fieldInputClass,
+  amountFieldClass,
+  amountInputClass,
   favouriteChipClass,
   getRate,
   failureKind,
@@ -22,7 +25,6 @@ import {
   postTransfer,
   authorize,
   calcTransferFee,
-  addFavouriteBtnClass,
   isoToFlagEmoji,
   recipientLabel,
   findCountryByName,
@@ -271,49 +273,51 @@ export function SendMoney({
   return (
     <>
       <div className={flowPanelClass}>
-        <div className="flex items-center justify-between">
-          {myCountry && (
-            <span className="flex items-center gap-1.5 text-[0.85rem] font-semibold text-[var(--soft)]">
-              Sending from {isoToFlagEmoji(myCountry.flag)}
-            </span>
-          )}
-          <button
-            type="button"
-            className="ml-auto text-gold text-[0.8rem] font-semibold hover:opacity-75 transition-opacity"
-            onClick={() => openSection("send-many")}
-          >
-            Send to many →
-          </button>
-        </div>
-        <Label htmlFor="send-recipient" className={formLabelClass}>
-          Recipient
+        <div className={fieldClass}>
+          <span className={fieldAffixClass} aria-hidden="true">
+            To
+          </span>
+          <input
+            id="send-recipient"
+            aria-label="Recipient"
+            autoComplete="off"
+            className={fieldInputClass}
+            placeholder={myCountry ? "Name or local number" : "Name or phone"}
+            value={recipientSearchTerm}
+            onChange={(e) => {
+              setRecipientSearchTerm(e.target.value);
+              setSelectedRecipient(null);
+            }}
+          />
           {recipientCountry && (
-            <span className="font-medium text-muted-foreground">
-              {isoToFlagEmoji(recipientCountry.flag)} {recipientCountry.name}
+            <span
+              className="shrink-0 text-base"
+              title={recipientCountry.name}
+              aria-label={recipientCountry.name}
+            >
+              {isoToFlagEmoji(recipientCountry.flag)}
             </span>
           )}
-        </Label>
-        <Input
-          id="send-recipient"
-          className={formInputClass}
-          placeholder={
-            myCountry
-              ? "Name, or local number e.g. 707069007"
-              : "Name or phone number"
-          }
-          value={recipientSearchTerm}
-          onChange={(e) => {
-            setRecipientSearchTerm(e.target.value);
-            setSelectedRecipient(null);
-          }}
-        />
+          {recipientSearchTerm && !selectedRecipient && (
+            <button
+              type="button"
+              onClick={handleAddRecipientToFavourites}
+              aria-label="Add recipient to favourites"
+              title="Add to favourites"
+              className="-mr-2 shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-[var(--soft)] hover:text-gold hover:bg-white/[0.05] transition-colors"
+            >
+              <Star size={16} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+        {/* One line of matches; extra ones scroll sideways, not the screen. */}
         {recipientSearchTerm && filteredFavourites.length > 0 && (
-          <div className="flex flex-wrap gap-2 -mt-[0.6rem]">
+          <div className="-mt-1 flex gap-2 overflow-x-auto shrink-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {filteredFavourites.map((fav, idx) => (
               <button
                 key={fav.id || idx}
                 type="button"
-                className={favouriteChipClass(false)}
+                className={cn(favouriteChipClass(false), "shrink-0 py-1.5")}
                 onClick={() => handleSelectRecipient(fav)}
               >
                 {recipientLabel(fav)}
@@ -321,75 +325,66 @@ export function SendMoney({
             ))}
           </div>
         )}
-        {recipientSearchTerm && !selectedRecipient && (
-          <button
-            type="button"
-            className={addFavouriteBtnClass}
-            onClick={handleAddRecipientToFavourites}
-          >
-            + Add recipient to favourites
-          </button>
-        )}
 
-        <Label htmlFor="send-amount" className={formLabelClass}>
-          Amount ({senderCurrency})
-        </Label>
-        <Input
-          id="send-amount"
-          inputMode="decimal"
-          autoComplete="off"
-          className={formInputClass}
-          placeholder="0.00"
-          value={sendAmount}
-          onChange={(e) => setSendAmount(toDecimalInput(e.target.value))}
-        />
-        <div
-          aria-live="polite"
-          className="bg-[var(--gold-pale)] border border-dashed border-[var(--gold-border)] rounded-xl px-4 py-[0.85rem] text-center -mt-[0.6rem]">
-          {availableCurrencies.length > 0 ? (
-            <>
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-[1.2rem] font-bold text-gold tracking-[-0.3px]">
-                  ≈ {Number(convertedSendAmount || 0).toLocaleString()}
-                </span>
-                <select
-                  className="bg-white/[0.06] text-gold border border-[var(--gold-border)] rounded-sm px-2 py-1 text-[0.95rem] font-bold cursor-pointer outline-none disabled:opacity-85 disabled:cursor-default"
-                  aria-label="Recipient currency"
-                  value={recipientCurrency}
-                  disabled={!!recipientCountry}
-                  title={
-                    recipientCountry
-                      ? "Detected from recipient's number"
-                      : undefined
-                  }
-                  onChange={(e) => setRecipientCurrencyChoice(e.target.value)}
-                >
-                  {availableCurrencies.map((ccy) => (
-                    <option key={ccy} value={ccy}>
-                      {ccy}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <span className="block text-xs text-gold/85 mt-1 tabular-nums">
-                1 {senderCurrency} = {conversionRate} {recipientCurrency} ·{" "}
-                {liveRates ? "live rate" : "indicative rate"}
+        <div className={amountFieldClass}>
+          <span className={fieldAffixClass} aria-hidden="true">
+            {myCountry ? `${isoToFlagEmoji(myCountry.flag)} ` : ""}
+            {senderCurrency}
+          </span>
+          <input
+            id="send-amount"
+            aria-label={`Amount to send, ${senderCurrency}`}
+            inputMode="decimal"
+            autoComplete="off"
+            className={amountInputClass}
+            placeholder="0.00"
+            value={sendAmount}
+            onChange={(e) => setSendAmount(toDecimalInput(e.target.value))}
+          />
+          {availableCurrencies.length > 0 && (
+            <span
+              aria-live="polite"
+              className="shrink-0 flex items-center gap-1.5 text-gold font-semibold tabular-nums"
+            >
+              <span className="text-[0.85rem]">
+                ≈ {Number(convertedSendAmount || 0).toLocaleString()}
               </span>
-            </>
-          ) : (
-            <span className="block text-xs text-gold/85 mt-1">
-              Conversion unavailable for {senderCurrency}
+              <select
+                className="-mr-1 bg-white/[0.06] text-gold border border-[var(--gold-border)] rounded-sm px-1.5 py-1 text-[0.8rem] font-bold cursor-pointer outline-none disabled:opacity-85 disabled:cursor-default"
+                aria-label="Recipient currency"
+                value={recipientCurrency}
+                disabled={!!recipientCountry}
+                title={
+                  recipientCountry ? "Detected from recipient's number" : undefined
+                }
+                onChange={(e) => setRecipientCurrencyChoice(e.target.value)}
+              >
+                {availableCurrencies.map((ccy) => (
+                  <option key={ccy} value={ccy}>
+                    {ccy}
+                  </option>
+                ))}
+              </select>
             </span>
           )}
         </div>
+        <div className="-mt-1 flex items-center justify-between gap-3 text-[0.72rem] text-[var(--soft)] tabular-nums">
+          <span className="truncate">
+            {availableCurrencies.length > 0
+              ? `1 ${senderCurrency} = ${conversionRate} ${recipientCurrency} · ${liveRates ? "live" : "indicative"}`
+              : `Conversion unavailable for ${senderCurrency}`}
+          </span>
+          <button
+            type="button"
+            className="shrink-0 -my-1 h-7 px-1 text-gold font-semibold hover:opacity-75 transition-opacity"
+            onClick={() => openSection("send-many")}
+          >
+            Send to many →
+          </button>
+        </div>
 
         {sendAmountNum > 0 && (
-          <FeeSummary
-            currency={senderCurrency}
-            fee={sendFee}
-            total={sendTotal}
-            className="-mt-[0.6rem]"
-          />
+          <FeeSummary currency={senderCurrency} fee={sendFee} total={sendTotal} />
         )}
 
         {insufficientBalance ? (

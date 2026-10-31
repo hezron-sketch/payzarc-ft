@@ -13,6 +13,9 @@ import {
   formInputClass,
   primaryBtnClass,
   flowPanelClass,
+  fieldAffixClass,
+  amountFieldClass,
+  amountInputClass,
   pickerDialogClass,
   modalAddLinkClass,
   methodBtnClass,
@@ -209,19 +212,22 @@ export function Withdraw({
   return (
     <>
       <div className={flowPanelClass}>
-        <Label htmlFor="withdraw-amount" className={formLabelClass}>
-          Amount ({displayCurrency})
-        </Label>
-        <Input
-          id="withdraw-amount"
-          inputMode="decimal"
-          autoComplete="off"
-          className={formInputClass}
-          placeholder="0.00"
-          value={withdrawAmount}
-          onChange={(e) => setWithdrawAmount(toDecimalInput(e.target.value))}
-        />
-        <p className="-mt-[0.6rem] text-[0.8rem] text-[var(--soft)] tabular-nums m-0">
+        <div className={amountFieldClass}>
+          <span className={fieldAffixClass} aria-hidden="true">
+            {displayCurrency}
+          </span>
+          <input
+            id="withdraw-amount"
+            aria-label={`Amount to withdraw, ${displayCurrency}`}
+            inputMode="decimal"
+            autoComplete="off"
+            className={amountInputClass}
+            placeholder="0.00"
+            value={withdrawAmount}
+            onChange={(e) => setWithdrawAmount(toDecimalInput(e.target.value))}
+          />
+        </div>
+        <p className="-mt-1 text-[0.75rem] text-[var(--soft)] tabular-nums m-0">
           Available: {displayCurrency} {formattedBalance}
         </p>
 

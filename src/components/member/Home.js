@@ -258,7 +258,7 @@ function Home({
                   onSelect={(fav) => openSection("send", fav)}
                 />
                 {/* Inside the phone whenever there's no side column for it. */}
-                <div className="lg:hidden">
+                <div className="lg:hidden flex-1 min-h-0 flex flex-col">
                   <RecentActivity
                     embedded
                     transactions={recentTransactions}

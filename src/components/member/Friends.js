@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { ChevronRight, UsersRound } from "lucide-react";
 import { djangoApis } from "../../utility/axiosInstance";
+import {
+  listClass,
+  listRowClass,
+  listAvatarClass,
+  listTitleClass,
+  listMetaClass,
+} from "./shared";
 
 function Friends({ onSelectFriend }) {
   const [favourites, setFavourites] = useState([]);
@@ -71,7 +78,7 @@ function Friends({ onSelectFriend }) {
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-1 stagger">
+        <div className={`${listClass} stagger`}>
           {favourites.map((fav) => {
             const name = fav.display_name || "—";
             const subtitle = fav.phone || fav.email || "";
@@ -80,17 +87,15 @@ function Friends({ onSelectFriend }) {
                 key={fav.id}
                 type="button"
                 onClick={() => onSelectFriend?.(fav)}
-                className="w-full flex items-center gap-3 p-3 rounded-sm bg-white/[0.03] border border-white/[0.06] text-left transition-colors duration-200 hover:border-gold/30 hover:bg-white/[0.05]"
+                className={listRowClass}
               >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm shrink-0">
+                <div className={listAvatarClass}>
                   {name.slice(0, 1).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate m-0">
-                    {name}
-                  </p>
+                  <p className={listTitleClass}>{name}</p>
                   {subtitle && (
-                    <p className="text-xs text-muted-foreground truncate m-0 mt-0.5">
+                    <p className={`${listMetaClass} mt-0.5`}>
                       {subtitle}
                     </p>
                   )}

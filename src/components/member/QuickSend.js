@@ -1,14 +1,34 @@
 import React from "react";
-import { Send } from "lucide-react";
+import { Send, UserRound } from "lucide-react";
+import {
+  listClass,
+  listRowClass,
+  listAvatarClass,
+  listTitleClass,
+  listMetaClass,
+} from "./shared";
 
+const nameOf = (fav) =>
+  fav.name || fav.full_name || fav.phone || fav.value || "?";
+// Phone-only favourites start with "+" or a digit: show a person, not that.
+const Initial = ({ name }) =>
+  /^\p{L}/u.test(name) ? (
+    name.slice(0, 1).toUpperCase()
+  ) : (
+    <UserRound size={16} aria-hidden="true" />
+  );
+
+// Phones: the top three, leaving room for Recent Activity below. Large
+// screens have the phone to spare (Recent Activity sits beside it), so there
+// it shows as many whole rows as fit, same trick as RecentActivity.
 function QuickSend({ favourites, onSeeAll, onSelect }) {
   return (
-    <>
-      <div className="flex items-center justify-between">
-        <h2 className="text-base font-bold m-0">Quick Send</h2>
+    <div className="flex flex-col gap-3 shrink-0 lg:flex-1 lg:min-h-0">
+      <div className="flex items-center justify-between h-6">
+        <h2 className="text-[0.95rem] font-bold m-0">Quick Send</h2>
         <button
           type="button"
-          className="-mr-2 h-9 px-2 rounded-full text-gold font-medium text-[0.8rem] transition-colors hover:bg-white/[0.05]"
+          className="-mr-2 h-8 px-2 rounded-full text-gold font-medium text-[0.8rem] transition-colors hover:bg-white/[0.05]"
           onClick={onSeeAll}
         >
           See all
@@ -16,49 +36,45 @@ function QuickSend({ favourites, onSeeAll, onSelect }) {
       </div>
 
       {favourites.length === 0 ? (
-        <p className="text-[0.85rem] text-muted-foreground">
-          The people you send to most will live here. Save one from Send
-          Money — any of 150+ currencies.
+        <p className="text-[0.8rem] text-muted-foreground m-0">
+          The people you send to most will live here. Save one from Send.
         </p>
       ) : (
-        <div className="pt-4 border-t border-white/[0.04] flex flex-col gap-1 stagger">
-          {favourites.slice(0, 3).map((fav, idx) => {
-            const name =
-              fav.name || fav.full_name || fav.phone || fav.value || "?";
-            const sub = fav.phone || fav.email || "";
+        <div
+          className={`${listClass} -mt-1 stagger max-lg:[&>*:nth-child(n+4)]:hidden lg:flex-1 lg:min-h-0 lg:flex-wrap lg:content-start lg:overflow-hidden`}
+        >
+          {favourites.map((fav, idx) => {
+            const name = nameOf(fav);
+            const sub = fav.phone && fav.phone !== name ? fav.phone : fav.email;
             return (
               <button
                 key={fav.id || idx}
                 type="button"
                 onClick={() => onSelect(fav)}
-                className="w-full flex items-center gap-3 p-3 rounded-sm bg-white/[0.03] border border-white/[0.06] transition-colors duration-200 hover:border-gold/30 hover:bg-white/[0.05] group"
+                className={`${listRowClass} shrink-0 group`}
               >
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-xs shrink-0">
-                  {name.slice(0, 1).toUpperCase()}
-                </div>
-                <div className="flex-1 text-left min-w-0">
-                  <p className="text-[0.9rem] font-semibold text-foreground truncate m-0">
-                    {name}
-                  </p>
+                <span className={listAvatarClass}>
+                  <Initial name={name} />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className={`block ${listTitleClass}`}>{name}</span>
                   {sub && (
-                    <p className="text-[0.8rem] text-muted-foreground truncate m-0">
+                    <span className={`block ${listMetaClass} mt-0.5`}>
                       {sub}
-                    </p>
+                    </span>
                   )}
-                </div>
-                <div className="w-7 h-7 rounded-lg bg-white/[0.04] flex items-center justify-center transition-colors group-hover:bg-gold/10 shrink-0">
-                  <Send
-                    size={14}
-                    aria-hidden="true"
-                    className="text-muted-foreground transition-colors group-hover:text-gold"
-                  />
-                </div>
+                </span>
+                <Send
+                  size={15}
+                  aria-hidden="true"
+                  className="shrink-0 text-[var(--soft)] transition-colors group-hover:text-gold"
+                />
               </button>
             );
           })}
         </div>
       )}
-    </>
+    </div>
   );
 }
 

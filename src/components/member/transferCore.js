@@ -4,10 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { countries } from "../../utility/countries";
 import { GLOBAL_AVG_REMITTANCE_COST } from "../../utility/constants";
-import {
-  primaryBtnClass,
-  assertDelivered,
-} from "./shared";
+import { assertDelivered } from "./shared";
 
 export const postTransfer = async (
   url,
@@ -39,9 +36,6 @@ export const authorize = async (pin, requestFace) => {
 
 export const calcTransferFee = (amount) =>
   amount > 0 ? Math.max(1, amount * 0.015) : 0;
-
-export const addFavouriteBtnClass =
-  "self-start bg-transparent border-none text-gold text-[0.8rem] font-semibold cursor-pointer p-0 -mt-[0.6rem] transition-opacity hover:opacity-75";
 
 export const isoToFlagEmoji = (iso) =>
   /^[A-Z]{2}$/.test(iso)
@@ -103,24 +97,23 @@ export function FeeSummary({ currency, fee, total, className }) {
     <div
       aria-live="polite"
       className={cn(
-        "flex flex-col gap-1.5 bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-[0.85rem]",
+        "shrink-0 flex flex-col gap-1 bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-2.5",
         className,
       )}
     >
-      <div className="flex items-center justify-between text-[0.85rem] text-muted-foreground">
-        <span>Transaction Fee</span>
+      <div className="flex items-baseline justify-between gap-3 text-[0.8rem] text-muted-foreground tabular-nums">
         <span>
-          {currency} {fee.toFixed(2)}
+          Fee {currency} {fee.toFixed(2)}
         </span>
-      </div>
-      <div className="flex items-center justify-between text-[0.85rem] text-muted-foreground">
-        <span>Total to pay</span>
-        <span className="text-gold font-bold">
-          {currency} {total.toFixed(2)}
+        <span>
+          Total{" "}
+          <span className="text-gold font-bold">
+            {currency} {total.toFixed(2)}
+          </span>
         </span>
       </div>
       {saved >= 0.01 && (
-        <p className="m-0 pt-1.5 mt-0.5 border-t border-white/[0.06] text-[0.75rem] text-muted-foreground tabular-nums">
+        <p className="m-0 text-[0.7rem] text-[var(--soft)] tabular-nums">
           ≈ {currency} {saved.toFixed(2)} less than the global average fee
           ({+(GLOBAL_AVG_REMITTANCE_COST * 100).toFixed(2)}%)
         </p>
@@ -138,15 +131,21 @@ export function InsufficientBalance({
   return (
     <div
       role="status"
-      className="flex flex-col gap-2 bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3.5">
-      <span className="text-sm font-semibold text-destructive">
-        Insufficient balance for this transfer.
-      </span>
-      <span className="text-xs text-muted-foreground">
-        You need {currency} {total.toFixed(2)} but your balance is {currency}{" "}
-        {formattedBalance}.
-      </span>
-      <Button type="button" className={primaryBtnClass} onClick={onAddMoney}>
+      className="shrink-0 flex items-center gap-3 bg-destructive/10 border border-destructive/30 rounded-xl pl-4 pr-2 py-2.5">
+      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+        <span className="text-[0.85rem] font-semibold text-destructive">
+          Not enough balance
+        </span>
+        <span className="text-[0.72rem] text-muted-foreground tabular-nums">
+          Need {currency} {total.toFixed(2)} · have {currency}{" "}
+          {formattedBalance}
+        </span>
+      </div>
+      <Button
+        type="button"
+        className="shrink-0 h-9 rounded-full px-4 text-[0.85rem] font-bold text-black"
+        onClick={onAddMoney}
+      >
         Deposit
       </Button>
     </div>

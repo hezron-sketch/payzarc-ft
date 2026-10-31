@@ -11,6 +11,9 @@ import {
   formInputClass,
   primaryBtnClass,
   flowPanelClass,
+  fieldClass,
+  fieldAffixClass,
+  fieldInputClass,
   favouriteChipClass,
   getRate,
   failureKind,
@@ -22,7 +25,6 @@ import {
   postTransfer,
   authorize,
   calcTransferFee,
-  addFavouriteBtnClass,
   isoToFlagEmoji,
   recipientLabel,
   detectRecipientCountry,
@@ -36,6 +38,10 @@ const FREE_SEND_MANY_LIMIT = 5;
 
 const avatarClass =
   "rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center border border-[rgba(var(--gold-rgb),0.3)] text-sm";
+
+// Lists that could outgrow the phone run sideways instead of down.
+const sideScrollRowClass =
+  "flex shrink-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 
 export function SendToMany({
   user,
@@ -247,7 +253,7 @@ export function SendToMany({
       <button
         type="button"
         onClick={() => openSection("send")}
-        className="self-start -ml-2 inline-flex items-center gap-1 h-9 pl-1 pr-3 rounded-full text-[0.85rem] font-medium text-gold hover:bg-white/[0.05] transition-colors"
+        className="self-start -ml-2 -my-1 inline-flex items-center gap-1 h-8 pl-1 pr-3 rounded-full text-[0.8rem] font-medium text-gold hover:bg-white/[0.05] transition-colors"
       >
         <ChevronLeft className="w-4 h-4" aria-hidden="true" />
         Send to one person
@@ -256,32 +262,35 @@ export function SendToMany({
 
       {step === "pick" && (
         <>
-          <Label htmlFor="many-recipient" className={formLabelClass}>
-            Recipient
-          </Label>
-          <Input
-            id="many-recipient"
-            type="tel"
-            className={formInputClass}
-            placeholder="Enter phone number"
-            value={phoneInput}
-            onChange={(e) => setPhoneInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addPhone();
-              }
-            }}
-          />
-          {phoneInput.trim() && (
-            <button
-              type="button"
-              className={addFavouriteBtnClass}
-              onClick={addPhone}
-            >
-              + Add {phoneInput.trim()}
-            </button>
-          )}
+          <div className={fieldClass}>
+            <span className={fieldAffixClass} aria-hidden="true">
+              To
+            </span>
+            <input
+              id="many-recipient"
+              aria-label="Recipient phone number"
+              type="tel"
+              className={fieldInputClass}
+              placeholder="Phone number"
+              value={phoneInput}
+              onChange={(e) => setPhoneInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addPhone();
+                }
+              }}
+            />
+            {phoneInput.trim() && (
+              <button
+                type="button"
+                onClick={addPhone}
+                className="-mr-2 shrink-0 h-8 px-3 rounded-full bg-gold/10 border border-gold/30 text-gold text-[0.8rem] font-semibold hover:bg-gold/15 transition-colors"
+              >
+                Add
+              </button>
+            )}
+          </div>
 
           <Label className={formLabelClass}>
             Send to {recipients.length}
@@ -298,11 +307,11 @@ export function SendToMany({
             </button>
           )}
           {recipients.length > 0 && (
-            <div className="flex flex-wrap gap-3 -mt-[0.4rem]">
+            <div className={cn(sideScrollRowClass, "gap-3 pt-1.5 pr-1.5")}>
               {recipients.map((r) => (
                 <div
                   key={keyOf(r)}
-                  className="relative flex flex-col items-center gap-1 w-16"
+                  className="relative shrink-0 flex flex-col items-center gap-1 w-14"
                 >
                   <button
                     type="button"
@@ -312,7 +321,7 @@ export function SendToMany({
                   >
                     <X className="w-3.5 h-3.5" aria-hidden="true" />
                   </button>
-                  <div className={cn(avatarClass, "w-12 h-12")}>
+                  <div className={cn(avatarClass, "w-11 h-11")}>
                     {(recipientLabel(r) || "?").slice(0, 1).toUpperCase()}
                   </div>
                   <span className="text-[0.7rem] text-center text-muted-foreground truncate w-full">
@@ -324,13 +333,16 @@ export function SendToMany({
           )}
 
           <Label className={formLabelClass}>Favourites</Label>
-          <div className="flex flex-wrap gap-2 -mt-[0.6rem]">
+          <div className={cn(sideScrollRowClass, "gap-2 -mt-1")}>
             {favourites.map((fav, idx) => (
               <button
                 key={fav.id || idx}
                 type="button"
                 aria-pressed={recipients.some((r) => keyOf(r) === keyOf(fav))}
-                className={favouriteChipClass(recipients.some((r) => keyOf(r) === keyOf(fav)))}
+                className={cn(
+                  favouriteChipClass(recipients.some((r) => keyOf(r) === keyOf(fav))),
+                  "shrink-0 py-1.5",
+                )}
                 onClick={() => toggleRecipient(fav)}
               >
                 {recipientLabel(fav)}
@@ -357,8 +369,8 @@ export function SendToMany({
           >
             Edit recipients ({recipients.length})
           </button>
-          <div className="flex items-center gap-3 bg-[var(--gold-pale)] border border-dashed border-[var(--gold-border)] rounded-xl px-4 py-4">
-            <UsersRound className="w-8 h-8 text-gold shrink-0" />
+          <div className="shrink-0 flex items-center gap-3 bg-[var(--gold-pale)] border border-dashed border-[var(--gold-border)] rounded-xl px-4 py-2.5">
+            <UsersRound className="w-6 h-6 text-gold shrink-0" />
             <div>
               <div className="text-lg font-bold text-gold">
                 {senderCurrency} {amountTotal.toFixed(2)}
@@ -369,19 +381,22 @@ export function SendToMany({
             </div>
           </div>
 
-          <Label htmlFor="many-same-amount" className={formLabelClass}>
-            Same amount for everyone
-          </Label>
-          <Input
-            id="many-same-amount"
-            inputMode="decimal"
-            autoComplete="off"
-            className={formInputClass}
-            placeholder="0.00"
-            value={sameAmount}
-            onChange={(e) => applySameAmount(toDecimalInput(e.target.value))}
-          />
-          <span className="text-xs text-muted-foreground -mt-[0.6rem]">
+          <div className={fieldClass}>
+            <span className={fieldAffixClass} aria-hidden="true">
+              {senderCurrency}
+            </span>
+            <input
+              id="many-same-amount"
+              aria-label={`Same amount for everyone, ${senderCurrency}`}
+              inputMode="decimal"
+              autoComplete="off"
+              className={cn(fieldInputClass, "tabular-nums")}
+              placeholder="Same amount for everyone"
+              value={sameAmount}
+              onChange={(e) => applySameAmount(toDecimalInput(e.target.value))}
+            />
+          </div>
+          <span className="text-xs text-muted-foreground -mt-1.5 tabular-nums">
             Balance: {senderCurrency} {formattedBalance}
           </span>
 

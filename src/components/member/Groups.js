@@ -12,6 +12,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { listClass } from "./shared";
 import axiosInstance, { contactsApi } from "../../utility/axiosInstance";
 import { isSafeText } from "../../utility/validators";
 import { Input } from "@/components/ui/input";
@@ -177,7 +178,7 @@ function GroupCard({ group, friends, onContribute, onAddMember, onWithdraw }) {
               {group.members.map((m) => (
                 <div
                   key={m.id}
-                  className="flex items-center gap-2.5 py-2 border-b border-white/[0.04] last:border-b-0"
+                  className="flex items-center gap-2.5 py-2.5 border-t border-white/[0.06]"
                 >
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gold/35 to-gold/15 text-gold font-bold flex items-center justify-center text-[0.65rem] shrink-0">
                     {(m.display_name || "?").slice(0, 1).toUpperCase()}
@@ -232,6 +233,7 @@ function GroupCard({ group, friends, onContribute, onAddMember, onWithdraw }) {
         </div>
       ) : mode === "add-member" ? (
         <div className="flex flex-col gap-1.5 animate-flow-fade-in">
+          <div className={listClass}>
           {addable.length === 0 ? (
             <p className="text-xs text-muted-foreground py-1">
               All your friends are already in this group.
@@ -243,13 +245,14 @@ function GroupCard({ group, friends, onContribute, onAddMember, onWithdraw }) {
                 type="button"
                 disabled={busy}
                 onClick={() => submitAddMember(f.id)}
-                className="flex items-center justify-between gap-2 text-left text-sm text-foreground bg-white/[0.03] hover:bg-white/[0.06] rounded-md px-3 py-1.5 transition-colors disabled:opacity-60"
+                className="flex items-center justify-between gap-2 text-left text-sm text-foreground px-1 py-2.5 hover:bg-white/[0.04] transition-colors disabled:opacity-60"
               >
                 {f.display_name}
                 <UserRoundPlus size={14} className="text-gold shrink-0" />
               </button>
             ))
           )}
+          </div>
           <button type="button" onClick={reset} className={ghostLinkBtnClass}>
             Done
           </button>

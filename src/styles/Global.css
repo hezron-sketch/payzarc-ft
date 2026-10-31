@@ -217,8 +217,57 @@ h1, h2, h3 { text-wrap: balance; }
   }
 }
 
+/* Phone header actions (BalanceCard). Lowering plays as one gesture: the
+   drop shadow collapses first, the button sinks with a small press-past-and-
+   settle (the curve overshoots the 0.97 scale), then the colour drains a
+   beat later. Raising runs it backwards: colour returns at once, the button
+   springs up, and its shadow blooms in just behind it. */
+@layer components {
+  .lift {
+    transition:
+      transform 560ms cubic-bezier(0.34, 1.45, 0.64, 1),
+      box-shadow 460ms cubic-bezier(0.22, 1, 0.36, 1) 60ms,
+      opacity 220ms ease-out,
+      filter 260ms ease-out,
+      color 260ms ease-out,
+      background-color 260ms ease-out,
+      border-color 260ms ease-out;
+  }
+  .lift[data-lowered] {
+    transition:
+      transform 520ms cubic-bezier(0.3, 1.5, 0.6, 1),
+      box-shadow 200ms cubic-bezier(0.4, 0, 1, 1),
+      opacity 220ms ease-out,
+      filter 420ms ease-out 120ms,
+      color 420ms ease-out 120ms,
+      background-color 420ms ease-out 120ms,
+      border-color 420ms ease-out 120ms;
+  }
+  /* Hover and press are direct manipulation: they must answer at once. */
+  .lift:hover {
+    transition-duration: 180ms;
+    transition-delay: 0ms;
+  }
+  .lift:active {
+    transition-duration: 90ms;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lift,
+    .lift[data-lowered] {
+      transition-property: filter, color, background-color, border-color;
+      transition-delay: 0ms;
+    }
+  }
+}
+
 [data-phone-bezel]:has([data-phone-screen] > *) [data-edge-pill] {
   filter: blur(4px) brightness(0.5);
+  pointer-events: none;
+}
+/* The edge pills sit above the whole phone screen, top-bar popovers included,
+   so they step aside while one is open. */
+[data-phone-bezel][data-overlay-open] [data-edge-pill] {
+  opacity: 0;
   pointer-events: none;
 }
 
