@@ -12,7 +12,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { listClass } from "./shared";
+import { listClass, listRowClass, listTileClass, listTitleClass } from "./shared";
 import axiosInstance, { contactsApi } from "../../utility/axiosInstance";
 import { isSafeText } from "../../utility/validators";
 import { Input } from "@/components/ui/input";
@@ -44,8 +44,8 @@ const FUND_TYPES = [
 ];
 const fundTypeFor = (key) => FUND_TYPES.find((t) => t.key === key) || FUND_TYPES[0];
 
-const cardClass =
-  "w-full flex flex-col gap-3 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06]";
+// A list row (shared style) that expands in place to show members/actions.
+const cardClass = "w-full flex flex-col";
 const createGroupBtnClass =
   "w-full flex items-center justify-center gap-2 rounded-md py-2 px-4 text-[0.9rem] font-bold cursor-pointer text-black bg-gradient-to-b from-gold to-gold-dark transition-colors duration-200 hover:brightness-110";
 const smallPillBtnClass =
@@ -129,46 +129,35 @@ function GroupCard({ group, friends, onContribute, onAddMember, onWithdraw }) {
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        className="w-full flex items-center gap-3 text-left cursor-pointer"
+        className={listRowClass}
       >
-        <div
-          className={cn(
-            "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-            fundType.iconBg,
-            fundType.iconColor,
-          )}
-        >
-          <Icon size={18} aria-hidden="true" />
+        <div className={cn(listTileClass, fundType.iconBg, fundType.iconColor)}>
+          <Icon size={16} aria-hidden="true" />
         </div>
-        {/* Title gets its own line; members and amount share the one below. */}
         <div className="flex-1 min-w-0 flex flex-col gap-1">
-          <div className="flex items-start gap-2">
-            <p className="flex-1 min-w-0 text-[0.9rem] font-semibold text-foreground leading-snug line-clamp-2 break-words m-0">
-              {group.name}
-            </p>
-            <ChevronDown
-              size={16}
-              aria-hidden="true"
-              className={cn(
-                "mt-0.5 text-muted-foreground transition-transform duration-200 shrink-0",
-                expanded && "rotate-180",
-              )}
-            />
-          </div>
           <div className="flex items-baseline justify-between gap-3">
-            <span className="text-[0.75rem] text-muted-foreground whitespace-nowrap">
-              {group.members.length} member
-              {group.members.length === 1 ? "" : "s"}
-            </span>
-            <span className="text-[0.95rem] font-bold text-gold tabular-nums whitespace-nowrap">
+            <p className={listTitleClass}>{group.name}</p>
+            <span className="text-sm font-bold text-gold tabular-nums whitespace-nowrap shrink-0">
               {group.currency} {group.balance.toLocaleString()}
             </span>
           </div>
+          <span className="text-[0.72rem] text-muted-foreground whitespace-nowrap">
+            {group.members.length} member
+            {group.members.length === 1 ? "" : "s"}
+          </span>
         </div>
+        <ChevronDown
+          size={16}
+          aria-hidden="true"
+          className={cn(
+            "text-muted-foreground transition-transform duration-200 shrink-0",
+            expanded && "rotate-180",
+          )}
+        />
       </button>
 
       {expanded && (
-        <div className="flex flex-col gap-3 animate-flow-fade-in">
+        <div className="flex flex-col gap-3 px-2.5 pb-3 animate-flow-fade-in">
           {group.members.length > 0 && (
             <div className="flex flex-col border-t border-white/[0.06] pt-1">
               <div className="flex justify-between text-[0.7rem] font-medium text-muted-foreground uppercase tracking-wider py-1.5">
@@ -446,7 +435,7 @@ function Groups({ onTotalChange, onWalletChange }) {
       {loading ? (
         <p className="text-center text-muted-foreground text-sm py-6">Loading groups…</p>
       ) : (
-        <div className="flex flex-col gap-2.5 stagger">
+        <div className={cn(listClass, "stagger")}>
           {groups.map((g) => (
             <GroupCard
               key={g.id}

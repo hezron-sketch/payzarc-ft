@@ -15,11 +15,13 @@ export const flowPanelClass =
 // Labelled field in one box: a short prefix (To, KES) replaces the label row
 // above it, which is what lets each flow fit the phone screen unscrolled.
 export const fieldClass =
-  "flex items-center gap-3 h-12 shrink-0 rounded-xl px-4 bg-white/[0.03] border border-white/[0.06] transition-colors duration-200 focus-within:ring-2 focus-within:ring-gold/40 focus-within:border-gold/60 focus-within:bg-white/[0.07]";
+  "flex items-center gap-3 h-12 shrink-0 rounded-xl px-4 bg-white/[0.03] border border-white/[0.06] transition-[background-color,border-color,box-shadow] duration-200 ease-out focus-within:bg-white/[0.06] focus-within:border-gold/45 focus-within:shadow-[0_0_0_3px_rgba(var(--gold-rgb),0.12)]";
 export const fieldAffixClass =
   "shrink-0 text-[0.8rem] font-semibold text-[var(--soft)] tabular-nums";
+// The box shows focus for the whole field; the input's own outline (from the
+// global :focus-visible rule) would draw a second, square box inside it.
 export const fieldInputClass =
-  "flex-1 min-w-0 h-full bg-transparent border-0 outline-none text-base text-foreground placeholder:text-muted-foreground";
+  "flex-1 min-w-0 h-full bg-transparent border-0 outline-none focus-visible:outline-none text-base text-foreground placeholder:text-muted-foreground caret-gold";
 // The amount is the point of every flow, so it gets the big type.
 export const amountFieldClass = cn(fieldClass, "h-14");
 export const amountInputClass = cn(
