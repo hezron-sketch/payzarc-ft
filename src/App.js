@@ -369,24 +369,28 @@ function FloatCard({ side, iconBg, icon, label, value, sub }) {
   return (
     <div
       className={cn(
-        "absolute bg-secondary border-[0.5px] border-input rounded-2xl py-[10px] px-[14px] flex items-center gap-2.5 z-[3] whitespace-nowrap max-[768px]:px-[10px] max-[768px]:py-2",
+        // Phones: each card is capped under half the row and its fine print
+        // wraps, so the two can never overlap however long the fee line is.
+        "absolute text-left bg-secondary border-[0.5px] border-input rounded-xl py-2 px-3 flex items-center gap-2 z-[3] whitespace-nowrap shadow-[0_10px_24px_-10px_rgba(0,0,0,0.6)] max-[768px]:rounded-[10px] max-[768px]:px-2 max-[768px]:py-1.5 max-[768px]:gap-1.5 max-[768px]:max-w-[40%] max-[768px]:whitespace-normal max-[480px]:rounded-lg max-[480px]:pl-1.5 max-[480px]:pr-2.5 max-[480px]:py-1",
         side === "left"
           ? "left-0 top-[55px] max-[768px]:-left-[10px] max-[768px]:top-10"
           : "right-0 top-[95px] max-[768px]:-right-[10px] max-[768px]:top-20",
       )}
     >
       <div
-        className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center flex-shrink-0"
+        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 max-[768px]:w-6 max-[768px]:h-6 max-[768px]:rounded-md max-[768px]:[&>*]:scale-[0.8] max-[480px]:w-5 max-[480px]:h-5 max-[480px]:[&>*]:scale-[0.65]"
         style={{ background: iconBg }}
       >
         {icon}
       </div>
-      <div>
-        <div className="text-[10px] text-[var(--muted)]">{label}</div>
-        <div className="text-[15px] font-bold text-foreground max-[768px]:text-[13px]">
+      <div className="min-w-0">
+        <div className="text-[9.5px] leading-tight text-[var(--muted)] max-[768px]:text-[8.5px] max-[480px]:text-[8px]">{label}</div>
+        <div className="text-[13px] leading-tight font-bold text-foreground max-[768px]:text-[11.5px] max-[480px]:text-[11px]">
           {value}
         </div>
-        <div className="text-[10px] text-[var(--muted)]">{sub}</div>
+        {/* Narrow phones: the fee/rate line repeats the hero copy above, so
+            the card keeps just label and amount. */}
+        <div className="text-[9.5px] leading-snug text-[var(--muted)] max-[768px]:text-[8.5px] max-[480px]:hidden">{sub}</div>
       </div>
     </div>
   );
