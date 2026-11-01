@@ -155,6 +155,13 @@ const extractName = (text) => {
   return candidate ? nameFromLine(candidate) : null;
 };
 
+// Local YYYY-MM-DD; string compare avoids timezone/leap-day drift in Date math.
+const todayISO = () => new Date().toLocaleDateString("en-CA");
+const latestAdultDOB = () => {
+  const t = todayISO();
+  return `${Number(t.slice(0, 4)) - 18}${t.slice(4)}`;
+};
+
 const captureVideoFrame = (video, canvas, mimeType, quality) => {
   const boxRatio = 4 / 3;
   const vw = video.videoWidth;
@@ -341,6 +348,10 @@ function Register({ onBack, embedded = false, compact = false }) {
         case 2:
           if (!formData.gender) newErrors.gender = "Gender required";
           if (!formData.dob) newErrors.dob = "Date of birth required";
+          else if (formData.dob > todayISO())
+            newErrors.dob = "Date of birth can't be in the future";
+          else if (formData.dob > latestAdultDOB())
+            newErrors.dob = "You must be at least 18 to register";
           if (!formData.idType) newErrors.idType = "ID type required";
           if (
             !formData.idNumber ||
@@ -1007,6 +1018,7 @@ function Register({ onBack, embedded = false, compact = false }) {
                     <Input
                       type="date"
                       name="dob"
+                      max={latestAdultDOB()}
                       value={formData.dob}
                       onChange={handleChange}
                       className={inputFieldClass(compact)}
