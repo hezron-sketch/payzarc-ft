@@ -37,23 +37,13 @@ const getFormattedAmount = (amt, isCredit, currency) => {
   })}`;
 };
 
-function RecentActivity({ transactions, currency, onViewAll, embedded = false }) {
+function RecentActivity({ transactions, currency, onViewAll }) {
   const [selected, setSelected] = useState(null);
   return (
-    <div className={cn("flex flex-col", embedded ? "flex-1 min-h-0" : "items-center")}>
-      <div className={cn("w-full", embedded && "flex-1 min-h-0 flex flex-col")}>
-        <div
-          className={cn(
-            "flex items-center justify-between",
-            embedded ? "mb-1 h-6" : "mb-4",
-          )}
-        >
-          <h2
-            className={cn(
-              "font-bold text-foreground m-0",
-              embedded ? "text-[0.95rem]" : "text-[1.05rem] tracking-tight",
-            )}
-          >
+    <div className="flex flex-col items-center">
+      <div className="w-full">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-foreground m-0 text-[1.05rem] tracking-tight">
             Recent Activity
           </h2>
           <button
@@ -65,17 +55,7 @@ function RecentActivity({ transactions, currency, onViewAll, embedded = false })
           </button>
         </div>
 
-        <div
-          className={cn(
-            "overflow-hidden stagger",
-            listClass,
-            // Fixed-height column that wraps: rows that don't fit whole move
-            // to a clipped second column, so the phone shows only full rows.
-            embedded
-              ? "flex-1 min-h-0 flex-wrap content-start"
-              : "bg-card rounded-2xl",
-          )}
-        >
+        <div className={cn("overflow-hidden stagger bg-card rounded-2xl", listClass)}>
           {transactions.length === 0 ? (
             <p className="text-center text-[0.9rem] text-muted-foreground py-8">
               Your first transfer will show up here, tracked from sent to
@@ -90,7 +70,7 @@ function RecentActivity({ transactions, currency, onViewAll, embedded = false })
                   type="button"
                   key={tx.id || idx}
                   onClick={() => setSelected(tx)}
-                  className={cn(listRowClass, embedded ? "shrink-0" : "px-4")}
+                  className={cn(listRowClass, "px-4")}
                 >
                   <div
                     className={cn(

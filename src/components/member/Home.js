@@ -251,22 +251,11 @@ function Home({
             onOpenGroupFunds={openGroupFunds}
           >
             {activeSection === "dashboard" && (
-              <>
-                <QuickSend
-                  favourites={favourites}
-                  onSeeAll={() => switchSection("groups")}
-                  onSelect={(fav) => openSection("send", fav)}
-                />
-                {/* Inside the phone whenever there's no side column for it. */}
-                <div className="lg:hidden flex-1 min-h-0 flex flex-col">
-                  <RecentActivity
-                    embedded
-                    transactions={recentTransactions}
-                    currency={displayCurrency}
-                    onViewAll={() => openSection("reports")}
-                  />
-                </div>
-              </>
+              <QuickSend
+                favourites={favourites}
+                onSeeAll={() => switchSection("groups")}
+                onSelect={(fav) => openSection("send", fav)}
+              />
             )}
             {activeSection === "add-money" && <AddMoney {...flowProps} />}
             {activeSection === "withdraw" && <Withdraw {...flowProps} />}
@@ -289,7 +278,9 @@ function Home({
           </BalanceCard>
         </div>
 
-        <div className="w-full hidden lg:block">
+        {/* Its own card outside the phone. The framed phone view has no room
+            beside it, so there it's reached through the History tab. */}
+        <div className="w-full max-[768px]:hidden">
           <RecentActivity
             transactions={recentTransactions}
             currency={displayCurrency}

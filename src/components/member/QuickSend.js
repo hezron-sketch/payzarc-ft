@@ -18,12 +18,10 @@ const Initial = ({ name }) =>
     <UserRound size={16} aria-hidden="true" />
   );
 
-// Phones: the top three, leaving room for Recent Activity below. Large
-// screens have the phone to spare (Recent Activity sits beside it), so there
-// it shows as many whole rows as fit, same trick as RecentActivity.
+// Docked at the bottom of the phone: the top two; "See all" has the rest.
 function QuickSend({ favourites, onSeeAll, onSelect }) {
   return (
-    <div className="flex flex-col gap-3 shrink-0 lg:flex-1 lg:min-h-0">
+    <div className="flex flex-col gap-3 shrink-0">
       <div className="flex items-center justify-between h-6">
         <h2 className="text-[0.95rem] font-bold m-0">Quick Send</h2>
         <button
@@ -40,10 +38,8 @@ function QuickSend({ favourites, onSeeAll, onSelect }) {
           The people you send to most will live here. Save one from Send.
         </p>
       ) : (
-        <div
-          className={`${listClass} -mt-1 stagger max-lg:[&>*:nth-child(n+4)]:hidden lg:flex-1 lg:min-h-0 lg:flex-wrap lg:content-start lg:overflow-hidden`}
-        >
-          {favourites.map((fav, idx) => {
+        <div className={`${listClass} -mt-1 stagger`}>
+          {favourites.slice(0, 2).map((fav, idx) => {
             const name = nameOf(fav);
             const sub = fav.phone && fav.phone !== name ? fav.phone : fav.email;
             return (
@@ -51,7 +47,7 @@ function QuickSend({ favourites, onSeeAll, onSelect }) {
                 key={fav.id || idx}
                 type="button"
                 onClick={() => onSelect(fav)}
-                className={`${listRowClass} shrink-0 group`}
+                className={`${listRowClass} group`}
               >
                 <span className={listAvatarClass}>
                   <Initial name={name} />
