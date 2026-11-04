@@ -80,8 +80,10 @@ export function useLayoutSpring(items, mode) {
     if (!moving || raf.current) return;
     let last = performance.now();
     const frame = (now) => {
-      // A dropped tab or long task shouldn't teleport the motion.
-      const dt = Math.min((now - last) / 1000, 1 / 20);
+      // A dropped tab or long task shouldn't teleport the motion. `now` is when
+      // the frame began, which can be before the click handler that started
+      // this, and a negative step would run the spring backwards for a frame.
+      const dt = Math.min(Math.max(now - last, 0) / 1000, 1 / 20);
       last = now;
       let active = false;
       items.forEach(({ ref, response, swingX }, i) => {

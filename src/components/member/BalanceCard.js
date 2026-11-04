@@ -420,8 +420,7 @@ function BalanceCard({
                 ref={chipsRef}
                 className={cn(
                   "order-4 w-full flex justify-center gap-2",
-                  // Home's free height splits evenly above Send and above the chips,
-                  // which sit a fixed step above Quick Send.
+                  // Quick Send sits a fixed step below the chips.
                   phoneZoomActive ? "mt-4" : "mt-auto mb-4",
                 )}
               >
@@ -497,6 +496,9 @@ function BalanceCard({
                 </div>
               )}
             </div>
+            {/* Home's free height: half below Quick Send, and the header's half
+                splits evenly above Send and above the chips. */}
+            {!phoneZoomActive && <span aria-hidden="true" className="flex-[1_0_0]" />}
           </div>
         </div>
       </div>
