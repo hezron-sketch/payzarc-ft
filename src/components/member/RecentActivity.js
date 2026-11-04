@@ -1,7 +1,13 @@
 import React, { useState } from "react";
 import TransactionDetails from "./TransactionDetails";
-import { ArrowDownLeft, ArrowUpRight, ChevronRight } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  phoneBezelColorClass,
+  phoneModalShadowClass,
+  phoneShellClass,
+  phoneScreenClass,
+} from "../PhoneMockup";
 import { listClass, listRowClass, listTileClass, listTitleClass } from "./shared";
 
 const txStatusTone = (status) => {
@@ -40,22 +46,22 @@ const getFormattedAmount = (amt, isCredit, currency) => {
 function RecentActivity({ transactions, currency, onViewAll }) {
   const [selected, setSelected] = useState(null);
   return (
-    <div className="flex flex-col items-center">
-      <div className="w-full">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-foreground m-0 text-[1.05rem] tracking-tight">
+    <div className={cn(phoneShellClass, phoneBezelColorClass, phoneModalShadowClass)}>
+      <div className={cn(phoneScreenClass, "px-6 pt-8 pb-6")}>
+        <div className="flex items-center justify-between h-6 mb-2">
+          <h2 className="text-[0.95rem] font-bold text-foreground m-0">
             Recent Activity
           </h2>
           <button
             type="button"
-            className="-mr-2 h-9 px-2 rounded-full text-gold text-[0.8rem] font-medium flex items-center gap-1 transition-colors hover:bg-white/[0.05]"
+            className="-mr-2 h-8 px-2 rounded-full text-gold font-medium text-[0.8rem] transition-colors hover:bg-white/[0.05]"
             onClick={onViewAll}
           >
-            View all <ChevronRight size={14} aria-hidden="true" />
+            View all
           </button>
         </div>
 
-        <div className={cn("overflow-hidden stagger bg-card rounded-2xl", listClass)}>
+        <div className={cn("overflow-hidden stagger", listClass)}>
           {transactions.length === 0 ? (
             <p className="text-center text-[0.9rem] text-muted-foreground py-8">
               Your first transfer will show up here, tracked from sent to
@@ -70,7 +76,7 @@ function RecentActivity({ transactions, currency, onViewAll }) {
                   type="button"
                   key={tx.id || idx}
                   onClick={() => setSelected(tx)}
-                  className={cn(listRowClass, "px-4")}
+                  className={listRowClass}
                 >
                   <div
                     className={cn(

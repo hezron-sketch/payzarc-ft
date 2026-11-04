@@ -14,6 +14,8 @@ import {
   phoneBezelColorClass,
   phoneNotchBaseClass,
   phoneModalShadowClass,
+  phoneShellClass,
+  phoneScreenClass,
 } from "../PhoneMockup";
 
 const ACTION_TILES = [
@@ -30,9 +32,9 @@ const ICON_ROW_ACTIONS = ACTION_TILES.filter(
 );
 
 const balanceCardClass =
-  "relative bg-card rounded-[calc(var(--r)-8px)] max-[768px]:rounded-none max-[768px]:bg-transparent max-[768px]:shadow-none flex-1 min-h-0 flex flex-col shadow-[inset_0_1px_0_rgba(255,255,255,0.1),inset_0_0_0_1px_rgba(255,255,255,0.04),inset_0_28px_46px_-30px_rgba(255,255,255,0.08),inset_20px_0_36px_-32px_rgba(255,255,255,0.06),inset_-20px_0_36px_-32px_rgba(255,255,255,0.06)]";
+  "max-[768px]:rounded-none max-[768px]:bg-transparent max-[768px]:shadow-none flex-1 min-h-0 flex flex-col";
 const phoneBezelClass =
-  "relative flex flex-col w-[clamp(300px,calc((100vh-150px)*9/19.5),360px)] aspect-[9/19.5] mx-auto lg:ml-0 max-[768px]:scroll-mt-[calc(var(--topbar-h)+8px)] origin-top transition-transform duration-300 ease-in-out [--r:56px] rounded-[var(--r)] border-[0.5px] border-[rgba(var(--gold-rgb),0.16)] p-[8px] max-[768px]:w-full max-[768px]:aspect-auto max-[768px]:h-[calc(100cqh+1rem)] max-[768px]:-mt-2 max-[768px]:-mb-6 max-[768px]:rounded-none max-[768px]:border-none max-[768px]:bg-transparent max-[768px]:p-0 max-[768px]:shadow-none";
+  "relative flex flex-col w-[clamp(300px,calc((100vh-150px)*9/19.5),360px)] aspect-[9/19.5] mx-auto lg:ml-0 max-[768px]:scroll-mt-[calc(var(--topbar-h)+8px)] origin-top transition-transform duration-300 ease-in-out max-[768px]:w-full max-[768px]:aspect-auto max-[768px]:h-[calc(100cqh+1rem)] max-[768px]:-mt-2 max-[768px]:-mb-6 max-[768px]:rounded-none max-[768px]:border-none max-[768px]:bg-transparent max-[768px]:p-0 max-[768px]:shadow-none";
 const phoneNotchClass =
   "top-0 w-[40%] h-[22px] rounded-b-[14px] max-[768px]:hidden";
 // A hairline that stays near-invisible until the pointer is over the screen;
@@ -46,10 +48,13 @@ const chipBtnClass =
 // press flat into it, greyed, while another flow is open. Timing lives in
 // .lift (Global.css). Both shadows keep the same two layers, drop then
 // inset, so the browser can interpolate between them instead of jumping.
-const chipRaisedClass =
-  "-translate-y-0.5 shadow-[0_8px_18px_-6px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.1)] [@media(hover:hover)_and_(pointer:fine)]:hover:-translate-y-1 [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.12)] active:translate-y-0 active:shadow-[0_2px_6px_-2px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.06)]";
 const pillRaisedClass =
   "shadow-[0_10px_24px_-8px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] [@media(hover:hover)_and_(pointer:fine)]:hover:-translate-y-0.5 [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-[0_16px_30px_-10px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.1)] active:scale-[0.96]";
+// Every header action looks the same; only its placement differs.
+const actionRestClass =
+  "bg-secondary border-input hover:border-gold/30 text-foreground";
+const actionActiveClass =
+  "bg-gradient-to-b from-gold to-gold-dark border-transparent text-black";
 // Lowered keeps the buttons' own slate blue, just a darker shade of it.
 const loweredClass =
   "translate-y-0 scale-[0.97] shadow-[0_0_0_0_rgba(0,0,0,0),inset_0_1px_3px_rgba(0,0,0,0.45)] bg-secondary border-white/[0.06] brightness-[0.8] text-[var(--soft)] hover:brightness-95 hover:text-foreground";
@@ -185,13 +190,14 @@ function BalanceCard({
       <div
         ref={balanceCardRef}
         className={cn(
+          phoneShellClass,
           phoneBezelClass,
           phoneBezelColorClass,
           phoneModalShadowClass,
           phoneZoomActive && "scale-[1.02]",
         )}
       >
-        <div className={balanceCardClass}>
+        <div className={cn(phoneScreenClass, balanceCardClass)}>
           <div className={cn(phoneNotchBaseClass, phoneNotchClass)} />
           <div className="w-full h-full min-h-0 flex flex-col items-center px-6 pt-8 pb-4 max-[768px]:px-4 max-[768px]:pt-2 max-[768px]:pb-2">
             {/* Home: the header takes the free height, spreading the actions
@@ -289,15 +295,13 @@ function BalanceCard({
                       aria-pressed={active}
                       data-lowered={dimmed(key) || undefined}
                       className={cn(
-                        "lift flex z-10 items-center justify-center gap-2 w-[140px] h-11 rounded-md whitespace-nowrap cursor-pointer text-[0.85rem] font-semibold",
+                        "lift flex z-10 items-center justify-center gap-2 w-[140px] h-11 rounded-md whitespace-nowrap cursor-pointer text-[0.85rem] font-semibold border-[0.5px]",
                         "absolute",
                         !framed &&
                           (isSend
                             ? "top-0 -left-[53px] max-[768px]:-left-[48px] max-[640px]:-left-[28px]"
                             : "top-0 -right-[53px] max-[768px]:-right-[48px] max-[640px]:-right-[28px]"),
-                        active
-                          ? "bg-gradient-to-b from-gold to-gold-dark border-[0.5px] border-transparent text-black"
-                          : "bg-secondary border-[0.5px] border-input hover:border-gold/30 text-foreground",
+                        active ? actionActiveClass : actionRestClass,
                         dimmed(key) ? loweredClass : pillRaisedClass,
                       )}
                     >
@@ -348,16 +352,25 @@ function BalanceCard({
                       data-lowered={dimmed(key) || undefined}
                       className={cn(
                         chipBtnClass,
-                        active
-                          ? "bg-gradient-to-b from-gold to-gold-dark border-transparent text-black"
-                          : key === "add-money"
-                            ? "bg-secondary border-gold/35 text-gold hover:border-gold/55"
-                            : "bg-secondary border-white/[0.1] text-foreground hover:border-white/[0.18]",
-                        dimmed(key) ? loweredClass : chipRaisedClass,
+                        active ? actionActiveClass : actionRestClass,
+                        dimmed(key) ? loweredClass : pillRaisedClass,
                       )}
                     >
-                      <Icon size={16} className="shrink-0" aria-hidden="true" />
-                      {label}
+                      <Icon
+                        size={16}
+                        aria-hidden="true"
+                        className={cn(
+                          "shrink-0 transition-colors duration-[420ms]",
+                          active
+                            ? "text-black"
+                            : dimmed(key)
+                              ? "text-current"
+                              : key === "add-money"
+                                ? "text-gold"
+                                : "text-info",
+                        )}
+                      />
+                      <span className="truncate">{label}</span>
                     </button>
                   );
                 })}

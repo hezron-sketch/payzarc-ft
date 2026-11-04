@@ -20,6 +20,12 @@ export const phoneNotchBaseClass =
 // faint wide ambient one — the way a real object close to a surface reads.
 export const phoneModalShadowClass =
   "shadow-[0_1px_2px_rgba(0,0,0,0.35),0_6px_16px_-4px_rgba(0,0,0,0.35),0_20px_40px_-16px_rgba(0,0,0,0.45)]";
+// The dashboard's two surfaces (phone, Activity card) share these, so they
+// read as one family: a dark rim around a softly lit screen.
+export const phoneShellClass =
+  "[--r:56px] rounded-[var(--r)] border-[0.5px] border-[rgba(var(--gold-rgb),0.16)] p-[8px]";
+export const phoneScreenClass =
+  "relative bg-card rounded-[calc(var(--r)-8px)] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),inset_0_0_0_1px_rgba(255,255,255,0.04),inset_0_28px_46px_-30px_rgba(255,255,255,0.08),inset_20px_0_36px_-32px_rgba(255,255,255,0.06),inset_-20px_0_36px_-32px_rgba(255,255,255,0.06)]";
 export const phoneModalOpenClass =
   "top-1/2 left-1/2 [transform:translate(-50%,-50%)_translateZ(48px)] h-[min(820px,88vh)] w-[min(calc(min(820px,88vh)*9/19.5),92vw)] [--r:60px] border-[0.5px] border-[rgba(var(--gold-rgb),0.16)] max-[480px]:w-[94vw] max-[480px]:h-[90vh] max-[480px]:[--r:54px]";
 
