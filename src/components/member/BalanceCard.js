@@ -420,7 +420,9 @@ function BalanceCard({
                 ref={chipsRef}
                 className={cn(
                   "order-4 w-full flex justify-center gap-2",
-                  phoneZoomActive ? "mt-4" : "my-auto",
+                  // Home's free height splits evenly above Send and above the chips,
+                  // which sit a fixed step above Quick Send.
+                  phoneZoomActive ? "mt-4" : "mt-auto mb-4",
                 )}
               >
                 {ICON_ROW_ACTIONS.map(({ key, label, icon: Icon }) => {
@@ -457,10 +459,6 @@ function BalanceCard({
                   );
                 })}
               </div>
-              {/* Home's free height splits 1:1:2 above Send, above the chips and
-                  below them, which holds the ring together around the balance;
-                  this is the second share below the chips. */}
-              {!phoneZoomActive && <span aria-hidden="true" className="order-5 mt-auto" />}
             </div>
 
             <div
