@@ -82,6 +82,10 @@ module.exports = {
           from: { opacity: 0, transform: "translateY(10px) scale(0.98)" },
           to: { opacity: 1, transform: "translateY(0) scale(1)" },
         },
+        // The outgoing screen leaves while the new one rises in.
+        "flow-fade-out": {
+          to: { opacity: 0, transform: "scale(0.98)" },
+        },
         // Bigger rise than flow-fade-in, no scale — that one's sized for a
         // small inline form swap; this is for a full page's worth of
         // content, where a subtler zoom would barely read but a taller
@@ -126,6 +130,7 @@ module.exports = {
         "slide-in-right": "slide-in-right 0.3s cubic-bezier(0.32,0.72,0,1)",
         "slide-in-left": "slide-in-left 0.3s cubic-bezier(0.32,0.72,0,1)",
         "flow-fade-in": "flow-fade-in 0.35s cubic-bezier(0.32,0.72,0,1)",
+        "flow-fade-out": "flow-fade-out 0.18s cubic-bezier(0.23,1,0.32,1) forwards",
         // Same easing the old strip-slide used for panel motion — a smooth
         // decelerate-into-place curve, fitting for a full page settling in.
         "page-swap-in": "page-swap-in 0.45s cubic-bezier(0.22,1,0.36,1)",

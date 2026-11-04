@@ -17,6 +17,7 @@ import {
   phoneShellClass,
   phoneScreenClass,
 } from "../PhoneMockup";
+import { useLayoutSpring } from "./layoutSpring";
 
 const ACTION_TILES = [
   { key: "add-money", label: "Deposit", icon: CirclePlus },
@@ -61,8 +62,6 @@ const loweredClass =
 
 const EDGE_OVERHANG = 48; // px of each 140px pill outside the screen
 const PILL_H = 44;
-const TUCK_ZONE = 72;
-const TUCK_INSET = 12;
 function usePhoneEdgePills(sendRowRef, withdrawRowRef, sendRef, withdrawRef) {
   const [bezel, setBezel] = useState(null);
   useEffect(() => {
@@ -93,23 +92,22 @@ function usePhoneEdgePills(sendRowRef, withdrawRowRef, sendRef, withdrawRef) {
       };
       // Never hang past the browser window on a narrow real phone.
       const out = Math.max(0, Math.min(EDGE_OVERHANG, b.left - 4));
-      const place = (el, top, side) => {
+      const sendRow = sendRowRef.current.getBoundingClientRect();
+      const withdrawRow = withdrawRowRef.current.getBoundingClientRect();
+      const place = (el, { top }, side, nudge = 0) => {
         if (!el) return;
         const t = top - b.top;
-        const edgeDist = Math.min(top - m.top, m.bottom - (top + PILL_H));
-        const p = Math.min(1, Math.max(0, edgeDist / TUCK_ZONE));
-        const ease = p * p * (3 - 2 * p); // smoothstep: no kink at either end
-        const hang = -TUCK_INSET + (out + TUCK_INSET) * ease;
         el.style.top = `${t}px`;
-        el.style.left = side === "left" ? `${8 - hang}px` : "auto";
-        el.style.right = side === "right" ? `${8 - hang}px` : "auto";
+        el.style.left = side === "left" ? `${8 - out + nudge}px` : "auto";
+        el.style.right = side === "right" ? `${8 - out}px` : "auto";
         const clipTop = Math.max(0, m.top - top);
         const clipBottom = Math.max(0, top + PILL_H - m.bottom);
         el.style.clipPath = `inset(${clipTop}px -40px ${clipBottom}px -40px round 6px)`;
         el.style.visibility = clipTop + clipBottom >= PILL_H ? "hidden" : "";
       };
-      place(sendRef.current, sendRowRef.current.getBoundingClientRect().top, "left");
-      place(withdrawRef.current, withdrawRowRef.current.getBoundingClientRect().top, "right");
+      // Withdraw's row never moves sideways, so the gap is Send's arc.
+      place(sendRef.current, sendRow, "left", sendRow.left - withdrawRow.left);
+      place(withdrawRef.current, withdrawRow, "right");
       raf = requestAnimationFrame(tick);
     };
     tick();
@@ -147,7 +145,6 @@ function BalanceCard({
   scrollRef,
   activeSection,
   contentKey,
-  contentAnimation = "animate-flow-fade-in",
   switchSection,
   goToDashboard,
   displayCurrency,
@@ -185,6 +182,51 @@ function BalanceCard({
   const bezel = usePhoneEdgePills(sendRowRef, withdrawRowRef, sendRef, withdrawRef);
   const framed = !!bezel;
 
+  // Opening or closing a flow rearranges the header. Everything glides to its
+  // new place on its own spring: the balance leads, the rest follow slightly
+  // behind, and any of it can reverse mid-flight. Pills in the phone frame
+  // follow their rows, because their placement reads the rows' live position.
+  const balanceRowRef = useRef(null);
+  const amountRef = useRef(null);
+  const groupFundsRef = useRef(null);
+  const chipsRef = useRef(null);
+  useLayoutSpring(
+    [
+      { ref: balanceRowRef, response: 0.42 },
+      { ref: amountRef, response: 0.42, scale: true },
+      { ref: groupFundsRef, response: 0.47 },
+      // Send and the balance swap places, so Send swings out around the
+      // balance, far enough to clear it at its widest, to keep the figure
+      // readable as they pass.
+      {
+        ref: sendRowRef,
+        response: 0.45,
+        swingX: () => {
+          const pill = sendRef.current.getBoundingClientRect();
+          const amount = amountRef.current.getBoundingClientRect();
+          const widest = Math.max(amount.width, amountRef.current.offsetWidth);
+          const left = amount.left + amount.width / 2 - widest / 2;
+          return -Math.max(24, pill.right + 8 - left);
+        },
+      },
+      { ref: withdrawRowRef, response: 0.5 },
+      { ref: chipsRef, response: 0.52 },
+      { ref: scrollRef, response: 0.55 },
+    ],
+    phoneZoomActive,
+  );
+
+  // The screen leaving stays mounted, inert, while it fades out over the one
+  // arriving, so neither has to cut.
+  const [exiting, setExiting] = useState(null);
+  const lastContent = useRef({ key: contentKey, node: children });
+  if (lastContent.current.key !== contentKey) {
+    setExiting(lastContent.current);
+    lastContent.current = { key: contentKey, node: children };
+  } else {
+    lastContent.current.node = children;
+  }
+
   return (
     <div className="relative w-full max-w-[400px] mx-auto">
       <div
@@ -199,23 +241,49 @@ function BalanceCard({
       >
         <div className={cn(phoneScreenClass, balanceCardClass)}>
           <div className={cn(phoneNotchBaseClass, phoneNotchClass)} />
-          <div className="w-full h-full min-h-0 flex flex-col items-center px-6 pt-8 pb-4 max-[768px]:px-4 max-[768px]:pt-2 max-[768px]:pb-2">
-            {/* Home: the header takes the free height, spreading the actions
-                down the phone above a docked Quick Send. In a flow it packs
-                into a compact block so the screen below gets the room. */}
+          {/* Clipped vertically only: pills hang past the sides on large screens,
+              and a travelling screen mustn't make the page scrollable. */}
+          <div className="w-full h-full min-h-0 flex flex-col items-center [overflow-y:clip] px-6 pt-8 pb-4 max-[768px]:px-4 max-[768px]:pt-2 max-[768px]:pb-2">
+            {/* Home: the header takes the free height and the actions ring the
+                balance above a docked Quick Send. In a flow it packs into a
+                compact block, balance first, so the screen below gets the room.
+                `order` rearranges them without remounting, so they can glide. */}
             <div
               className={cn(
                 "w-full flex flex-col items-center",
-                phoneZoomActive ? "shrink-0" : "flex-[1_0_auto]",
+                phoneZoomActive ? "shrink-0" : "flex-[1_0_auto] gap-y-3",
               )}
             >
               {/* Balance centred in the middle cell; the close button owns the
                   right cell, so the two can never run into each other. */}
-              <div className="w-full h-9 grid grid-cols-[1fr_auto_1fr] items-center gap-1">
+              <div
+                className={cn(
+                  "w-full flex flex-col items-center",
+                  phoneZoomActive ? "order-1" : "order-2 mt-auto",
+                )}
+              >
+              <div
+                ref={balanceRowRef}
+                className={cn(
+                  "relative w-full grid grid-cols-[1fr_auto_1fr] items-center gap-1",
+                  phoneZoomActive ? "h-9" : "h-12",
+                )}
+              >
+                {/* A faint pool of gold under the balance while it's the hero. */}
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[260px] h-[120px] pointer-events-none bg-[radial-gradient(closest-side,rgba(var(--gold-rgb),0.09),transparent)] transition-opacity duration-500 ease-apple",
+                    phoneZoomActive && "opacity-0",
+                  )}
+                />
                 <span />
-                <div className="flex items-center gap-2">
+                <div ref={amountRef} className="relative flex items-center gap-2">
                   <h1
-                    className="text-[1.4rem] leading-none font-semibold text-gold tracking-[-0.01em] tabular-nums whitespace-nowrap m-0 flex items-baseline gap-1.5"
+                    className={cn(
+                      "leading-none font-semibold text-gold tracking-[-0.01em] tabular-nums whitespace-nowrap m-0 flex items-baseline gap-1.5",
+                      phoneZoomActive ? "text-[1.4rem]" : "text-[1.75rem]",
+                    )}
                   >
                     <span className="sr-only">Balance</span>
                     <span className="font-medium opacity-75">
@@ -250,8 +318,9 @@ function BalanceCard({
                   aria-label="Close"
                   inert={!phoneZoomActive}
                   className={cn(
-                    "justify-self-end -mr-2 w-8 h-8 rounded-full text-[var(--soft)] hover:text-foreground hover:bg-white/[0.05] flex items-center justify-center transition-ui duration-300",
-                    !phoneZoomActive && "opacity-0 scale-75",
+                    "relative justify-self-end -mr-2 w-8 h-8 rounded-full text-[var(--soft)] hover:text-foreground hover:bg-white/[0.05] flex items-center justify-center transition-ui duration-300",
+                    // Arrives once the balance has nearly landed beside it.
+                    phoneZoomActive ? "delay-150" : "opacity-0 scale-75",
                   )}
                 >
                   <X size={16} aria-hidden="true" />
@@ -264,9 +333,10 @@ function BalanceCard({
               )}
               {groupFundsTotal > 0 && (
                 <button
+                  ref={groupFundsRef}
                   type="button"
                   onClick={onOpenGroupFunds}
-                  className="mt-1.5 inline-flex items-center gap-1.5 h-7 rounded-full px-3 text-[0.75rem] font-semibold text-muted-foreground bg-white/[0.04] border border-white/[0.08] cursor-pointer transition-colors hover:bg-white/[0.07] hover:border-gold/20 hover:text-foreground"
+                  className="relative mt-1.5 inline-flex items-center gap-1.5 h-7 rounded-full px-3 text-[0.75rem] font-semibold text-muted-foreground bg-white/[0.04] border border-white/[0.08] cursor-pointer transition-colors hover:bg-white/[0.07] hover:border-gold/20 hover:text-foreground"
                 >
                   <UsersRound size={12} className="text-gold" aria-hidden="true" />
                   <span className="tabular-nums uppercase">
@@ -278,10 +348,12 @@ function BalanceCard({
                   in Group Funds
                 </button>
               )}
+              </div>
 
               {/* Send and Withdraw each straddle their edge of the phone, and
-                  each row only reserves its pill's height. Home staggers them;
-                  in a flow Withdraw's row overlaps Send's, so they line up. */}
+                  each row only reserves its pill's height. Home puts the balance
+                  between them; in a flow Withdraw's row overlaps Send's, so they
+                  line up. */}
               {BALANCE_CARD_ACTIONS.map(({ key, label, icon: Icon }) => {
                   const active = activeSection === key;
                   const isSend = key === "send";
@@ -329,10 +401,12 @@ function BalanceCard({
                       className={cn(
                         "relative w-full h-11",
                         isSend
-                          ? "mt-3.5"
+                          ? phoneZoomActive
+                            ? "order-2 mt-3.5"
+                            : "order-1 mt-2"
                           : phoneZoomActive
-                            ? "-mt-11"
-                            : "my-auto",
+                            ? "order-3 -mt-11"
+                            : "order-3 mt-auto",
                       )}
                     >
                       {bezel ? createPortal(pill, bezel, key) : pill}
@@ -340,7 +414,13 @@ function BalanceCard({
                   );
                 })}
 
-              <div className="w-full flex justify-center gap-2 mt-4">
+              <div
+                ref={chipsRef}
+                className={cn(
+                  "order-4 w-full flex justify-center gap-2",
+                  phoneZoomActive ? "mt-4" : "mt-auto",
+                )}
+              >
                 {ICON_ROW_ACTIONS.map(({ key, label, icon: Icon }) => {
                   const active = activeSection === key;
                   return (
@@ -380,7 +460,7 @@ function BalanceCard({
             <div
               ref={scrollRef}
               className={cn(
-                "w-full mt-3 pt-3 border-t border-white/[0.06] min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain",
+                "relative w-full mt-3 pt-3 border-t border-white/[0.06] min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain",
                 phoneZoomActive ? "flex-1" : "flex-[0_1_auto]",
                 phoneScrollAreaClass,
               )}
@@ -388,7 +468,7 @@ function BalanceCard({
               <div
                 key={contentKey}
                 // h-full so a flow panel can fill the screen exactly.
-                className={cn("w-full h-full flex flex-col gap-4", contentAnimation)}
+                className="w-full h-full flex flex-col gap-4 animate-flow-fade-in"
               >
                 {/* The retained button already names the flow; title the rest. */}
                 {phoneZoomActive && !hasOwnButton && (
@@ -398,6 +478,20 @@ function BalanceCard({
                 )}
                 {children}
               </div>
+              {/* Reopened while still fading out: the live copy wins. */}
+              {exiting && exiting.key !== contentKey && (
+                <div
+                  key={exiting.key}
+                  inert
+                  aria-hidden="true"
+                  className="absolute inset-x-0 top-3 flex flex-col gap-4 pointer-events-none animate-flow-fade-out"
+                  onAnimationEnd={(e) => {
+                    if (e.target === e.currentTarget) setExiting(null);
+                  }}
+                >
+                  {exiting.node}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -34,19 +34,6 @@ function Home({
   const setGroupsTab = (tab) =>
     onNavigate?.({ section: "groups", tab }, { replace: true });
 
-  const prevSectionRef = useRef(activeSection);
-  const contentAnimationRef = useRef("animate-flow-fade-in");
-  if (prevSectionRef.current !== activeSection) {
-    const from = prevSectionRef.current;
-    contentAnimationRef.current =
-      from === "dashboard"
-        ? "animate-slide-in-right"
-        : activeSection === "dashboard"
-          ? "animate-slide-in-left"
-          : "animate-flow-fade-in";
-    prevSectionRef.current = activeSection;
-  }
-
   const [balanceData, setBalanceData] = useState(null);
   const [loadingBalance, setLoadingBalance] = useState(true);
   const [balanceError, setBalanceError] = useState(null);
@@ -240,7 +227,6 @@ function Home({
             scrollRef={phoneScrollRef}
             activeSection={activeSection}
             contentKey={flowKey}
-            contentAnimation={contentAnimationRef.current}
             switchSection={switchSection}
             goToDashboard={goToDashboard}
             displayCurrency={displayCurrency}
