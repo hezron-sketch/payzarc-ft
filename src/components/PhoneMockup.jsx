@@ -20,8 +20,7 @@ export const phoneNotchBaseClass =
 // faint wide ambient one — the way a real object close to a surface reads.
 export const phoneModalShadowClass =
   "shadow-[0_1px_2px_rgba(0,0,0,0.35),0_6px_16px_-4px_rgba(0,0,0,0.35),0_20px_40px_-16px_rgba(0,0,0,0.45)]";
-// The dashboard's two surfaces (phone, Activity card) share these, so they
-// read as one family: a dark rim around a softly lit screen.
+// The dashboard phone: a dark rim around a softly lit screen.
 export const phoneShellClass =
   "[--r:56px] rounded-[var(--r)] border-[0.5px] border-[rgba(var(--gold-rgb),0.16)] p-[8px]";
 export const phoneScreenClass =

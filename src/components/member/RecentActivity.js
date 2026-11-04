@@ -2,12 +2,7 @@ import React, { useState } from "react";
 import TransactionDetails from "./TransactionDetails";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  phoneBezelColorClass,
-  phoneModalShadowClass,
-  phoneShellClass,
-  phoneScreenClass,
-} from "../PhoneMockup";
+import { phoneModalShadowClass } from "../PhoneMockup";
 import { listClass, listRowClass, listTileClass, listTitleClass } from "./shared";
 
 const txStatusTone = (status) => {
@@ -46,8 +41,8 @@ const getFormattedAmount = (amt, isCredit, currency) => {
 function RecentActivity({ transactions, currency, onViewAll }) {
   const [selected, setSelected] = useState(null);
   return (
-    <div className={cn(phoneShellClass, phoneBezelColorClass, phoneModalShadowClass)}>
-      <div className={cn(phoneScreenClass, "px-6 pt-8 pb-6")}>
+    <div className={cn("bg-card rounded-2xl border border-white/[0.06]", phoneModalShadowClass)}>
+      <div className="px-5 pt-5 pb-3">
         <div className="flex items-center justify-between h-6 mb-2">
           <h2 className="text-[0.95rem] font-bold text-foreground m-0">
             Recent Activity
