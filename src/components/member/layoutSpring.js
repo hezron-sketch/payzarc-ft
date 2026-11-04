@@ -24,9 +24,10 @@ const atRest = (value, velocity, eps) =>
 // layout mid-flight just adds to the offset and keeps the velocity: reversing
 // never jumps. offsetLeft/Top/Width ignore transforms, so nothing needs
 // un-applying before measuring. Scale items follow width changes only when
-// `mode` flips, so a balance finishing loading doesn't pulse. `swingX` returns
-// how many px to swing sideways on a flip, to pass around something on the same
-// path: a shove on a slower spring, which makes an arc that settles by itself.
+// `mode` flips, so a balance finishing loading doesn't pulse. `swingX(x)` gets
+// the item's current sideways offset and returns how many px to swing on a flip,
+// to pass around something on the same path: a shove on a slower spring, which
+// makes an arc that settles by itself.
 export function useLayoutSpring(items, mode) {
   const states = useRef([]);
   const lastMode = useRef(mode);
@@ -64,7 +65,11 @@ export function useLayoutSpring(items, mode) {
         s.y += s.top - el.offsetTop;
         s.left = el.offsetLeft;
         s.top = el.offsetTop;
-        if (modeChanged && swingX) s.vx = swingX() * SWING_W * Math.E;
+        if (modeChanged && swingX) {
+          // Only the part of the swing not already under way, so reversing
+          // mid-swing doesn't stack a second arc on the first.
+          s.vx = (swingX(s.x) - s.x) * SWING_W * Math.E;
+        }
       }
       if (reduce) s.x = s.y = s.s = s.vx = s.vy = s.vs = 0;
       // Before paint, so the new layout never shows for a frame.

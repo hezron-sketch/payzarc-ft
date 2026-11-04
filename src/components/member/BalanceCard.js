@@ -201,12 +201,14 @@ function BalanceCard({
       {
         ref: sendRowRef,
         response: 0.45,
-        swingX: () => {
+        swingX: (x) => {
           const pill = sendRef.current.getBoundingClientRect();
           const amount = amountRef.current.getBoundingClientRect();
           const widest = Math.max(amount.width, amountRef.current.offsetWidth);
           const left = amount.left + amount.width / 2 - widest / 2;
-          return -Math.max(24, pill.right + 8 - left);
+          // From the pill's resting spot, so reversing mid-swing still clears;
+          // with margin, because the arc is past its peak by the time they cross.
+          return -1.35 * Math.max(24, pill.right - x + 8 - left);
         },
       },
       { ref: withdrawRowRef, response: 0.5 },
@@ -251,7 +253,7 @@ function BalanceCard({
             <div
               className={cn(
                 "w-full flex flex-col items-center",
-                phoneZoomActive ? "shrink-0" : "flex-[1_0_auto] gap-y-3",
+                phoneZoomActive ? "shrink-0" : "flex-[1_0_auto] gap-y-1.5",
               )}
             >
               {/* Balance centred in the middle cell; the close button owns the
@@ -259,14 +261,14 @@ function BalanceCard({
               <div
                 className={cn(
                   "w-full flex flex-col items-center",
-                  phoneZoomActive ? "order-1" : "order-2 mt-auto",
+                  phoneZoomActive ? "order-1" : "order-2",
                 )}
               >
               <div
                 ref={balanceRowRef}
                 className={cn(
                   "relative w-full grid grid-cols-[1fr_auto_1fr] items-center gap-1",
-                  phoneZoomActive ? "h-9" : "h-12",
+                  phoneZoomActive ? "h-9" : "h-11",
                 )}
               >
                 {/* A faint pool of gold under the balance while it's the hero. */}
@@ -403,10 +405,10 @@ function BalanceCard({
                         isSend
                           ? phoneZoomActive
                             ? "order-2 mt-3.5"
-                            : "order-1 mt-2"
+                            : "order-1 mt-auto"
                           : phoneZoomActive
                             ? "order-3 -mt-11"
-                            : "order-3 mt-auto",
+                            : "order-3",
                       )}
                     >
                       {bezel ? createPortal(pill, bezel, key) : pill}
@@ -418,7 +420,7 @@ function BalanceCard({
                 ref={chipsRef}
                 className={cn(
                   "order-4 w-full flex justify-center gap-2",
-                  phoneZoomActive ? "mt-4" : "mt-auto",
+                  phoneZoomActive ? "mt-4" : "my-auto",
                 )}
               >
                 {ICON_ROW_ACTIONS.map(({ key, label, icon: Icon }) => {
@@ -455,6 +457,10 @@ function BalanceCard({
                   );
                 })}
               </div>
+              {/* Home's free height splits 1:1:2 above Send, above the chips and
+                  below them, which holds the ring together around the balance;
+                  this is the second share below the chips. */}
+              {!phoneZoomActive && <span aria-hidden="true" className="order-5 mt-auto" />}
             </div>
 
             <div
